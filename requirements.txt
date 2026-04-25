@@ -27,9 +27,13 @@ is updated whenever a scope, architecture, or tooling decision changes.
            - Daylight
 
        (b) Digital-only:
-           - Flip Clock  (retro mechanical, animated card flip)
-           - Marquee     (theater bulbs, animated chase)
-           - Slab        (brutalist concrete, static)
+           - Flip Clock      (retro mechanical, animated card flip)
+           - Marquee         (theater bulbs, animated chase)
+           - Slab            (brutalist concrete, static)
+           - Binary Digital  (binary HH/MM/SS as text, terminal
+                              aesthetic; pairs with the BCD encoding
+                              face below for users who want the
+                              binary read-out without the dot grid)
 
        (c) Specialty encodings:
            - Binary      (BCD LED stack with decoded readout)
@@ -39,6 +43,35 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - The active theme is selectable per clock window and per tab
        (see § 1.2 for the per-tab settings gear and § 1.8 for the
        global "same theme everywhere" override).
+     - Per-theme color customization. Every theme — analog,
+       digital-only, AND encoding — exposes the same five
+       user-overridable color slots, set per tab (or per
+       free-floating window) via the settings gear popover (§ 1.2):
+
+         · Ring      - outermost frame / bezel / case
+         · Face      - dial background / panel / tile face
+         · Hands     - hour + minute + second hands (analog) or
+                       primary accent strokes (digital, encoding)
+         · Numbers   - numerals (analog) or primary big digits
+                       (digital, encoding)
+         · Digital   - integrated digital readout color (analog) or
+                       secondary/auxiliary digital text such as
+                       seconds, decoded readout, footer captions
+                       (digital, encoding)
+
+       Each theme's renderer maps the five slots to the closest
+       visual element for that theme; every theme implements all
+       five slots so the settings UI is identical across theme
+       types. design/README.md documents the per-theme
+       slot-to-element mapping. The settings popover shall offer a
+       "Reset colors to theme defaults" action.
+
+       Theme-specific accent colors that do not map to any of the
+       five slots (e.g., Boulder Slate's red second-hand disc,
+       Atomic Lab's `NIST · BOULDER · CO` legend, Flip Clock's
+       amber colon pips) remain at the theme's discretion and are
+       NOT user-overridable. These accents are part of each theme's
+       identity.
      - Faces shall update at least once per second; analog second
        hand motion may be smooth (sub-second) or stepped at the
        user's choice.
@@ -57,10 +90,17 @@ is updated whenever a scope, architecture, or tooling decision changes.
          - Theme selector (dropdown of all themes from § 1.1). This
            selector is disabled when the global "Use the same theme
            across all tabs" toggle is ON (see § 1.8).
-         - "Show digital readout" toggle. Visible only when the active
-           theme is in category (a). Hidden for digital-only and
-           specialty themes since they have no separable digital
+         - "Show digital readout" toggle. Visible only when the
+           active theme is in category (a). Hidden for digital-only
+           and specialty themes since they have no separable digital
            readout to toggle.
+         - Five color pickers labeled "Ring", "Face", "Hands",
+           "Numbers", and "Digital" (per § 1.1). Each picker
+           overrides the active theme's color for that slot on this
+           tab only — unless the global "Use the same theme across
+           all tabs" toggle is ON, in which case the override
+           propagates to all tabs. A "Reset colors to theme
+           defaults" link sits under the pickers.
      - The user can add, rename, reorder, and remove tabs.
 
 1.3  Multiple simultaneous clock windows
@@ -101,20 +141,24 @@ is updated whenever a scope, architecture, or tooling decision changes.
 
 1.8  Settings
      - Per-tab: time zone, theme, "show digital readout" (analog
-       themes only).
+       themes only), and the five color overrides (ring, face,
+       hands, numbers, digital).
      - Per-window (clock windows spawned outside the main tabbed
        view per § 1.3): time zone, theme, size, position, on-top,
-       overlay mode, "show digital readout" (analog themes only).
+       overlay mode, "show digital readout" (analog themes only),
+       and the five color overrides.
      - Global:
          - Sync server, sync interval.
          - Start with Windows.
          - Service install state.
          - "Use the same theme across all tabs" toggle. When ON,
-           changing the theme on any tab applies that theme to all
-           tabs and disables the per-tab theme selectors in their
-           settings popovers. When OFF (the default), each tab keeps
-           its own theme. The toggle does NOT govern free-floating
-           clock windows from § 1.3 — those are always per-window.
+           changing the theme — or any of its five color overrides
+           — on any tab applies to all tabs, and disables the
+           per-tab theme and color selectors in their settings
+           popovers. When OFF (the default), each tab keeps its own
+           theme and its own color overrides. The toggle does NOT
+           govern free-floating clock windows from § 1.3 — those
+           are always per-window.
          - Default theme on first run: Atomic Lab.
 
 ------------------------------------------------------------------

@@ -4,7 +4,9 @@ This directory holds the visual-design artifacts for the app: theme proposals, m
 
 ## Themes
 
-Eleven face theme proposals live under [`themes/`](themes/) — six analog (each with an integrated digital readout that can be hidden), three digital-only, and two specialty encodings (binary and hexadecimal). Each is a self-contained SVG. Open [`themes/index.html`](themes/index.html) in any browser for the side-by-side gallery view.
+Twelve face theme proposals live under [`themes/`](themes/) — six analog (each with an integrated digital readout that can be hidden), four digital-only, and two specialty encodings (BCD-dot binary and hexadecimal). Each is a self-contained SVG. Open [`themes/index.html`](themes/index.html) in any browser for the side-by-side gallery view.
+
+Every theme — regardless of category — exposes the same five user-overridable color slots: **Ring**, **Face**, **Hands**, **Numbers**, **Digital**. See [Per-theme color customization](#per-theme-color-customization) below for the slot-to-element mapping each theme implements.
 
 Every preview is rendered at the same fixed time — **10:08:42** — so the eye can compare them without distraction. (10:08 is the watch-photography standard: hands form a near-symmetric "smile" that frames the brand or numerals; the 42-second hand pulls slightly into the lower-left so it doesn't visually overlap with either main hand.)
 
@@ -21,8 +23,9 @@ Every preview is rendered at the same fixed time — **10:08:42** — so the eye
 | 9 | [Slab](themes/slab.svg) | Brutalist concrete, architectural | Digital-only |
 | 10 | [Binary](themes/binary.svg) | BCD LED stack, programmer-toy | Binary (BCD per digit) |
 | 11 | [Hex](themes/hex.svg) | Programmer terminal, hexadecimal + day-fraction color | Hexadecimal |
+| 12 | [Binary Digital](themes/binary-digital.svg) | Pure binary text — H/M/S as 5b/6b/6b binary, magenta terminal | Binary text (digital-only) |
 
-For analog themes (1–6) the integrated digital readout can be hidden per window via a toggle in the tab/window settings, leaving a pure analog face. Themes 7–11 are inherently digital and the toggle is hidden.
+For analog themes (1–6) the integrated digital readout can be hidden per window via a toggle in the tab/window settings, leaving a pure analog face. Themes 7–12 are inherently digital and the toggle is hidden.
 
 ### Theme rationale, in detail
 
@@ -48,6 +51,31 @@ For analog themes (1–6) the integrated digital readout can be hidden per windo
 
 **11. Hex.** Two hex encodings on the same screen: each unit (HH, MM, SS) shown as a hex pair `0A:08:2A` with decimal underneath, AND the elapsed fraction of today shown as a 16-bit hex value `0x6C38 / 0xFFFF` which doubles as a literal `#RRGGBB` color swatch. The bar IS today, encoded — it drifts gradually through the spectrum across 24 hours. Programmer terminal chrome (red/yellow/green traffic-light dots in the title bar, blinking cursor) makes it feel like a tiny TUI app.
 
+**12. Binary Digital.** Pure binary text — three labeled rows showing hours, minutes, and seconds as their binary representations (5 bits, 6 bits, 6 bits, MSB first). Decimal decode and a bit-width annotation underneath; faint random-looking binary strings in the lower third for texture; same terminal chrome as the Hex theme but with a magenta-on-deep-purple palette to differentiate. Pairs with theme #10 (Binary, the BCD-dots encoding face) for users who want the binary read-out as text without the BCD dot grid.
+
+## Per-theme color customization
+
+Every theme exposes the same five user-overridable color slots: **Ring**, **Face**, **Hands**, **Numbers**, and **Digital**. The settings UI shows the same five color pickers regardless of which theme is active, and each theme's renderer maps the slots to the closest visual element it has. Settings live per tab and per free-floating window (see `requirements.txt` § 1.1, § 1.2, § 1.8).
+
+| # | Theme | Ring | Face | Hands | Numbers | Digital |
+|---|---|---|---|---|---|---|
+| 1 | Atomic Lab | brushed silver bezel | navy dial | white hour/min hands | amber 12·3·6·9 numerals | amber LCD readout |
+| 2 | Boulder Slate | black bezel | white dial | black baton hands | tick-mark color (no numerals on this theme) | small black digital text below |
+| 3 | Aero Glass | dark grey ring outline | translucent acrylic | white hands | white 12·3·6·9 numerals | white digital pill |
+| 4 | Cathode | dark phosphor outline | black CRT | green hands (glow) | green numerals | green LCD readout |
+| 5 | Concourse | dark grey ring | charcoal dial | orange hands | orange 1–12 numerals | orange dot-matrix readout |
+| 6 | Daylight | medium grey ring | cream dial | navy hands | navy 1–12 numerals | navy digital text |
+| 7 | Flip Clock | black case + chrome legs | white tile faces | hinge / spindle hardware | black big digits | small `42 SECONDS` footer |
+| 8 | Marquee | red theater frame | black inner panel | bulb glow color | yellow time text | yellow header / subtitle text |
+| 9 | Slab | top + bottom black accent bars | concrete gritty backdrop | red accent rule | black big HH:MM | small footer caption |
+| 10 | Binary | dark border | black field | lit-LED dot color | decoded readout digits | bit-width labels (HOURS / MINUTES / SECONDS) |
+| 11 | Hex | terminal chrome bar | dark navy field | secondary cyan accents (cursor, prompt) | primary hex digits | decimal-decode + day-fraction text |
+| 12 | Binary Digital | terminal chrome bar | deep purple field | secondary magenta accents (cursor, prompt) | primary big binary digits | row labels + decimal-decode text |
+
+**Theme-specific accents are NOT user-overridable.** Boulder Slate's red second-hand disc stays red. Atomic Lab's `NIST · BOULDER · CO` legend stays amber. Flip Clock's amber colon pips stay amber. Marquee's red theater frame is part of its identity (the "Ring" slot controls it, but the *redness* is what makes it a marquee — letting users tint it sky-blue would break the theme; the slot is honored but the theme will document a recommended hue range in its `ResourceDictionary`). The renderer's job is to apply the user's chosen colors while preserving the theme's visual cohesion.
+
+A "Reset colors to theme defaults" link in the settings popover restores all five slots for the active theme.
+
 ## Why SVG and not PNG/JPG
 
 - **Editable as text.** The theme designer can adjust a color hex code or a stroke width with any text editor. No round-trip through Photoshop.
@@ -72,7 +100,9 @@ src/ComTekAtomicClock.UI/Themes/
   Slab.xaml              <-- digital-only
   Binary.xaml            <-- BCD encoding face
   Hex.xaml               <-- hexadecimal encoding face
+  BinaryDigital.xaml     <-- digital-only, binary text display (pairs with Binary)
   ThemeManager.cs        <-- runtime theme switcher; persists per-tab + per-window
+                              including the five color overrides per active theme
 ```
 
 Each `.xaml` defines color brushes, font families, and shape templates that the `ClockFaceControl` consumes. Switching themes at runtime is a `ResourceDictionary` swap; no window recreate.

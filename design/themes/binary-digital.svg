@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Binary Digital — ComTek Atomic Clock theme (digital-only, binary text display)</title>
+  <defs>
+    <radialGradient id="bg-bd" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#1a0830"/>
+      <stop offset="100%" stop-color="#080414"/>
+    </radialGradient>
+    <filter id="glow-bd" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-bd)"/>
+  <!-- terminal-style top bar -->
+  <rect x="0" y="0" width="400" height="32" fill="#08000a"/>
+  <g font-family="'Cascadia Code', Consolas, monospace" font-size="11">
+    <circle cx="14" cy="16" r="4" fill="#ff5050" opacity="0.7"/>
+    <circle cx="30" cy="16" r="4" fill="#ffaa30" opacity="0.7"/>
+    <circle cx="46" cy="16" r="4" fill="#50cc60" opacity="0.7"/>
+    <text x="200" y="20" text-anchor="middle" fill="#ff5cd0" opacity="0.7" letter-spacing="3">comtek :: bin_clock.exe</text>
+  </g>
+  <!-- header -->
+  <text x="40" y="80" font-family="'Cascadia Code', Consolas, monospace" font-size="12" fill="#ff5cd0" opacity="0.55">// time encoded as binary text (per unit)</text>
+  <!-- big binary digits, three lines, labeled -->
+  <g font-family="'Cascadia Code', Consolas, monospace" font-weight="bold" filter="url(#glow-bd)">
+    <text x="80" y="138" font-size="34" fill="#883366" letter-spacing="2">H</text>
+    <text x="120" y="138" font-size="34" fill="#ff5cd0" letter-spacing="3">01010</text>
+    <text x="80" y="180" font-size="34" fill="#883366" letter-spacing="2">M</text>
+    <text x="120" y="180" font-size="34" fill="#ff5cd0" letter-spacing="3">001000</text>
+    <text x="80" y="222" font-size="34" fill="#883366" letter-spacing="2">S</text>
+    <text x="120" y="222" font-size="34" fill="#ff5cd0" letter-spacing="3">101010</text>
+  </g>
+  <!-- decimal decode -->
+  <text x="40" y="270" font-family="'Cascadia Code', Consolas, monospace" font-size="14" fill="#ff5cd0" opacity="0.7">// dec: <tspan fill="#ffaae8">10:08:42</tspan></text>
+  <!-- bit width annotation -->
+  <text x="40" y="295" font-family="'Cascadia Code', Consolas, monospace" font-size="11" fill="#883366" letter-spacing="1">// widths: 5b hour · 6b min · 6b sec · MSB first</text>
+  <!-- tiny grid of bit toggles as decoration -->
+  <g opacity="0.18">
+    <text x="40" y="328" font-family="'Cascadia Code', monospace" font-size="9" fill="#ff5cd0" letter-spacing="2">11010 · 01100 · 11100 · 01000 · 10101 · 10010 · 00111 · 11001</text>
+    <text x="40" y="342" font-family="'Cascadia Code', monospace" font-size="9" fill="#ff5cd0" letter-spacing="2">01001 · 11011 · 00100 · 11110 · 01010 · 10000 · 11000 · 00101</text>
+  </g>
+  <!-- terminal cursor -->
+  <text x="40" y="372" font-family="'Cascadia Code', Consolas, monospace" font-size="14" fill="#ff5cd0">$ <tspan fill="#ffaae8">_</tspan></text>
+</svg>
