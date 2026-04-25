@@ -2,8 +2,12 @@ ComTek Atomic Clock — Windows
 Requirements specification
 ==========================================
 
+Last updated: 2026-04-25
+
 Note: this file is a project requirements document, not a Python pip
 manifest. .NET dependencies are declared in each project's .csproj file.
+This document is the source of truth for what the product must do; it
+is updated whenever a scope, architecture, or tooling decision changes.
 
 ------------------------------------------------------------------
 1. FUNCTIONAL REQUIREMENTS
@@ -70,9 +74,10 @@ manifest. .NET dependencies are declared in each project's .csproj file.
      - Windows 10 version 1809 or newer, and Windows 11.
      - x64 and ARM64 builds.
 
-2.2  Runtime
-     - .NET 8 (LTS).
-     - WPF for the UI; Worker Service template for the system service.
+2.2  Runtime and language
+     - C# 12 on .NET 8 (LTS).
+     - WPF for the UI; Worker Service template for the system service;
+       a class library for shared IPC contracts and models.
 
 2.3  Privileges
      - The UI process shall run as the standard user.
@@ -102,6 +107,22 @@ manifest. .NET dependencies are declared in each project's .csproj file.
      - Single MSIX installer that deploys both the UI and the service
        and registers the service.
      - Uninstaller shall stop and remove the service.
+
+2.8  Build environment
+     - Hard prerequisite: .NET 8 SDK on PATH. The full solution shall
+       build, test, and run from the command line via `dotnet build`
+       / `dotnet run` with no IDE present.
+     - Recommended for human inspection / debugging: Visual Studio
+       2026 (or 2022) Community edition with the ".NET desktop
+       development" workload. The IDE provides the XAML designer,
+       multi-process debugging, and the Windows SDK / `signtool.exe`
+       used during release packaging. The IDE is NOT required for
+       contributors who only edit code.
+
+2.9  License and ownership
+     - Source code license: MIT (see LICENSE at repo root).
+     - Copyright (c) 2026 Daniel V. Oxender.
+     - Source repository: https://github.com/doxender/WindowsComTekAtomicClock
 
 ------------------------------------------------------------------
 3. OUT OF SCOPE (initial release)
