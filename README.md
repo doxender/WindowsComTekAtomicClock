@@ -75,4 +75,4 @@ git push -u origin master
 
 ## License
 
-TBD.
+[MIT](LICENSE) © 2026 Daniel V. Oxender.
