@@ -14,14 +14,53 @@ is updated whenever a scope, architecture, or tooling decision changes.
 ------------------------------------------------------------------
 
 1.1  Clock display
-     - Show the current time as either a digital face or an analog face.
-     - The face style shall be selectable per clock window.
-     - Faces shall update at least once per second; analog second hand
-       motion may be smooth (sub-second) or stepped at the user's choice.
+     - The product ships with eleven face themes (subject to revision)
+       organized into three categories. Visual references and design
+       rationale for each live under design/themes/ in this repo.
 
-1.2  Multiple time zones
-     - The main application window shall present a tabbed view, each tab
-       bound to a single IANA / Windows time zone.
+       (a) Analog with integrated digital readout:
+           - Atomic Lab    (default on first run)
+           - Boulder Slate
+           - Aero Glass
+           - Cathode
+           - Concourse
+           - Daylight
+
+       (b) Digital-only:
+           - Flip Clock  (retro mechanical, animated card flip)
+           - Marquee     (theater bulbs, animated chase)
+           - Slab        (brutalist concrete, static)
+
+       (c) Specialty encodings:
+           - Binary      (BCD LED stack with decoded readout)
+           - Hex         (hex per unit + 16-bit day fraction shown
+                          as a literal #RRGGBB color swatch)
+
+     - The active theme is selectable per clock window and per tab
+       (see § 1.2 for the per-tab settings gear and § 1.8 for the
+       global "same theme everywhere" override).
+     - Faces shall update at least once per second; analog second
+       hand motion may be smooth (sub-second) or stepped at the
+       user's choice.
+     - For analog themes (category a), the integrated digital readout
+       shall be independently hideable per clock window or per tab,
+       leaving a pure analog face. The toggle is hidden for themes
+       in categories (b) and (c) since they have no analog face to
+       reveal.
+
+1.2  Multiple time zones (tabbed view)
+     - The main application window shall present a tabbed view, each
+       tab bound to a single IANA / Windows time zone.
+     - Each tab shall expose a settings gear icon on the right side of
+       the tab header. Clicking it opens a popover containing:
+         - Time-zone selector (dropdown of IANA / Windows zones).
+         - Theme selector (dropdown of all themes from § 1.1). This
+           selector is disabled when the global "Use the same theme
+           across all tabs" toggle is ON (see § 1.8).
+         - "Show digital readout" toggle. Visible only when the active
+           theme is in category (a). Hidden for digital-only and
+           specialty themes since they have no separable digital
+           readout to toggle.
      - The user can add, rename, reorder, and remove tabs.
 
 1.3  Multiple simultaneous clock windows
@@ -61,10 +100,22 @@ is updated whenever a scope, architecture, or tooling decision changes.
        terminate the UI process.
 
 1.8  Settings
-     - Per-window: time zone, face style, size, position, on-top,
-       overlay mode, font/color theme.
-     - Global: sync server, sync interval, start with Windows,
-       service install state.
+     - Per-tab: time zone, theme, "show digital readout" (analog
+       themes only).
+     - Per-window (clock windows spawned outside the main tabbed
+       view per § 1.3): time zone, theme, size, position, on-top,
+       overlay mode, "show digital readout" (analog themes only).
+     - Global:
+         - Sync server, sync interval.
+         - Start with Windows.
+         - Service install state.
+         - "Use the same theme across all tabs" toggle. When ON,
+           changing the theme on any tab applies that theme to all
+           tabs and disables the per-tab theme selectors in their
+           settings popovers. When OFF (the default), each tab keeps
+           its own theme. The toggle does NOT govern free-floating
+           clock windows from § 1.3 — those are always per-window.
+         - Default theme on first run: Atomic Lab.
 
 ------------------------------------------------------------------
 2. NON-FUNCTIONAL REQUIREMENTS

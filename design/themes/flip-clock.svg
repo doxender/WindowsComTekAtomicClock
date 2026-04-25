@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Flip Clock — ComTek Atomic Clock theme (retro bedroom mechanical)</title>
+  <defs>
+    <linearGradient id="bg-fc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5a3d22"/>
+      <stop offset="100%" stop-color="#2a1d10"/>
+    </linearGradient>
+    <linearGradient id="case-fc" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="50%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="card-fc" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#080808"/>
+      <stop offset="49%" stop-color="#181818"/>
+      <stop offset="50%" stop-color="#000000"/>
+      <stop offset="51%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#222222"/>
+    </linearGradient>
+    <linearGradient id="chrome-fc" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cccccc"/>
+      <stop offset="50%" stop-color="#888888"/>
+      <stop offset="100%" stop-color="#444444"/>
+    </linearGradient>
+  </defs>
+  <!-- nightstand surface backdrop -->
+  <rect width="400" height="400" fill="url(#bg-fc)"/>
+  <!-- subtle wood grain hint -->
+  <g opacity="0.12" stroke="#1a0e04" stroke-width="0.5">
+    <line x1="0" y1="345" x2="400" y2="345"/>
+    <line x1="0" y1="360" x2="400" y2="360"/>
+    <line x1="0" y1="375" x2="400" y2="375"/>
+    <line x1="0" y1="392" x2="400" y2="392"/>
+  </g>
+  <!-- chrome legs -->
+  <rect x="78" y="316" width="22" height="14" rx="2" fill="url(#chrome-fc)"/>
+  <rect x="300" y="316" width="22" height="14" rx="2" fill="url(#chrome-fc)"/>
+  <!-- clock case -->
+  <rect x="36" y="78" width="328" height="244" rx="14" fill="url(#case-fc)" stroke="#3a3a3a" stroke-width="1.5"/>
+  <!-- inner display recess -->
+  <rect x="50" y="98" width="300" height="186" rx="6" fill="#040404"/>
+  <!-- card 1: HH tens = '1' -->
+  <g transform="translate(64, 122)">
+    <rect width="60" height="138" rx="6" fill="url(#card-fc)"/>
+    <line x1="0" y1="69" x2="60" y2="69" stroke="#040404" stroke-width="2"/>
+    <text x="30" y="98" text-anchor="middle" font-family="'Helvetica Neue', 'Arial Black', sans-serif" font-weight="900" font-size="84" fill="#f5f0e0">1</text>
+  </g>
+  <!-- card 2: HH ones = '0' -->
+  <g transform="translate(132, 122)">
+    <rect width="60" height="138" rx="6" fill="url(#card-fc)"/>
+    <line x1="0" y1="69" x2="60" y2="69" stroke="#040404" stroke-width="2"/>
+    <text x="30" y="98" text-anchor="middle" font-family="'Helvetica Neue', 'Arial Black', sans-serif" font-weight="900" font-size="84" fill="#f5f0e0">0</text>
+  </g>
+  <!-- colon -->
+  <g fill="#f5f0e0">
+    <circle cx="200" cy="166" r="3.5"/>
+    <circle cx="200" cy="216" r="3.5"/>
+  </g>
+  <!-- card 3: MM tens = '0' -->
+  <g transform="translate(208, 122)">
+    <rect width="60" height="138" rx="6" fill="url(#card-fc)"/>
+    <line x1="0" y1="69" x2="60" y2="69" stroke="#040404" stroke-width="2"/>
+    <text x="30" y="98" text-anchor="middle" font-family="'Helvetica Neue', 'Arial Black', sans-serif" font-weight="900" font-size="84" fill="#f5f0e0">0</text>
+  </g>
+  <!-- card 4: MM ones = '8' -->
+  <g transform="translate(276, 122)">
+    <rect width="60" height="138" rx="6" fill="url(#card-fc)"/>
+    <line x1="0" y1="69" x2="60" y2="69" stroke="#040404" stroke-width="2"/>
+    <text x="30" y="98" text-anchor="middle" font-family="'Helvetica Neue', 'Arial Black', sans-serif" font-weight="900" font-size="84" fill="#f5f0e0">8</text>
+  </g>
+  <!-- seconds indicator + branding -->
+  <text x="200" y="276" text-anchor="middle" font-family="'Helvetica Neue', sans-serif" font-size="10" font-weight="500" fill="#888" letter-spacing="3">: 4 2 SECONDS</text>
+  <text x="200" y="304" text-anchor="middle" font-family="'Helvetica Neue', sans-serif" font-size="9" fill="#666" letter-spacing="4">COMTEK · MODEL CT-1971</text>
+</svg>

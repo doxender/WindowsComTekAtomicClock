@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Hex — ComTek Atomic Clock theme (programmer hexadecimal terminal)</title>
+  <defs>
+    <radialGradient id="bg-hx" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#0c1828"/>
+      <stop offset="100%" stop-color="#020812"/>
+    </radialGradient>
+    <filter id="glow-hx" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-hx)"/>
+  <!-- terminal-style top bar -->
+  <rect x="0" y="0" width="400" height="32" fill="#000814"/>
+  <g fill="#5fe2ff" opacity="0.6" font-family="'Cascadia Code', Consolas, monospace" font-size="11">
+    <circle cx="14" cy="16" r="4" fill="#ff5050" opacity="0.7"/>
+    <circle cx="30" cy="16" r="4" fill="#ffaa30" opacity="0.7"/>
+    <circle cx="46" cy="16" r="4" fill="#50cc60" opacity="0.7"/>
+    <text x="200" y="20" text-anchor="middle" letter-spacing="3">comtek :: hex_clock.exe</text>
+  </g>
+  <!-- prompt -->
+  <text x="40" y="80" font-family="'Cascadia Code', Consolas, monospace" font-size="12" fill="#5fe2ff" opacity="0.55">// time encoded as hexadecimal (per unit)</text>
+  <!-- big hex digits -->
+  <g font-family="'Cascadia Code', Consolas, 'Courier New', monospace" font-weight="bold">
+    <text x="200" y="190" text-anchor="middle" font-size="64" fill="#5fe2ff" letter-spacing="3" filter="url(#glow-hx)">0A:08:2A</text>
+  </g>
+  <!-- per-column section labels under each pair -->
+  <g font-family="'Cascadia Code', Consolas, monospace" font-size="10" fill="#3a8aaa" text-anchor="middle" letter-spacing="2">
+    <text x="80" y="216">HOURS</text>
+    <text x="200" y="216">MINUTES</text>
+    <text x="320" y="216">SECONDS</text>
+  </g>
+  <!-- decoded -->
+  <text x="40" y="262" font-family="'Cascadia Code', Consolas, monospace" font-size="14" fill="#5fe2ff" opacity="0.7">// dec: <tspan fill="#a0eeff">10:08:42</tspan></text>
+  <!-- day fraction (as a 16-bit value) -->
+  <text x="40" y="290" font-family="'Cascadia Code', Consolas, monospace" font-size="14" fill="#5fe2ff" opacity="0.7">// day: <tspan fill="#a0eeff">0x6C38</tspan> / 0xFFFF <tspan fill="#3a8aaa">(42.3% elapsed)</tspan></text>
+  <!-- swatch showing day-fraction as a color -->
+  <rect x="40" y="306" width="320" height="14" rx="2" fill="#6C38FF" opacity="0.85"/>
+  <text x="40" y="338" font-family="'Cascadia Code', Consolas, monospace" font-size="12" fill="#5fe2ff" opacity="0.55">// the bar above is #6C38FF — today, encoded as a color</text>
+  <!-- terminal cursor -->
+  <text x="40" y="372" font-family="'Cascadia Code', Consolas, monospace" font-size="14" fill="#5fe2ff">$ <tspan fill="#a0eeff">_</tspan></text>
+</svg>

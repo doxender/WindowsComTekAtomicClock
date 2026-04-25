@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Binary — ComTek Atomic Clock theme (BCD LED stack)</title>
+  <defs>
+    <radialGradient id="lit-bin" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#ffc4c4"/>
+      <stop offset="50%" stop-color="#ff3030"/>
+      <stop offset="100%" stop-color="#7a0808"/>
+    </radialGradient>
+    <radialGradient id="unlit-bin" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#3a0a0a"/>
+      <stop offset="100%" stop-color="#180404"/>
+    </radialGradient>
+    <filter id="glow-bin" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="#080808"/>
+  <!-- subtle grid lines -->
+  <g stroke="#1a0808" stroke-width="0.5">
+    <line x1="40" y1="120" x2="380" y2="120"/>
+    <line x1="40" y1="265" x2="380" y2="265"/>
+  </g>
+  <!-- title -->
+  <text x="200" y="60" text-anchor="middle" font-family="'Cascadia Code', Consolas, monospace" font-weight="bold" font-size="16" fill="#ff5555" letter-spacing="6">BINARY CLOCK</text>
+  <!-- bit value labels (left side) -->
+  <g font-family="'Cascadia Code', Consolas, monospace" font-size="11" fill="#553030" text-anchor="end">
+    <text x="42" y="155">8</text>
+    <text x="42" y="195">4</text>
+    <text x="42" y="235">2</text>
+    <text x="42" y="275">1</text>
+  </g>
+  <!-- Col 1: H tens (val=1), 2 dots: bits 2 and 1 -->
+  <circle cx="78" cy="230" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="78" cy="270" r="11" fill="url(#lit-bin)" filter="url(#glow-bin)"/>
+  <!-- Col 2: H ones (val=0), 4 dots all unlit -->
+  <circle cx="128" cy="150" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="128" cy="190" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="128" cy="230" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="128" cy="270" r="11" fill="url(#unlit-bin)"/>
+  <!-- Col 3: M tens (val=0), 3 dots all unlit -->
+  <circle cx="198" cy="190" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="198" cy="230" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="198" cy="270" r="11" fill="url(#unlit-bin)"/>
+  <!-- Col 4: M ones (val=8), bit 8 lit -->
+  <circle cx="248" cy="150" r="11" fill="url(#lit-bin)" filter="url(#glow-bin)"/>
+  <circle cx="248" cy="190" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="248" cy="230" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="248" cy="270" r="11" fill="url(#unlit-bin)"/>
+  <!-- Col 5: S tens (val=4), bit 4 lit -->
+  <circle cx="318" cy="190" r="11" fill="url(#lit-bin)" filter="url(#glow-bin)"/>
+  <circle cx="318" cy="230" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="318" cy="270" r="11" fill="url(#unlit-bin)"/>
+  <!-- Col 6: S ones (val=2), bit 2 lit -->
+  <circle cx="368" cy="150" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="368" cy="190" r="11" fill="url(#unlit-bin)"/>
+  <circle cx="368" cy="230" r="11" fill="url(#lit-bin)" filter="url(#glow-bin)"/>
+  <circle cx="368" cy="270" r="11" fill="url(#unlit-bin)"/>
+  <!-- group labels -->
+  <g font-family="'Cascadia Code', Consolas, monospace" font-size="10" fill="#aa3030" text-anchor="middle" letter-spacing="3">
+    <text x="103" y="304">HOURS</text>
+    <text x="223" y="304">MINUTES</text>
+    <text x="343" y="304">SECONDS</text>
+  </g>
+  <!-- decoded readout -->
+  <text x="200" y="350" text-anchor="middle" font-family="'Cascadia Code', Consolas, monospace" font-weight="bold" font-size="22" fill="#ff3030" letter-spacing="3" filter="url(#glow-bin)">10 : 08 : 42</text>
+  <!-- footer hint -->
+  <text x="200" y="375" text-anchor="middle" font-family="'Cascadia Code', monospace" font-size="9" fill="#553030" letter-spacing="2">read top→bottom · 8·4·2·1 BCD per column</text>
+</svg>

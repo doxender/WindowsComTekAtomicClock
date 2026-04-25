@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Marquee — ComTek Atomic Clock theme (theater incandescent bulbs)</title>
+  <defs>
+    <radialGradient id="bulb-mq" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#fff8d8"/>
+      <stop offset="55%" stop-color="#ffc940"/>
+      <stop offset="100%" stop-color="#a06010"/>
+    </radialGradient>
+    <radialGradient id="bg-mq" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#1a0a0a"/>
+      <stop offset="100%" stop-color="#080404"/>
+    </radialGradient>
+    <filter id="glow-mq" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <symbol id="bulb" overflow="visible">
+      <circle r="6" fill="url(#bulb-mq)" filter="url(#glow-mq)"/>
+    </symbol>
+  </defs>
+  <!-- outer red theater frame -->
+  <rect width="400" height="400" fill="#7a1818"/>
+  <rect x="14" y="14" width="372" height="372" fill="none" stroke="#3a0a0a" stroke-width="2"/>
+  <!-- inner black panel -->
+  <rect x="34" y="34" width="332" height="332" rx="4" fill="url(#bg-mq)" stroke="#3a1010" stroke-width="2"/>
+  <!-- chase bulbs along the inner border -->
+  <!-- top row -->
+  <use href="#bulb" x="58" y="58"/>
+  <use href="#bulb" x="92" y="58"/>
+  <use href="#bulb" x="126" y="58"/>
+  <use href="#bulb" x="160" y="58"/>
+  <use href="#bulb" x="194" y="58"/>
+  <use href="#bulb" x="228" y="58"/>
+  <use href="#bulb" x="262" y="58"/>
+  <use href="#bulb" x="296" y="58"/>
+  <use href="#bulb" x="330" y="58"/>
+  <!-- bottom row -->
+  <use href="#bulb" x="58" y="342"/>
+  <use href="#bulb" x="92" y="342"/>
+  <use href="#bulb" x="126" y="342"/>
+  <use href="#bulb" x="160" y="342"/>
+  <use href="#bulb" x="194" y="342"/>
+  <use href="#bulb" x="228" y="342"/>
+  <use href="#bulb" x="262" y="342"/>
+  <use href="#bulb" x="296" y="342"/>
+  <use href="#bulb" x="330" y="342"/>
+  <!-- left column (skip corners) -->
+  <use href="#bulb" x="58" y="92"/>
+  <use href="#bulb" x="58" y="126"/>
+  <use href="#bulb" x="58" y="160"/>
+  <use href="#bulb" x="58" y="194"/>
+  <use href="#bulb" x="58" y="228"/>
+  <use href="#bulb" x="58" y="262"/>
+  <use href="#bulb" x="58" y="296"/>
+  <!-- right column -->
+  <use href="#bulb" x="330" y="92"/>
+  <use href="#bulb" x="330" y="126"/>
+  <use href="#bulb" x="330" y="160"/>
+  <use href="#bulb" x="330" y="194"/>
+  <use href="#bulb" x="330" y="228"/>
+  <use href="#bulb" x="330" y="262"/>
+  <use href="#bulb" x="330" y="296"/>
+  <!-- header -->
+  <text x="200" y="120" text-anchor="middle" font-family="'Bebas Neue', 'Impact', 'Arial Black', sans-serif" font-weight="700" font-size="20" fill="#ffc940" letter-spacing="6" filter="url(#glow-mq)">★ NOW SHOWING ★</text>
+  <!-- big time -->
+  <text x="200" y="232" text-anchor="middle" font-family="'Bebas Neue', 'Impact', 'Arial Black', sans-serif" font-weight="900" font-size="76" fill="#ffc940" letter-spacing="2" filter="url(#glow-mq)">10:08:42</text>
+  <!-- subtitle -->
+  <text x="200" y="282" text-anchor="middle" font-family="'Bebas Neue', sans-serif" font-weight="500" font-size="13" fill="#ffc940" opacity="0.85" letter-spacing="5">★ ATOMIC TIME ★ FROM BOULDER ★</text>
+</svg>
