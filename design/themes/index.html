@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ComTek Atomic Clock — Theme Gallery</title>
+  <style>
+    :root {
+      --bg: #ececec;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --muted: #666;
+      --accent: #003366;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161616;
+        --card: #222;
+        --text: #f0f0f0;
+        --muted: #aaa;
+        --accent: #6db4ff;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+    }
+    header { max-width: 1400px; margin: 0 auto 28px; }
+    h1 { font-weight: 600; margin: 0 0 6px; font-size: 28px; letter-spacing: -0.01em; }
+    .sub { color: var(--muted); margin: 0; font-size: 15px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px)  { .grid { grid-template-columns: 1fr; } }
+    .tile {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      display: flex;
+      flex-direction: column;
+    }
+    .tile img {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      height: auto;
+      margin: 0 auto;
+      border-radius: 6px;
+    }
+    .tile h2 {
+      font-size: 18px;
+      margin: 14px 0 4px;
+      font-weight: 600;
+    }
+    .tile p {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+    .swatches {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .sw {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+    footer {
+      max-width: 1400px;
+      margin: 32px auto 0;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid rgba(127,127,127,0.25);
+      padding-top: 16px;
+    }
+    code { font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ComTek Atomic Clock — Theme Gallery</h1>
+    <p class="sub">Six proposed visual themes. All faces show 10:08:42 for direct comparison. Each SVG is a live, editable file in this directory.</p>
+  </header>
+
+  <div class="grid">
+
+    <div class="tile">
+      <img src="atomic-lab.svg" alt="Atomic Lab clock face preview"/>
+      <h2>1. Atomic Lab</h2>
+      <p>Dark navy field, brushed-silver bezel, amber LCD digital readout printed with <code>NIST · BOULDER · CO</code>. Leans hard into the project's atomic-clock identity. Best for users who want the clock to feel like an instrument.</p>
+      <div class="swatches" aria-label="palette">
+        <span class="sw" style="background:#0a1628" title="#0a1628"></span>
+        <span class="sw" style="background:#ffb000" title="#ffb000"></span>
+        <span class="sw" style="background:#f5f5f5" title="#f5f5f5"></span>
+        <span class="sw" style="background:#ff3030" title="#ff3030"></span>
+      </div>
+    </div>
+
+    <div class="tile">
+      <img src="boulder-slate.svg" alt="Boulder Slate clock face preview"/>
+      <h2>2. Boulder Slate</h2>
+      <p>Mondaine / SBB-inspired Swiss minimalism. White face, black baton hands, single red second hand with the iconic stop-signal disc at the tip. The neutral default candidate for daytime work.</p>
+      <div class="swatches" aria-label="palette">
+        <span class="sw" style="background:#ffffff" title="#ffffff"></span>
+        <span class="sw" style="background:#0a0a0a" title="#0a0a0a"></span>
+        <span class="sw" style="background:#e3001b" title="#e3001b"></span>
+      </div>
+    </div>
+
+    <div class="tile">
+      <img src="aero-glass.svg" alt="Aero Glass clock face preview"/>
+      <h2>3. Aero Glass</h2>
+      <p>Translucent acrylic disc over a desktop wallpaper. White hands, cyan second hand, drop shadow. Designed to make the desktop overlay mode feel native to Windows 11's Fluent design language.</p>
+      <div class="swatches" aria-label="palette">
+        <span class="sw" style="background:#3a4f7a" title="#3a4f7a"></span>
+        <span class="sw" style="background:rgba(255,255,255,0.32)" title="acrylic"></span>
+        <span class="sw" style="background:#ffffff" title="#ffffff"></span>
+        <span class="sw" style="background:#00b7ff" title="#00b7ff"></span>
+      </div>
+    </div>
+
+    <div class="tile">
+      <img src="cathode.svg" alt="Cathode clock face preview"/>
+      <h2>4. Cathode</h2>
+      <p>Black background, glowing phosphor green hands and ticks, 7-segment-style digital readout, faint scanlines layered on top. Pure CRT nostalgia. A "fun" face you keep on a secondary monitor.</p>
+      <div class="swatches" aria-label="palette">
+        <span class="sw" style="background:#000000" title="#000000"></span>
+        <span class="sw" style="background:#00ff66" title="#00ff66"></span>
+        <span class="sw" style="background:#003d18" title="#003d18"></span>
+      </div>
+    </div>
+
+    <div class="tile">
+      <img src="concourse.svg" alt="Concourse clock face preview"/>
+      <h2>5. Concourse</h2>
+      <p>Charcoal field, bold orange numerals at every hour position, departure-board-style digital. Optimized for at-a-glance reading from across a room or when the clock window is small in the corner of a screen.</p>
+      <div class="swatches" aria-label="palette">
+        <span class="sw" style="background:#181818" title="#181818"></span>
+        <span class="sw" style="background:#ff8c00" title="#ff8c00"></span>
+        <span class="sw" style="background:#ffffff" title="#ffffff"></span>
+      </div>
+    </div>
+
+    <div class="tile">
+      <img src="daylight.svg" alt="Daylight clock face preview"/>
+      <h2>6. Daylight</h2>
+      <p>Pale cream background, bold navy numerals at every hour, orange-red second hand. High contrast and accessibility-friendly. Designed to remain legible in bright office environments and for users with low vision.</p>
+      <div class="swatches" aria-label="palette">
+        <span class="sw" style="background:#fffdf5" title="#fffdf5"></span>
+        <span class="sw" style="background:#003366" title="#003366"></span>
+        <span class="sw" style="background:#e84a1a" title="#e84a1a"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Source files: <code>design/themes/*.svg</code> &middot; Repository: <a href="https://github.com/doxender/WindowsComTekAtomicClock">doxender/WindowsComTekAtomicClock</a> &middot; Last updated 2026-04-25.
+  </footer>
+</body>
+</html>

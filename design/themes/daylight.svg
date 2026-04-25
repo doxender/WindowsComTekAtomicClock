@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Daylight — ComTek Atomic Clock theme (high-contrast accessible)</title>
+  <defs>
+    <radialGradient id="bg-dl" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#fffdf5"/>
+      <stop offset="100%" stop-color="#fff3d6"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-dl)"/>
+  <g transform="translate(200,200)">
+    <circle r="172" fill="#ffffff" stroke="#9a9a9a" stroke-width="2"/>
+    <circle r="160" fill="#ffffff"/>
+    <!-- 60 minute ticks (navy, thin) -->
+    <g stroke="#003366" stroke-width="1.2" stroke-linecap="butt">
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(6)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(12)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(18)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(24)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(36)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(42)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(48)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(54)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(66)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(72)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(78)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(84)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(96)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(102)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(108)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(114)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(126)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(132)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(138)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(144)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(156)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(162)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(168)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(174)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(186)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(192)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(198)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(204)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(216)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(222)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(228)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(234)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(246)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(252)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(258)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(264)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(276)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(282)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(288)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(294)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(306)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(312)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(318)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(324)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(336)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(342)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(348)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(354)"/>
+    </g>
+    <!-- 12 hour ticks (navy, thicker) -->
+    <g stroke="#003366" stroke-width="3.5" stroke-linecap="square">
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(0)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(30)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(60)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(90)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(120)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(150)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(180)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(210)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(240)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(270)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(300)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(330)"/>
+    </g>
+    <!-- All 12 numerals in bold navy sans-serif -->
+    <g font-family="'Inter', 'Segoe UI', sans-serif" font-weight="700" font-size="24" fill="#003366" text-anchor="middle">
+      <text y="-115">12</text>
+      <text x="58" y="-94">1</text>
+      <text x="100" y="-52">2</text>
+      <text x="118" y="10">3</text>
+      <text x="100" y="70">4</text>
+      <text x="58" y="112">5</text>
+      <text y="128">6</text>
+      <text x="-58" y="112">7</text>
+      <text x="-100" y="70">8</text>
+      <text x="-118" y="10">9</text>
+      <text x="-100" y="-52">10</text>
+      <text x="-58" y="-94">11</text>
+    </g>
+    <!-- hour hand: thick navy -->
+    <rect x="-4.5" y="-90" width="9" height="110" fill="#003366" rx="1.5" transform="rotate(304.35)"/>
+    <!-- minute hand: longer navy -->
+    <rect x="-3.5" y="-128" width="7" height="148" fill="#003366" rx="1.5" transform="rotate(52.2)"/>
+    <!-- second hand: orange-red for high contrast -->
+    <line x1="0" y1="22" x2="0" y2="-140" stroke="#e84a1a" stroke-width="2" stroke-linecap="round" transform="rotate(252)"/>
+    <!-- center pin -->
+    <circle r="6" fill="#003366"/>
+    <circle r="2" fill="#e84a1a"/>
+    <!-- digital readout -->
+    <text x="0" y="74" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif" font-size="18" font-weight="700" fill="#003366" letter-spacing="2">10:08:42</text>
+  </g>
+</svg>

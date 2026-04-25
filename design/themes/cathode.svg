@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>Cathode — ComTek Atomic Clock theme (retro CRT phosphor)</title>
+  <defs>
+    <radialGradient id="bg-cat" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#0a1808"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <filter id="glow-cat" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="scan-cat" x="0" y="0" width="100%" height="3" patternUnits="userSpaceOnUse">
+      <rect width="100%" height="2" fill="transparent"/>
+      <rect y="2" width="100%" height="1" fill="#00ff66" fill-opacity="0.07"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-cat)"/>
+  <g transform="translate(200,200)">
+    <!-- bezel ring (faint dark green) -->
+    <circle r="172" fill="none" stroke="#003d18" stroke-width="3"/>
+    <circle r="160" fill="none" stroke="#005c25" stroke-width="1" filter="url(#glow-cat)"/>
+    <!-- 60 minute ticks (dim green) -->
+    <g stroke="#00b048" stroke-width="0.8" opacity="0.5" filter="url(#glow-cat)">
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(6)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(12)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(18)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(24)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(36)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(42)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(48)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(54)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(66)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(72)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(78)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(84)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(96)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(102)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(108)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(114)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(126)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(132)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(138)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(144)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(156)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(162)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(168)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(174)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(186)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(192)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(198)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(204)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(216)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(222)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(228)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(234)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(246)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(252)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(258)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(264)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(276)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(282)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(288)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(294)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(306)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(312)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(318)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(324)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(336)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(342)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(348)"/>
+      <line x1="0" y1="-160" x2="0" y2="-153" transform="rotate(354)"/>
+    </g>
+    <!-- 12 hour ticks (bright green, glowing) -->
+    <g stroke="#00ff66" stroke-width="2.5" stroke-linecap="round" filter="url(#glow-cat)">
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(0)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(30)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(60)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(90)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(120)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(150)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(180)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(210)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(240)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(270)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(300)"/>
+      <line x1="0" y1="-160" x2="0" y2="-145" transform="rotate(330)"/>
+    </g>
+    <!-- numerals 12/3/6/9 (LCD-style) -->
+    <g font-family="'Lucida Console', 'Consolas', monospace" font-weight="bold" font-size="20" fill="#00ff66" text-anchor="middle" filter="url(#glow-cat)">
+      <text y="-118">12</text>
+      <text x="118" y="8">3</text>
+      <text y="128">6</text>
+      <text x="-118" y="8">9</text>
+    </g>
+    <!-- hour hand -->
+    <line x1="0" y1="14" x2="0" y2="-90" stroke="#00ff66" stroke-width="5" stroke-linecap="round" transform="rotate(304.35)" filter="url(#glow-cat)"/>
+    <!-- minute hand -->
+    <line x1="0" y1="18" x2="0" y2="-128" stroke="#00ff66" stroke-width="3.5" stroke-linecap="round" transform="rotate(52.2)" filter="url(#glow-cat)"/>
+    <!-- second hand -->
+    <line x1="0" y1="22" x2="0" y2="-142" stroke="#a8ff8a" stroke-width="1.4" stroke-linecap="round" transform="rotate(252)" filter="url(#glow-cat)"/>
+    <!-- center pin -->
+    <circle r="5" fill="#00ff66" filter="url(#glow-cat)"/>
+    <!-- 7-segment style digital readout -->
+    <rect x="-72" y="44" width="144" height="40" rx="2" fill="#000a05" stroke="#00ff66" stroke-width="0.5" opacity="0.9"/>
+    <text x="0" y="73" text-anchor="middle" font-family="'Lucida Console', 'Consolas', monospace" font-size="22" font-weight="bold" fill="#00ff66" letter-spacing="3" filter="url(#glow-cat)">10:08:42</text>
+  </g>
+  <!-- scanlines on top -->
+  <rect width="400" height="400" fill="url(#scan-cat)" pointer-events="none"/>
+</svg>
