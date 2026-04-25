@@ -13,7 +13,7 @@ A Windows desktop clock that synchronizes to the NIST atomic clock in Boulder, C
 
 ## Architecture
 
-Three-project Visual Studio 2022 solution targeting **.NET 8** on Windows 10/11.
+Three-project Visual Studio solution targeting **.NET 8** on Windows 10/11. Built with Visual Studio 2026 (Visual Studio 2022 also works — the project files are forward/backward compatible).
 
 | Project | Type | Runs as | Purpose |
 |---|---|---|---|
@@ -26,7 +26,7 @@ The UI and Service communicate over a named pipe. The Service is the only compon
 ## Prerequisites
 
 - Windows 10 (1809+) or Windows 11
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/community/) (Community is fine) with the **.NET desktop development** workload
+- [Visual Studio 2026](https://visualstudio.microsoft.com/) (or 2022) — Community edition is fine. Install the **.NET desktop development** workload.
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - Git
 
