@@ -1,4 +1,5 @@
 using ComTekAtomicClock.Service;
+using ComTekAtomicClock.Service.Ipc;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -11,6 +12,13 @@ builder.Services.AddWindowsService(options =>
     options.ServiceName = "ComTekAtomicClockSvc";
 });
 
+// IPC: stub request handler + named-pipe server (per § 2.4).
+// StubIpcRequestHandler will be replaced with the real router when
+// SyncWorker / confirmation flow land in subsequent commits.
+builder.Services.AddSingleton<IIpcRequestHandler, StubIpcRequestHandler>();
+builder.Services.AddHostedService<IpcServer>();
+
+// Sync worker (still the dummy template for now; replaced in a later step).
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
