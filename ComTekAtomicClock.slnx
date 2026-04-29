@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ComTekAtomicClock.Service/ComTekAtomicClock.Service.csproj" />
+    <Project Path="src/ComTekAtomicClock.ServiceInstaller/ComTekAtomicClock.ServiceInstaller.csproj" />
+    <Project Path="src/ComTekAtomicClock.Shared/ComTekAtomicClock.Shared.csproj" />
+    <Project Path="src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj" />
+  </Folder>
+</Solution>

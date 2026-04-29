@@ -13,15 +13,16 @@ A Windows desktop clock that synchronizes to the NIST atomic clock in Boulder, C
 
 ## Architecture
 
-Three-project Visual Studio solution targeting **.NET 8** on Windows 10/11. Built with Visual Studio 2026 (Visual Studio 2022 also works — the project files are forward/backward compatible).
+Four-project Visual Studio solution targeting **.NET 8 LTS** on Windows 10/11. Buildable from the CLI alone (`dotnet build`); Visual Studio 2026 (or 2022) is recommended for debugging and the XAML designer but not required to author or build.
 
-| Project | Type | Runs as | Purpose |
-|---|---|---|---|
-| `ComTekAtomicClock.UI` | WPF App | Current user | Tray icon, tabbed UI, clock windows, desktop overlay |
-| `ComTekAtomicClock.Service` | Worker Service | LocalSystem | SNTP query to `time.nist.gov`, calls `SetSystemTime`, schedules periodic sync |
-| `ComTekAtomicClock.Shared` | Class Library | n/a | NTP packet, IPC contracts, shared models |
+| Project | Type | Target | Runs as | Purpose |
+|---|---|---|---|---|
+| `ComTekAtomicClock.UI` | WPF App | `net8.0-windows` | Current user | Tray icon, tabbed UI, clock windows, desktop overlay |
+| `ComTekAtomicClock.Service` | Worker Service | `net8.0` | LocalSystem | SNTP query to NIST stratum-1 pool, calls `SetSystemTime`, schedules periodic sync |
+| `ComTekAtomicClock.Shared` | Class Library | `net8.0` | n/a (referenced) | NTP packet types, IPC contracts, shared models |
+| `ComTekAtomicClock.ServiceInstaller` | Console (admin) | `net8.0` | LocalSystem (one-shot, via UAC) | Privileged helper that installs/starts the Windows Service when the user clicks the §1.9 banner |
 
-The UI and Service communicate over a named pipe. The Service is the only component with rights to change the system clock.
+The UI and Service communicate over a named pipe (`ComTekAtomicClock.UiToService`); the contract lives in `ComTekAtomicClock.Shared.Ipc`. The Service is the only component with rights to change the system clock; the ServiceInstaller is the only component that requires admin elevation, and only when the user clicks "Install / start the time-sync service" on the §1.9 banner.
 
 ## Prerequisites
 
@@ -32,16 +33,29 @@ The UI and Service communicate over a named pipe. The Service is the only compon
 
 ## Build & run
 
+From this directory (`windows/`):
+
 ```pwsh
-# from this directory, after the solution is scaffolded
+# Restore and build all four projects
 dotnet restore
 dotnet build -c Debug
 
-# run the UI (foreground)
-dotnet run --project ComTekAtomicClock.UI
+# Run the UI in the foreground (during development; debug build)
+dotnet run --project src/ComTekAtomicClock.UI
 
-# install the service (admin shell required)
-sc.exe create ComTekAtomicClockSvc binPath= "<full path>\ComTekAtomicClock.Service.exe" start= auto
+# Run the Service interactively (in dev — does NOT require admin
+# while running as a console app; only requires admin when registered
+# with the SCM)
+dotnet run --project src/ComTekAtomicClock.Service
+```
+
+Production install of the Windows Service is handled by the
+`ComTekAtomicClock.ServiceInstaller` helper, which the UI's §1.9
+banner launches via UAC. For manual install during development:
+
+```pwsh
+# From an Admin PowerShell, after `dotnet publish -c Release -r win-x64`:
+sc.exe create ComTekAtomicClockSvc binPath= "<full path>\ComTekAtomicClock.Service.exe" start= auto DisplayName= "ComTek Atomic Clock — time sync"
 sc.exe start ComTekAtomicClockSvc
 ```
 
@@ -55,22 +69,30 @@ sc.exe start ComTekAtomicClockSvc
 
 ```
 ComTekAtomicClock/
-  windows/                       <-- this repo (remote: WindowsComTekAtomicClock)
-    README.md
-    requirements.txt             functional & non-functional requirements
-    .gitignore
-    src/                         (added when solution is scaffolded)
+└── windows/                              <-- this repo
+    ├── ComTekAtomicClock.slnx            (.NET 9+ XML solution format)
+    ├── README.md                         (you are here)
+    ├── requirements.txt                  (functional + non-functional spec — source of truth)
+    ├── LICENSE                           (MIT)
+    ├── .gitignore
+    ├── design/                           (visual design artifacts)
+    │   ├── README.md                     (per-theme rationale + slot mapping)
+    │   └── themes/                       (12 .svg + index.html gallery)
+    └── src/                              (C# source)
+        ├── ComTekAtomicClock.UI/         (WPF app)
+        ├── ComTekAtomicClock.Service/    (Worker Service)
+        ├── ComTekAtomicClock.Shared/     (class library)
+        └── ComTekAtomicClock.ServiceInstaller/   (privileged helper)
 ```
 
 The parent `ComTekAtomicClock/` folder is reserved as an umbrella for future per-platform repos (e.g. `mac/`, `linux/`).
 
-## Git remote
+Future folders, added when needed: `tests/` (xUnit projects mirroring `src/`), `tools/` (build/sign/package scripts), `package/` (MSIX manifest + assets + `.appinstaller` template per § 2.7 of `requirements.txt`).
 
-The remote repository will be named **`WindowsComTekAtomicClock`**. To attach once it exists:
+## Repository remote
 
-```pwsh
-git remote add origin https://github.com/<owner>/WindowsComTekAtomicClock.git
-git push -u origin master
+```
+origin  https://github.com/doxender/WindowsComTekAtomicClock.git
 ```
 
 ## License
