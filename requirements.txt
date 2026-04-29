@@ -43,6 +43,20 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - The active theme is selectable per clock window and per tab
        (see § 1.2 for the per-tab settings gear and § 1.8 for the
        global "same theme everywhere" override).
+     - Analog second-hand motion default is theme-decided. Each
+       analog theme picks `smooth` (sub-second sweep) or `stepped`
+       (once-per-second tick) as part of its identity; per-theme
+       defaults are documented in design/README.md. Each tab and
+       free-floating window may override the default via a
+       three-way `Theme default / Smooth / Stepped` selector
+       exposed in the settings popover (§ 1.2, § 1.8).
+     - Theme animations beyond the second hand — Flip Clock card
+       flips, Marquee bulb chase, Binary BCD dot glow on toggle,
+       Hex day-fraction color drift — are always rendered when the
+       Windows system "Show animations in Windows" accessibility
+       setting is enabled, and always omitted when it is disabled.
+       There is no app-level animation toggle; the system
+       accessibility setting is the single source of truth.
      - Per-theme color customization. Every theme — analog,
        digital-only, AND encoding — exposes the same five
        user-overridable color slots, set per tab (or per
@@ -80,13 +94,42 @@ is updated whenever a scope, architecture, or tooling decision changes.
        leaving a pure analog face. The toggle is hidden for themes
        in categories (b) and (c) since they have no analog face to
        reveal.
+     - 24-hour vs 12-hour rendering. The time format setting
+       (per-tab, per-window — see § 1.8) is one of `Auto` (follow
+       Windows locale, the default), `12h`, or `24h`.
+
+         12-hour mode renders the digital readout as `H:MM:SS AM/PM`
+         (or as `H:MM:SS` with a separate AM/PM indicator on themes
+         where the readout is space-constrained). Analog numeral
+         positions render their canonical labels (1-12 or
+         12/3/6/9 depending on theme).
+
+         24-hour mode renders the digital readout as `HH:MM:SS`,
+         no AM/PM. On analog themes, the dial keeps its 12 numeral
+         positions but the labels SWAP at the 12:00:00 boundaries:
+           - From midnight (00:00:00) to noon (12:00:00):
+             positions show their AM labels (1, 2, ..., 11, 12 for
+             full-numeral themes; 12, 3, 6, 9 for sparse themes).
+           - From noon (12:00:00) to midnight (24:00:00):
+             positions 1-11 show 13-23; position 12 stays as "12";
+             sparse themes flip 3->15, 6->18, 9->21 with 12 fixed.
+           - The flip is abrupt at the exact second boundary, not
+             animated. Boulder Slate has no numerals and is
+             unaffected.
 
 1.2  Multiple time zones (tabbed view)
      - The main application window shall present a tabbed view, each
-       tab bound to a single IANA / Windows time zone.
-     - Each tab shall expose a settings gear icon on the right side of
-       the tab header. Clicking it opens a popover containing:
-         - Time-zone selector (dropdown of IANA / Windows zones).
+       tab bound to a single IANA time zone (e.g., `America/New_York`,
+       `Europe/Berlin`, `Asia/Tokyo`). Resolved at runtime via
+       .NET 8's `TimeZoneInfo.FindSystemTimeZoneById` which accepts
+       IANA IDs natively on Windows.
+     - Each tab shall expose a settings gear icon on the right side
+       of the tab header. Clicking it opens a popover containing:
+         - Time-zone selector. A type-to-search filter over the full
+           IANA catalog (~600 zones). Typing partial city or region
+           names ("tok" → Tokyo, Tokelau; "berlin" → Europe/Berlin)
+           narrows the list. Stored in settings.json as the IANA
+           string (e.g., `"timezone": "America/New_York"`).
          - Theme selector (dropdown of all themes from § 1.1). This
            selector is disabled when the global "Use the same theme
            across all tabs" toggle is ON (see § 1.8).
@@ -95,12 +138,30 @@ is updated whenever a scope, architecture, or tooling decision changes.
            and specialty themes since they have no separable digital
            readout to toggle.
          - Five color pickers labeled "Ring", "Face", "Hands",
-           "Numbers", and "Digital" (per § 1.1). Each picker
-           overrides the active theme's color for that slot on this
-           tab only — unless the global "Use the same theme across
-           all tabs" toggle is ON, in which case the override
-           propagates to all tabs. A "Reset colors to theme
-           defaults" link sits under the pickers.
+           "Numbers", and "Digital" (per § 1.1). Each picker, when
+           clicked, opens a modern color-picker control containing:
+             · HSV color wheel (hue + saturation/value).
+             · RGB sliders (8-bit per channel).
+             · Alpha (transparency) slider. Required for the
+               desktop overlay mode (§ 1.4) and for translucent
+               theme elements (e.g., Aero Glass acrylic).
+             · Hex input field accepting `#RRGGBB` or `#RRGGBBAA`.
+             · Eyedropper that picks a color from anywhere on
+               screen.
+           Each picker overrides the active theme's color for that
+           slot on this tab only — unless the global "Use the same
+           theme across all tabs" toggle is ON, in which case the
+           override propagates to all tabs. A "Reset colors to
+           theme defaults" link sits under the pickers and restores
+           the theme's defaults for all five slots.
+         - Time format selector: `Auto` / `12h` / `24h`. `Auto`
+           (the default) follows the Windows locale's short-time
+           format. See § 1.1 for the analog numeral-flip behavior
+           in 24h mode.
+         - Second-hand motion override: `Theme default` / `Smooth`
+           / `Stepped`. Default is `Theme default`. Visible only on
+           analog themes (§ 1.1 a) since digital and encoding
+           themes have no analog second hand.
      - The user can add, rename, reorder, and remove tabs.
 
 1.3  Multiple simultaneous clock windows
@@ -117,14 +178,54 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - Multiple overlay clocks may run simultaneously.
 
 1.5  Atomic clock synchronization
-     - The application shall synchronize the Windows system clock to a
-       NIST time server (default: time.nist.gov, Boulder anycast).
+     - The application shall synchronize the Windows system clock to
+       a NIST time server. Default primary: `time.nist.gov` (anycast
+       to NIST's stratum-1 pool; NIST's primary atomic clocks live
+       in Boulder, CO).
      - Synchronization uses SNTP (RFC 4330) over UDP/123.
-     - Default sync interval: hourly. User-configurable between 15
-       minutes and 24 hours.
-     - Manual "Sync now" action shall be available from the tray menu.
-     - The application shall respect the NIST 4-second minimum poll
-       interval per server.
+     - Default sync interval: hourly. User-configurable between
+       15 minutes and 24 hours.
+     - Manual "Sync now" action shall be available from the tray
+       menu.
+     - The Service shall respect the NIST minimum-poll-interval
+       rule: no more than one query per server per 4 seconds, both
+       within a single sync attempt and across the periodic
+       interval.
+
+     - Fallback pool (NIST-only). When the primary `time.nist.gov`
+       anycast endpoint fails (timeout, DNS failure, refused
+       packet), the Service walks NIST's published stratum-1 pool
+       in a randomized order. The pool, hardcoded in the binary
+       and refreshed per release from
+       https://tf.nist.gov/tf-cgi/servers.cgi, is at minimum:
+
+         Gaithersburg, MD:   time-a-g.nist.gov
+                             time-b-g.nist.gov
+                             time-c-g.nist.gov
+                             time-d-g.nist.gov
+                             time-e-g.nist.gov
+         Fort Collins, CO:   time-a-wwv.nist.gov
+                             time-b-wwv.nist.gov
+                             time-c-wwv.nist.gov
+                             time-d-wwv.nist.gov
+                             time-e-wwv.nist.gov
+
+       Each server is queried at most once per sync attempt; the
+       first successful, signature-validated response is used.
+     - No non-NIST fallback. If every NIST server in the pool fails
+       in a single sync attempt — total NIST outage, network down,
+       DNS broken — the Service logs a Warning to the Event Log
+       (with the per-server failure reason), sleeps one full sync
+       interval, and retries. The application is deliberately
+       constrained to atomic time from the NIST pool; it will not
+       silently degrade to `time.windows.com`, `pool.ntp.org`, or
+       any other non-stratum-1 source.
+     - The user-configurable "Sync server" setting (per § 1.8)
+       accepts only hostnames within the NIST pool. Non-NIST
+       hostnames are rejected at the input field with an
+       explanatory tooltip ("ComTek Atomic Clock syncs only to the
+       NIST stratum-1 pool. To use a different source, you'd be
+       running a different clock.").
 
 1.6  Background service
      - System clock synchronization shall run as a Windows Service so
@@ -141,14 +242,25 @@ is updated whenever a scope, architecture, or tooling decision changes.
 
 1.8  Settings
      - Per-tab: time zone, theme, "show digital readout" (analog
+       themes only), time format (auto / 12h / 24h), second-hand
+       motion override (theme default / smooth / stepped, analog
        themes only), and the five color overrides (ring, face,
        hands, numbers, digital).
      - Per-window (clock windows spawned outside the main tabbed
        view per § 1.3): time zone, theme, size, position, on-top,
        overlay mode, "show digital readout" (analog themes only),
-       and the five color overrides.
+       time format (auto / 12h / 24h), second-hand motion
+       override, and the five color overrides.
      - Global:
          - Sync server, sync interval.
+         - "Confirm large sync corrections" toggle (default OFF;
+           when ON, corrections greater than the threshold prompt
+           the user via toast — see § 2.5).
+         - Large-offset threshold in seconds (default 5).
+         - "Send anonymous crash reports" toggle (default OFF; see
+           § 2.11).
+         - "Send anonymous usage stats" toggle (default OFF; see
+           § 2.11).
          - Start with Windows.
          - Service install state.
          - "Use the same theme across all tabs" toggle. When ON,
@@ -160,6 +272,100 @@ is updated whenever a scope, architecture, or tooling decision changes.
            govern free-floating clock windows from § 1.3 — those
            are always per-window.
          - Default theme on first run: Atomic Lab.
+
+1.9  Service-absent behavior (degraded mode)
+     - When the Service is uninstalled, disabled, stopped, or
+       otherwise unreachable over the named pipe (§ 2.4), the UI
+       shall continue to run. All clock faces continue to display
+       the Windows system clock for their bound time zone — the
+       time just isn't being NIST-synced.
+     - Every visible clock face shall surface the "service not
+       running" warning directly on the face. The text replacement
+       is per-category:
+
+       - Analog themes (§ 1.1 a): the integrated digital readout
+         text is replaced with the literal string
+         "SERVICE NOT RUNNING". The analog hands continue showing
+         the local time normally.
+       - Digital-only themes (§ 1.1 b): the primary big-digit text
+         is replaced with "SERVICE NOT RUNNING". The time is not
+         displayed on these themes while the Service is down — the
+         warning is the priority. (Users who need to see time
+         during an outage can switch to an analog theme on the
+         affected tab.)
+       - Specialty encoding themes (§ 1.1 c): the decoded readout
+         text below the encoded representation is replaced with
+         "SERVICE NOT RUNNING". The encoded representation
+         (BCD dots, hex digits, binary digits) continues to show
+         the time.
+
+     - The replacement text shall be drawn in the active theme's
+       "Ring" slot color (per § 1.1) so it reads as obviously
+       different from normal-time text and contrasts with the
+       theme's Face color.
+     - The main application window shall additionally show a banner
+       with a button to enable the Service. The button's label
+       reflects the detected Service state (the UI can enumerate
+       local services as a standard user, no elevation required):
+
+         - Service not installed:
+             "Install and start the time-sync service"
+         - Service installed but stopped:
+             "Start the time-sync service"
+         - Service running:
+             (banner is not shown in this state)
+
+       Clicking the button shells to a small privileged helper
+       (`ComTekAtomicClock.ServiceInstaller.exe`, packaged
+       alongside the UI). Windows fires the UAC consent prompt
+       once. The helper re-detects Service state at run time
+       (state may have changed between UI detection and click)
+       and behaves as follows:
+
+         - Not installed: runs
+             sc.exe create ComTekAtomicClockSvc
+               binPath= "<resolved path to Service.exe>"
+               start= auto
+               DisplayName= "ComTek Atomic Clock — time sync"
+           followed by `sc.exe start ComTekAtomicClockSvc`.
+         - Installed but stopped: runs only
+             sc.exe start ComTekAtomicClockSvc
+           (skips `create` — the existing service binary path,
+            start mode, and display name are left untouched).
+         - Already running: no-op, reports success, exits.
+
+       Helper exits with code 0 on success, non-zero on any
+       failure. The UI surfaces a non-zero exit as a toast/error
+       dialog with the helper's stderr text.
+     - When the Service comes back online, the on-face warning text
+       reverts to normal time display, and the main-window banner
+       dismisses automatically.
+
+1.10 First-run experience
+     - On first launch (no settings.json at the path in § 2.10), the
+       application creates settings.json with the following defaults
+       and opens the main window:
+         - One tab bound to the system's local IANA time zone.
+         - Atomic Lab theme.
+         - Time format = Auto.
+         - Sync interval = hourly. Sync server = `time.nist.gov`.
+         - No color overrides; theme defaults are used for all five
+           slots.
+         - "Confirm large sync corrections" = OFF.
+         - "Use the same theme across all tabs" = OFF.
+     - There is no welcome dialog, no setup wizard, no tutorial.
+       Discovery happens through use; the settings gear popover and
+       tray menu are sufficient.
+     - The Service install state is naturally surfaced by the § 1.9
+       service-absent banner, which is showing when the app opens
+       on a fresh non-MSIX install. The user installs the Service
+       by clicking it; if they decline, the app continues to work
+       — only NIST sync is unavailable until they enable the
+       Service. The MSIX installer (§ 2.7) installs and starts the
+       Service as part of package install, so the banner is not
+       shown at first launch in that path.
+     - The app shall NOT require any privileged action to reach a
+       usable, time-displaying state.
 
 ------------------------------------------------------------------
 2. NON-FUNCTIONAL REQUIREMENTS
@@ -188,8 +394,28 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - Service shall log sync attempts, offsets applied, and failures
        to the Windows Event Log under a custom source.
      - Sync offset greater than a configurable threshold (default 5 s)
-       is logged at Warning; the user may opt to require confirmation
-       before applying large corrections.
+       is logged at Warning. If the user has opted in to "Confirm
+       large sync corrections" (per § 1.8), the Service shall NOT
+       apply the correction immediately; instead it shall:
+         - Notify the UI over the named pipe (§ 2.4) with the signed
+           offset and the source server hostname.
+         - The UI shall raise a Windows ToastNotification (Win10+
+           framework, already a target platform per § 2.1) of the
+           form:
+             "Time off by 47 s (gain). Apply? [Apply] [Skip]"
+           with the actual signed offset and direction substituted.
+         - On `Apply`: UI sends Apply over the pipe; Service writes
+           the new system time via `SetSystemTime` and logs an
+           Information entry with the pre/post offset.
+         - On `Skip`, or no response within 30 seconds (the user is
+           afk): the Service skips this sync, logs an Information
+           entry, and retries on the next sync interval. The clock
+           remains drifted until the user accepts a future
+           correction.
+       When the "Confirm large sync corrections" toggle is OFF
+       (the default), large corrections are applied immediately and
+       the only user-visible signal is the Warning-level Event Log
+       entry.
 
 2.6  Security
      - All NIST traffic is plain SNTP; the service shall validate the
@@ -198,10 +424,44 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - Release binaries shall be Authenticode-signed before
        distribution.
 
-2.7  Packaging
-     - Single MSIX installer that deploys both the UI and the service
-       and registers the service.
-     - Uninstaller shall stop and remove the service.
+2.7  Packaging and updates
+     - Single MSIX installer that deploys the UI, the Service, and
+       the privileged installer helper (§ 1.9). MSIX registers the
+       Service for automatic start at boot. The package bundles
+       both x64 and ARM64 architectures (per § 2.1).
+     - Uninstaller stops and removes the Service, removes the
+       privileged helper, and leaves `settings.json` (§ 2.10) in
+       place under `%APPDATA%\ComTekAtomicClock\`. Users frequently
+       uninstall and reinstall to fix issues; preserving settings
+       on uninstall is the user-friendly default.
+     - Updates are delivered via an `.appinstaller` manifest file
+       hosted on GitHub Pages:
+         - URL pattern:
+             https://doxender.github.io/WindowsComTekAtomicClock/
+                 ComTekAtomicClock.appinstaller
+         - Files served from the same Pages site:
+             ComTekAtomicClock.appinstaller   - manifest pointing at
+                                                the latest .msix
+             ComTekAtomicClock-X.Y.Z.msix     - versioned package
+                                                (prior versions kept
+                                                in the repo for
+                                                history but not
+                                                referenced by the
+                                                manifest)
+         - First install: user clicks the .appinstaller link from a
+           GitHub Release page or the README. Windows imports the
+           manifest, installs the package, and registers the
+           auto-update channel.
+         - Subsequent versions: when a new .msix is referenced by
+           the manifest, Windows detects the change on app launch
+           and updates silently in the background. The user does
+           not see an update prompt.
+         - The .appinstaller is configured with
+           `HoursBetweenUpdateChecks = 0` so an update check fires
+           on every launch.
+     - Release MSIX packages shall be Authenticode-signed before
+       being published to the Pages site (per § 2.6). Unsigned MSIX
+       is rejected by Windows on install.
 
 2.8  Build environment
      - Hard prerequisite: .NET 8 SDK on PATH. The full solution shall
@@ -218,6 +478,93 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - Source code license: MIT (see LICENSE at repo root).
      - Copyright (c) 2026 Daniel V. Oxender.
      - Source repository: https://github.com/doxender/WindowsComTekAtomicClock
+
+2.10 Persistence and storage
+     - All UI settings (per-tab, per-window, global, including the
+       five-color overrides per active theme — see § 1.8) shall
+       persist to a single JSON file at:
+
+         %APPDATA%\ComTekAtomicClock\settings.json
+
+       Per-user (Roaming AppData), portable between machines (the
+       user can copy the file), and hand-editable.
+     - Writes shall be atomic: write to a sibling `.tmp` file,
+       flush to disk, then rename over the existing file. Avoids
+       partial-write corruption on crash or power loss.
+     - JSON schema includes a `schemaVersion` integer for forward
+       migration. Unknown fields are preserved on read so a newer
+       app version does not lose data when the file is later read
+       by an older app version.
+     - Created on first run if absent, populated with defaults
+       (Atomic Lab theme, hourly sync, no extra tabs, single tab
+       bound to the system's local time zone).
+     - The Service reads its own sync server / interval / Event
+       Log source from a separate `service.json` in the same
+       directory; written by the UI, read by the Service. This
+       split avoids cross-process write contention on the
+       user-settings file.
+
+2.11 Telemetry and crash reporting
+     - Two opt-in toggles in global settings (§ 1.8), both default
+       OFF and independent:
+         - "Send anonymous crash reports"
+         - "Send anonymous usage stats"
+     - When the user toggles either to ON for the first time, a
+       confirmation dialog summarizes the data that will be
+       collected, links to the privacy policy
+       (`PRIVACY.md` at repo root), and confirms consent.
+       Subsequent toggles between ON and OFF do not re-prompt.
+
+     - Crash reports include only:
+         · Stack trace
+         · Exception type and message
+         · App version (semver)
+         · Windows version (major.minor)
+         · .NET runtime version
+         · Local timestamp (no time-zone offset)
+         · Active theme at time of crash
+
+       Crash reports do NOT include: user names, file paths outside
+       the app's own install directory, machine names, IP addresses
+       (the receiving endpoint must not log them), settings values
+       of any kind.
+
+     - Usage stats include only (sampled, aggregated):
+         · App launch count per session
+         · Active theme(s) in use (count per theme)
+         · Sync attempt count, success count, mean offset (signed)
+         · Sync interval distribution
+         · Theme-switch count per session
+         · Tab count distribution
+         · Free-floating window count distribution
+         · Time format distribution (`Auto` / `12h` / `24h`)
+         · Hide-digital readout usage rate (analog themes)
+
+       Usage stats do NOT include: time zones in use (potential
+       location hint), specific color override values, any
+       free-form text the user has entered, any data tied to a
+       persistent identifier.
+
+     - Endpoint and infrastructure are a deferred decision. Pre-1.0
+       options under consideration:
+         · Self-hosted Sentry / GlitchTip for crashes.
+         · Self-hosted Plausible / PostHog for usage stats.
+         · Cloud Sentry free tier (~5k events/mo).
+         · Custom Cloudflare Workers endpoint backed by R2.
+       The privacy policy must accurately describe the chosen
+       endpoint(s) and their retention behavior at release time.
+
+     - All transmitted data shall use TLS 1.2 or newer.
+     - The user may revoke consent at any time by toggling either
+       category OFF; the next app launch stops sending data in that
+       category. Already-sent data cannot be recalled — this is
+       documented explicitly in the privacy policy.
+
+     - Pre-public-release blocker: `PRIVACY.md` at the repo root,
+       drafted to match the chosen telemetry infrastructure and
+       reviewed for legal sufficiency. Tracked as an open
+       pre-release item (similar to Tromp's pre-publication
+       checklist).
 
 ------------------------------------------------------------------
 3. OUT OF SCOPE (initial release)

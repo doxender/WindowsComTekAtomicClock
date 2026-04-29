@@ -27,6 +27,19 @@ Every preview is rendered at the same fixed time — **10:08:42** — so the eye
 
 For analog themes (1–6) the integrated digital readout can be hidden per window via a toggle in the tab/window settings, leaving a pure analog face. Themes 7–12 are inherently digital and the toggle is hidden.
 
+### Analog second-hand motion defaults
+
+Per `requirements.txt` § 1.1, each analog theme picks a default cadence for the second hand. The user can override per tab or per window via a `Theme default / Smooth / Stepped` selector in the settings popover.
+
+| # | Theme | Default | Rationale |
+|---|---|---|---|
+| 1 | Atomic Lab | Smooth | Sub-second sweep matches the NIST-instrument identity |
+| 2 | Boulder Slate | Stepped | Faithful to the Mondaine SBB railway-clock cadence |
+| 3 | Aero Glass | Smooth | Win11 Fluent motion language is continuous |
+| 4 | Cathode | Smooth | Phosphor persistence-of-vision suggests a sweep |
+| 5 | Concourse | Smooth | Departure-board / station-clock electromechanical sweep |
+| 6 | Daylight | Stepped | Mechanical office wall-clock cadence; emphasizes accessibility (each tick is a discrete event) |
+
 ### Theme rationale, in detail
 
 **1. Atomic Lab.** This is the theme that earns the product name. The amber LCD readout, brushed-silver bezel, and `NIST · BOULDER · CO` legend make explicit the connection to the time source the service is talking to. Best as the default if the audience is technical.
