@@ -10,11 +10,12 @@ using System.Runtime.Versioning;
 using System.Windows;
 using ComTekAtomicClock.Shared.Settings;
 using ComTekAtomicClock.UI.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace ComTekAtomicClock.UI.Dialogs;
 
 [SupportedOSPlatform("windows")]
-public partial class TabSettingsDialog : Window
+public partial class TabSettingsDialog : FluentWindow
 {
     private readonly TabViewModel _tabVm;
 

@@ -1,24 +1,36 @@
-<Window x:Class="ComTekAtomicClock.UI.Dialogs.TabSettingsDialog"
+<ui:FluentWindow x:Class="ComTekAtomicClock.UI.Dialogs.TabSettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
         xmlns:settings="clr-namespace:ComTekAtomicClock.Shared.Settings;assembly=ComTekAtomicClock.Shared"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="Tab settings"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
         Width="520" Height="380"
-        Background="#0a1628"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
-    <Window.Resources>
+    <ui:FluentWindow.Resources>
         <ObjectDataProvider x:Key="ThemeValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="settings:Theme"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
-    </Window.Resources>
+    </ui:FluentWindow.Resources>
 
+    <DockPanel>
+        <ui:TitleBar DockPanel.Dock="Top"
+                     Title="Tab settings"
+                     ShowMaximize="False"
+                     ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -99,4 +111,5 @@
                     Click="SaveButton_Click"/>
         </StackPanel>
     </Grid>
-</Window>
+    </DockPanel>
+</ui:FluentWindow>

@@ -1,14 +1,26 @@
-<Window x:Class="ComTekAtomicClock.UI.Dialogs.AboutDialog"
+<ui:FluentWindow x:Class="ComTekAtomicClock.UI.Dialogs.AboutDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="About ComTek Atomic Clock"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
         Width="520" Height="430"
-        Background="#0a1628"
         Foreground="#f0e8c8"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
+    <DockPanel>
+        <ui:TitleBar DockPanel.Dock="Top"
+                     Title="About ComTek Atomic Clock"
+                     ShowMaximize="False"
+                     ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -100,4 +112,5 @@
                     IsDefault="True" IsCancel="True"/>
         </StackPanel>
     </Grid>
-</Window>
+    </DockPanel>
+</ui:FluentWindow>

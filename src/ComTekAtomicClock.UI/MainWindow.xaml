@@ -1,8 +1,9 @@
-<Window x:Class="ComTekAtomicClock.UI.MainWindow"
+<ui:FluentWindow x:Class="ComTekAtomicClock.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:local="clr-namespace:ComTekAtomicClock.UI"
         xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
         mc:Ignorable="d"
@@ -10,22 +11,31 @@
         Icon="pack://application:,,,/Assets/AppIcon.ico"
         Height="640" Width="560"
         MinHeight="420" MinWidth="380"
-        Background="#060D1A"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
         WindowStartupLocation="CenterScreen">
 
-    <Window.Resources>
+    <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-    </Window.Resources>
+    </ui:FluentWindow.Resources>
 
     <DockPanel>
 
-        <!-- ============================== Menu Bar ============================== -->
+        <!-- ============================== Title Bar ============================= -->
         <!--
-          Letting the Menu use the system default colors fixes the
-          low-contrast issue Dan flagged ("almost a whiteout"). The
-          menu sits as a thin light-gray strip with black text against
-          the dark navy window background — clean and readable.
+          Wpf.Ui's TitleBar replaces the standard Windows title bar
+          when ExtendsContentIntoTitleBar=True. Drag-to-move,
+          minimize/maximize/close, and the icon are all handled.
         -->
+        <ui:TitleBar DockPanel.Dock="Top"
+                     Title="ComTek Atomic Clock">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!-- ============================== Menu Bar ============================== -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
                 <MenuItem Header="E_xit" Click="ExitMenu_Click"/>
@@ -63,16 +73,11 @@
                 Padding="16,10"
                 Visibility="{Binding BannerVisible, Converter={StaticResource BoolToVis}}">
             <DockPanel>
-                <Button DockPanel.Dock="Right"
-                        Content="{Binding BannerButtonText}"
-                        Command="{Binding InstallServiceCommand}"
-                        Padding="14,6"
-                        FontWeight="SemiBold"
-                        Margin="12,0,0,0"
-                        Background="#FFB000"
-                        Foreground="#0a0a0a"
-                        BorderThickness="0"
-                        Cursor="Hand"/>
+                <ui:Button DockPanel.Dock="Right"
+                           Content="{Binding BannerButtonText}"
+                           Command="{Binding InstallServiceCommand}"
+                           Appearance="Primary"
+                           Margin="12,0,0,0"/>
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="{Binding BannerHeadlineText}"
                                FontWeight="SemiBold"
@@ -88,15 +93,7 @@
         </Border>
 
         <!-- ============================== Status Bar ============================ -->
-        <!--
-          Status bar at the bottom of the window. ServiceStatusText is
-          a one-line summary; live last-sync info (offset, age, source
-          server) lands in the next commit when IPC integration goes
-          in.
-        -->
         <StatusBar DockPanel.Dock="Bottom"
-                   Background="#0a1628"
-                   Foreground="#A8A39A"
                    FontSize="11"
                    Padding="8,2">
             <StatusBarItem>
@@ -105,7 +102,7 @@
             <Separator/>
             <StatusBarItem>
                 <TextBlock Text="Last sync: (not yet wired — Step 6d)"
-                           Foreground="#666"/>
+                           Opacity="0.6"/>
             </StatusBarItem>
         </StatusBar>
 
@@ -113,18 +110,9 @@
         <TabControl x:Name="MainTabs"
                     ItemsSource="{Binding Tabs}"
                     SelectedItem="{Binding SelectedTab}"
-                    Background="#060D1A"
-                    BorderBrush="#1A2A4A"
-                    BorderThickness="0,1,0,0"
                     Padding="0">
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <!--
-                      Tab header is just the label now. The gear-button
-                      pop-over from Step 6 is gone; per-tab settings
-                      live in Tabs -> Tab settings… (Ctrl+,) and edit
-                      the SELECTED tab via the modal dialog.
-                    -->
                     <TextBlock Text="{Binding Label}"
                                VerticalAlignment="Center"
                                FontSize="13"/>
@@ -133,7 +121,7 @@
 
             <TabControl.ContentTemplate>
                 <DataTemplate>
-                    <Grid Background="#060D1A">
+                    <Grid>
                         <controls:ClockFaceControl
                             Margin="20"
                             HorizontalAlignment="Stretch"
@@ -147,4 +135,4 @@
         </TabControl>
 
     </DockPanel>
-</Window>
+</ui:FluentWindow>

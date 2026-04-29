@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
+    <PackageReference Include="WPF-UI" Version="4.2.1" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -24,7 +25,7 @@
 
   <ItemGroup>
     <!-- Also include as content so Window.Icon can load it at runtime. -->
-    <Resource Include="Assets\AppIcon.ico"/>
+    <Resource Include="Assets\AppIcon.ico" />
   </ItemGroup>
 
 </Project>

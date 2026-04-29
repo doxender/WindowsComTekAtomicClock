@@ -8,10 +8,11 @@
 
 using System.Reflection;
 using System.Windows;
+using Wpf.Ui.Controls;
 
 namespace ComTekAtomicClock.UI.Dialogs;
 
-public partial class AboutDialog : Window
+public partial class AboutDialog : FluentWindow
 {
     public AboutDialog()
     {

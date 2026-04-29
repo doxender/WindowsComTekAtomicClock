@@ -11,11 +11,12 @@ using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Input;
 using ComTekAtomicClock.UI.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace ComTekAtomicClock.UI;
 
 [SupportedOSPlatform("windows")]
-public partial class MainWindow : Window
+public partial class MainWindow : FluentWindow
 {
     private MainWindowViewModel? _vm;
 
