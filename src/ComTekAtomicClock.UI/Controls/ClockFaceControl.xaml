@@ -7,179 +7,21 @@
     SnapsToDevicePixels="True"
     UseLayoutRounding="True">
 
-    <UserControl.Resources>
-        <!--
-          Atomic Lab theme — inline brushes for now. Step 5b will move
-          these into Themes/AtomicLab.xaml as a ResourceDictionary so
-          the user's color overrides + theme switching can apply them
-          cleanly. Values mirror design/themes/atomic-lab.svg exactly.
-        -->
-        <RadialGradientBrush x:Key="FaceBrush"
-                             Center="0.5,0.35" GradientOrigin="0.5,0.35"
-                             RadiusX="0.7" RadiusY="0.7">
-            <GradientStop Color="#1A2A4A" Offset="0"/>
-            <GradientStop Color="#060D1A" Offset="1"/>
-        </RadialGradientBrush>
-
-        <LinearGradientBrush x:Key="RingBrush" StartPoint="0.5,0" EndPoint="0.5,1">
-            <GradientStop Color="#E0E3E8" Offset="0"/>
-            <GradientStop Color="#7C8088" Offset="0.5"/>
-            <GradientStop Color="#2C3038" Offset="1"/>
-        </LinearGradientBrush>
-
-        <SolidColorBrush x:Key="HandsBrush"   Color="#F5F5F5"/>
-        <SolidColorBrush x:Key="NumbersBrush" Color="#FFB000"/>
-        <SolidColorBrush x:Key="DigitalBrush" Color="#FFB000"/>
-
-        <!-- Theme-specific accent: red second hand. Per requirements
-             § 1.1, this is NOT user-overridable; it's part of Atomic
-             Lab's identity. -->
-        <SolidColorBrush x:Key="SecondHandBrush" Color="#FF3030"/>
-
-        <!-- Digital readout panel background. Theme-specific. -->
-        <SolidColorBrush x:Key="DigitalPanelBrush" Color="#040B04"/>
-    </UserControl.Resources>
-
     <!--
-      Wrap in a Viewbox so the face scales with the window. Internal
-      coordinates are a fixed 400x400 viewBox identical to the SVG
-      reference, with the dial centered at (200, 200).
+      Theme-pluggable clock face. The Canvas is intentionally empty
+      in XAML; everything is rendered in code-behind by the per-theme
+      Build<ThemeName>() routines. This keeps each theme's visual
+      definition next to the others (one file, easy to compare and
+      tweak) and lets us add new themes with minimal ceremony — see
+      ClockFaceControl.xaml.cs.
+
+      Internal coordinate system is a fixed 400x400 with the dial
+      center at (200, 200), exactly matching the SVG mockups in
+      design/themes/. The Viewbox + Stretch=Uniform makes the whole
+      composition scale to fill the parent while preserving 1:1
+      aspect ratio.
     -->
     <Viewbox Stretch="Uniform">
-        <Canvas x:Name="Dial" Width="400" Height="400" ClipToBounds="False">
-
-            <!-- Bezel (outer ring) -->
-            <Ellipse Width="344" Height="344"
-                     Canvas.Left="28" Canvas.Top="28"
-                     Fill="{StaticResource RingBrush}"/>
-
-            <!-- Dial (inner face) -->
-            <Ellipse Width="320" Height="320"
-                     Canvas.Left="40" Canvas.Top="40"
-                     Fill="{StaticResource FaceBrush}"/>
-
-            <!--
-              Tick marks (60 minute ticks + 12 hour ticks) are added
-              programmatically in code-behind so we don't have to
-              hand-write 72 <Line> elements. They sit on top of the
-              dial, below the hands.
-            -->
-            <Canvas x:Name="TicksLayer" Width="0" Height="0"
-                    Canvas.Left="0" Canvas.Top="0"/>
-
-            <!--
-              Numerals at 12/3/6/9. Atomic Lab uses just the four
-              cardinal positions; full-numeral themes (Concourse,
-              Daylight) will draw all 12.
-            -->
-            <TextBlock Text="12"
-                       Canvas.Left="184" Canvas.Top="69"
-                       FontFamily="Consolas, Courier New"
-                       FontWeight="Bold" FontSize="22"
-                       Foreground="{StaticResource NumbersBrush}"/>
-            <TextBlock Text="3"
-                       Canvas.Left="313" Canvas.Top="195"
-                       FontFamily="Consolas, Courier New"
-                       FontWeight="Bold" FontSize="22"
-                       Foreground="{StaticResource NumbersBrush}"/>
-            <TextBlock Text="6"
-                       Canvas.Left="192" Canvas.Top="313"
-                       FontFamily="Consolas, Courier New"
-                       FontWeight="Bold" FontSize="22"
-                       Foreground="{StaticResource NumbersBrush}"/>
-            <TextBlock Text="9"
-                       Canvas.Left="71" Canvas.Top="195"
-                       FontFamily="Consolas, Courier New"
-                       FontWeight="Bold" FontSize="22"
-                       Foreground="{StaticResource NumbersBrush}"/>
-
-            <!--
-              Hour hand. Drawn vertical (12 o'clock) at 200,X going up;
-              the RotateTransform rotates around the dial center.
-              Length 104, with 14 px overhang past center for visual
-              weight (matches the SVG).
-            -->
-            <Line X1="200" Y1="214" X2="200" Y2="110"
-                  Stroke="{StaticResource HandsBrush}"
-                  StrokeThickness="6"
-                  StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                <Line.RenderTransform>
-                    <RotateTransform x:Name="HourHandRotate"
-                                     CenterX="200" CenterY="200" Angle="0"/>
-                </Line.RenderTransform>
-            </Line>
-
-            <!-- Minute hand: longer, thinner. -->
-            <Line X1="200" Y1="218" X2="200" Y2="72"
-                  Stroke="{StaticResource HandsBrush}"
-                  StrokeThickness="4"
-                  StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                <Line.RenderTransform>
-                    <RotateTransform x:Name="MinuteHandRotate"
-                                     CenterX="200" CenterY="200" Angle="0"/>
-                </Line.RenderTransform>
-            </Line>
-
-            <!-- Second hand: thinnest, in the theme-specific red accent. -->
-            <Line X1="200" Y1="222" X2="200" Y2="58"
-                  Stroke="{StaticResource SecondHandBrush}"
-                  StrokeThickness="1.6"
-                  StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                <Line.RenderTransform>
-                    <RotateTransform x:Name="SecondHandRotate"
-                                     CenterX="200" CenterY="200" Angle="0"/>
-                </Line.RenderTransform>
-            </Line>
-
-            <!-- Center pin: amber outer dot with a navy core. -->
-            <Ellipse Width="14" Height="14"
-                     Canvas.Left="193" Canvas.Top="193"
-                     Fill="{StaticResource NumbersBrush}"/>
-            <Ellipse Width="5" Height="5"
-                     Canvas.Left="197.5" Canvas.Top="197.5"
-                     Fill="{StaticResource FaceBrush}"/>
-
-            <!--
-              Integrated digital readout panel. Three lines now:
-                · top:    date (day-of-week · month · day)
-                · middle: time HH:MM:SS
-                · bottom: NIST · BOULDER · CO legend (theme-specific)
-              The date is in the Numbers/Digital amber but at smaller
-              size and lower opacity so the time stays the focal point.
-              Panel grew from 44 -> 60 px tall to fit cleanly.
-            -->
-            <Border Width="146" Height="60"
-                    Canvas.Left="127" Canvas.Top="234"
-                    Background="{StaticResource DigitalPanelBrush}"
-                    BorderBrush="{StaticResource DigitalBrush}"
-                    BorderThickness="0.6"
-                    CornerRadius="4">
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Margin="0,3,0,3">
-                    <TextBlock x:Name="DateReadout"
-                               Text=""
-                               Foreground="{StaticResource DigitalBrush}"
-                               Opacity="0.85"
-                               FontFamily="Consolas, Courier New"
-                               FontSize="9"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="DigitalReadout"
-                               Text="--:--:--"
-                               Foreground="{StaticResource DigitalBrush}"
-                               FontFamily="Consolas, Courier New"
-                               FontWeight="Bold" FontSize="20"
-                               HorizontalAlignment="Center"
-                               Margin="0,1,0,1"/>
-                    <TextBlock Text="NIST · BOULDER · CO"
-                               Foreground="{StaticResource DigitalBrush}"
-                               Opacity="0.7"
-                               FontFamily="Consolas, Courier New"
-                               FontSize="7"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-
-        </Canvas>
+        <Canvas x:Name="Dial" Width="400" Height="400" ClipToBounds="False"/>
     </Viewbox>
 </UserControl>
