@@ -2,14 +2,9 @@
 //
 // Routes incoming UI -> Service requests to the right piece of Service
 // state. This is the contract between IpcServer (which owns the pipe
-// and the read loop) and the Service's domain logic (sync status,
-// confirmation handling, etc.).
-//
-// The stub implementation in this file just acknowledges every request
-// with an empty response and logs receipt. As we wire up SyncWorker
-// and the confirmation flow in subsequent commits, the stub gets
-// replaced with real handlers — without touching IpcServer.
+// and the read loop) and the Service's domain logic.
 
+using ComTekAtomicClock.Service.Sync;
 using ComTekAtomicClock.Shared.Ipc;
 using Microsoft.Extensions.Logging;
 
@@ -25,37 +20,67 @@ public interface IIpcRequestHandler
 }
 
 /// <summary>
-/// Default stub handler. Accepts any envelope, logs it, and returns a
-/// matching empty response envelope so the UI's read loop unblocks.
-/// Real domain logic (SyncWorker, confirmation flow) will replace this
-/// in subsequent commits.
+/// Production handler. Reads live state from <see cref="SyncStateProvider"/>
+/// and answers queries with real <see cref="SyncStatus"/> snapshots.
+///
+/// SyncNowRequest currently still returns the most recent state without
+/// forcing an out-of-cycle sync — `Sync now` triggering an immediate
+/// SNTP query lands in the next commit alongside the tray menu. The
+/// shape of the response is final.
+///
+/// ConfirmLargeOffset (UI -> Service) is also stubbed pending the
+/// toast-driven confirmation flow (§ 2.5).
 /// </summary>
-public sealed class StubIpcRequestHandler : IIpcRequestHandler
+public sealed class LiveIpcRequestHandler : IIpcRequestHandler
 {
-    private readonly ILogger<StubIpcRequestHandler> _logger;
+    private readonly ILogger<LiveIpcRequestHandler> _logger;
+    private readonly SyncStateProvider _state;
 
-    public StubIpcRequestHandler(ILogger<StubIpcRequestHandler> logger)
+    public LiveIpcRequestHandler(ILogger<LiveIpcRequestHandler> logger, SyncStateProvider state)
     {
         _logger = logger;
+        _state = state;
     }
 
     public Task<IpcEnvelope?> HandleAsync(IpcEnvelope request, CancellationToken ct)
     {
-        _logger.LogInformation(
-            "IPC request received: type={Type} schemaVersion={SchemaVersion}",
+        _logger.LogDebug(
+            "IPC request: type={Type} schemaVersion={SchemaVersion}",
             request.Type, request.SchemaVersion);
 
-        // Match each request type to its corresponding response type with
-        // an empty payload. Notification-style messages (no response
-        // expected) return null.
-        IpcEnvelope? response = request.Type switch
+        switch (request.Type)
         {
-            IpcMessageType.SyncNowRequest          => IpcEnvelope.Create(IpcMessageType.SyncNowResponse,          payloadJson: "{}"),
-            IpcMessageType.LastSyncStatusRequest   => IpcEnvelope.Create(IpcMessageType.LastSyncStatusResponse,   payloadJson: "{}"),
-            IpcMessageType.ConfirmLargeOffsetResponse => null, // UI -> Service notification, no reply
-            _                                       => null,
-        };
+            case IpcMessageType.LastSyncStatusRequest:
+            {
+                var snapshot = _state.Current;
+                var env = IpcWireFormat.WrapPayload(IpcMessageType.LastSyncStatusResponse, snapshot);
+                return Task.FromResult<IpcEnvelope?>(env);
+            }
 
-        return Task.FromResult(response);
+            case IpcMessageType.SyncNowRequest:
+            {
+                // For now: return the latest snapshot. A future commit
+                // will trigger SyncWorker to perform an immediate
+                // out-of-cycle sync and respond with the result of that
+                // attempt instead.
+                var snapshot = _state.Current;
+                var env = IpcWireFormat.WrapPayload(IpcMessageType.SyncNowResponse, snapshot);
+                return Task.FromResult<IpcEnvelope?>(env);
+            }
+
+            case IpcMessageType.ConfirmLargeOffsetResponse:
+            {
+                // Notification: UI is telling the Service whether to
+                // apply a previously-prompted large correction.
+                // Confirmation flow itself is not wired yet (§ 2.5).
+                _logger.LogInformation(
+                    "Received ConfirmLargeOffsetResponse; confirmation flow not yet implemented.");
+                return Task.FromResult<IpcEnvelope?>(null);
+            }
+
+            default:
+                _logger.LogWarning("Unhandled IPC request type: {Type}", request.Type);
+                return Task.FromResult<IpcEnvelope?>(null);
+        }
     }
 }
