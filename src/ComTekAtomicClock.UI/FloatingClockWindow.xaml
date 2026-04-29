@@ -1,0 +1,85 @@
+<ui:FluentWindow x:Class="ComTekAtomicClock.UI.FloatingClockWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
+        xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
+        xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
+        Title="ComTek Atomic Clock"
+        Icon="pack://application:,,,/Assets/AppIcon.ico"
+        Height="500" Width="500"
+        MinHeight="320" MinWidth="320"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
+        WindowStartupLocation="Manual">
+
+    <ui:FluentWindow.Resources>
+        <services:AppInterTabClient x:Key="FloatingInterTabClient"/>
+    </ui:FluentWindow.Resources>
+
+    <DockPanel>
+        <!--
+          A small title bar so the window can be dragged and closed.
+        -->
+        <ui:TitleBar DockPanel.Dock="Top"
+                     Title="ComTek Atomic Clock"
+                     ShowMaximize="True"
+                     ShowMinimize="True">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!--
+          A TabablzControl on every host window is required for tab
+          transfers to work. ConsolidateOrphanedItems=True so closing
+          this window with a tab still inside reattaches the tab to
+          the main strip. Same partition (default) as MainWindow so
+          drag-back works.
+        -->
+        <dragablz:TabablzControl x:Name="FloatingTabs"
+                                 ShowDefaultCloseButton="True"
+                                 ShowDefaultAddButton="False"
+                                 ConsolidateOrphanedItems="True"
+                                 Padding="0">
+            <dragablz:TabablzControl.InterTabController>
+                <dragablz:InterTabController InterTabClient="{StaticResource FloatingInterTabClient}"/>
+            </dragablz:TabablzControl.InterTabController>
+
+            <dragablz:TabablzControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Label}"
+                                   VerticalAlignment="Center"
+                                   FontSize="13"/>
+                        <Button Content="&#x25BE;"
+                                Margin="6,0,0,0"
+                                Padding="4,0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                FontSize="10"
+                                Cursor="Hand"
+                                ToolTip="Tab settings…"
+                                Click="TabSettingsArrow_Click"
+                                Tag="{Binding}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </dragablz:TabablzControl.ItemTemplate>
+
+            <dragablz:TabablzControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <controls:ClockFaceControl
+                            Margin="20"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            TimeZone="{Binding TimeZone}"
+                            Theme="{Binding Theme}"
+                            SmoothSecondHand="{Binding SmoothSecondHand}"/>
+                    </Grid>
+                </DataTemplate>
+            </dragablz:TabablzControl.ContentTemplate>
+        </dragablz:TabablzControl>
+    </DockPanel>
+</ui:FluentWindow>

@@ -68,8 +68,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         InstallServiceCommand      = new RelayCommand(LaunchInstallerAndPoll);
         UninstallServiceCommand    = new RelayCommand(LaunchUninstallerAndPoll);
         OpenTabSettingsCommand     = new RelayCommand(OpenTabSettings, _ => SelectedTab is not null);
+        OpenTabSettingsForCommand  = new RelayCommand(OpenTabSettingsFor);
         AddTabCommand              = new RelayCommand(AddTab);
         RemoveTabCommand           = new RelayCommand(RemoveTab, _ => Tabs.Count > 1);
+        CloseTabCommand            = new RelayCommand(CloseTab);
 
         RefreshServiceState();
     }
@@ -139,12 +141,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     // Commands
     // --------------------------------------------------------------
 
-    public RelayCommand InstallServiceCommand   { get; }
-    public RelayCommand UninstallServiceCommand { get; }
-    public RelayCommand OpenAboutCommand        { get; }
-    public RelayCommand OpenTabSettingsCommand  { get; }
-    public RelayCommand AddTabCommand           { get; }
-    public RelayCommand RemoveTabCommand        { get; }
+    public RelayCommand InstallServiceCommand    { get; }
+    public RelayCommand UninstallServiceCommand  { get; }
+    public RelayCommand OpenAboutCommand         { get; }
+    public RelayCommand OpenTabSettingsCommand   { get; }
+    /// <summary>
+    /// Opens TabSettings for the tab passed as the command parameter
+    /// (used by the per-tab ▾ arrow). Distinct from OpenTabSettingsCommand
+    /// which targets the SelectedTab.
+    /// </summary>
+    public RelayCommand OpenTabSettingsForCommand { get; }
+    public RelayCommand AddTabCommand            { get; }
+    public RelayCommand RemoveTabCommand         { get; }
+    /// <summary>Removes the tab passed as the command parameter (used by
+    /// the per-tab ✕ overlay button on the clock face).</summary>
+    public RelayCommand CloseTabCommand          { get; }
 
     private void OpenAbout(object? _)
     {
@@ -158,8 +169,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private void OpenTabSettings(object? _)
     {
         if (SelectedTab is null) return;
+        OpenTabSettingsCore(SelectedTab);
+    }
 
-        var dlg = new TabSettingsDialog(SelectedTab)
+    private void OpenTabSettingsFor(object? param)
+    {
+        if (param is TabViewModel vm) OpenTabSettingsCore(vm);
+    }
+
+    private void OpenTabSettingsCore(TabViewModel tab)
+    {
+        var dlg = new TabSettingsDialog(tab)
         {
             Owner = Application.Current?.MainWindow,
         };
@@ -182,6 +202,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                     MessageBoxImage.Warning);
             }
         }
+    }
+
+    private void CloseTab(object? param)
+    {
+        if (param is not TabViewModel vm) return;
+        // Removing from Tabs cascades to _settings.Tabs + persistence
+        // via the OnTabsCollectionChanged handler.
+        Tabs.Remove(vm);
     }
 
     private void AddTab(object? _)
