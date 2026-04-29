@@ -10,6 +10,7 @@
 // the next commit.
 
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
@@ -44,6 +45,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         SelectedTab = Tabs[0];
+
+        // Keep _settings.Tabs in lockstep with the Tabs ObservableCollection
+        // — the Dragablz per-tab close button removes items directly from
+        // ItemsSource (bypassing RemoveTabCommand), and Dragablz's
+        // NewItemFactory adds items via the same path. This handler
+        // mirrors the change into the underlying TabSettings list and
+        // persists settings.json.
+        Tabs.CollectionChanged += OnTabsCollectionChanged;
 
         // Poll the Service every 4 s. Inexpensive (just enumerates
         // the local SCM) and snappy enough that the banner reflects
@@ -177,33 +186,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void AddTab(object? _)
     {
-        // New tab defaults to UTC + the global default theme. The user
-        // can rename/edit via Tab -> Settings.
+        var vm = CreateNewTab();
+        Tabs.Add(vm);   // OnTabsCollectionChanged mirrors to _settings.Tabs + persists
+        SelectedTab = vm;
+    }
+
+    private void RemoveTab(object? _)
+    {
+        if (Tabs.Count <= 1) return; // menu-driven remove keeps at least one tab
+        if (SelectedTab is null) return;
+
+        var index = Tabs.IndexOf(SelectedTab);
+        Tabs.Remove(SelectedTab);   // OnTabsCollectionChanged mirrors + persists
+        SelectedTab = Tabs[Math.Min(index, Tabs.Count - 1)];
+    }
+
+    /// <summary>
+    /// Factory passed to Dragablz's TabablzControl.NewItemFactory so the
+    /// "+" button in the tab strip creates a fresh tab with the same
+    /// defaults as the menu's "Add new tab" command.
+    /// </summary>
+    public Func<object> NewTabFactory => () => CreateNewTab();
+
+    private TabViewModel CreateNewTab()
+    {
         var newTab = new TabSettings
         {
             TimeZoneId = "UTC",
             Theme      = _settings.Global.DefaultTheme,
             TimeFormat = TimeFormatMode.Auto,
         };
-        _settings.Tabs.Add(newTab);
-        var vm = WrapTab(newTab);
-        Tabs.Add(vm);
-        SelectedTab = vm;
-        TryPersist();
+        return WrapTab(newTab);
     }
 
-    private void RemoveTab(object? _)
+    private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (Tabs.Count <= 1) return; // never remove the last tab
-        if (SelectedTab is null) return;
-
-        var index = Tabs.IndexOf(SelectedTab);
-        var settingsRecord = SelectedTab.Settings;
-        Tabs.Remove(SelectedTab);
-        _settings.Tabs.Remove(settingsRecord);
-
-        // Select the neighbor that was at the same index, or the new last.
-        SelectedTab = Tabs[Math.Min(index, Tabs.Count - 1)];
+        // Mirror inserts/removes into _settings.Tabs so settings.json
+        // stays in lockstep regardless of who mutated the collection
+        // (Dragablz close button, Dragablz "+" via NewItemFactory, or
+        // our menu commands).
+        if (e.OldItems is not null)
+        {
+            foreach (TabViewModel vm in e.OldItems)
+                _settings.Tabs.Remove(vm.Settings);
+        }
+        if (e.NewItems is not null)
+        {
+            foreach (TabViewModel vm in e.NewItems)
+            {
+                if (!_settings.Tabs.Contains(vm.Settings))
+                    _settings.Tabs.Add(vm.Settings);
+            }
+        }
         TryPersist();
     }
 

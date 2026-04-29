@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
         xmlns:local="clr-namespace:ComTekAtomicClock.UI"
         xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
         mc:Ignorable="d"
@@ -107,19 +108,25 @@
         </StatusBar>
 
         <!-- ============================== Tab Strip ============================= -->
-        <TabControl x:Name="MainTabs"
-                    ItemsSource="{Binding Tabs}"
-                    SelectedItem="{Binding SelectedTab}"
-                    Padding="0">
-            <TabControl.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Label}"
-                               VerticalAlignment="Center"
-                               FontSize="13"/>
-                </DataTemplate>
-            </TabControl.ItemTemplate>
-
-            <TabControl.ContentTemplate>
+        <!--
+          Dragablz TabablzControl gives the Chrome / Edge-style tab UX:
+            · per-tab close button (✕)
+            · "+" button to add a new tab
+            · drag-to-reorder within the strip
+          Tear-off (drag a tab into its own window) requires an
+          IInterTabClient implementation and a multi-window settings
+          model — coming in the next commit.
+        -->
+        <dragablz:TabablzControl x:Name="MainTabs"
+                                 ItemsSource="{Binding Tabs}"
+                                 SelectedItem="{Binding SelectedTab}"
+                                 ShowDefaultCloseButton="True"
+                                 ShowDefaultAddButton="True"
+                                 NewItemFactory="{Binding NewTabFactory}"
+                                 ConsolidateOrphanedItems="True"
+                                 DisplayMemberPath="Label"
+                                 Padding="0">
+            <dragablz:TabablzControl.ContentTemplate>
                 <DataTemplate>
                     <Grid>
                         <controls:ClockFaceControl
@@ -131,8 +138,8 @@
                             SmoothSecondHand="{Binding SmoothSecondHand}"/>
                     </Grid>
                 </DataTemplate>
-            </TabControl.ContentTemplate>
-        </TabControl>
+            </dragablz:TabablzControl.ContentTemplate>
+        </dragablz:TabablzControl>
 
     </DockPanel>
 </ui:FluentWindow>

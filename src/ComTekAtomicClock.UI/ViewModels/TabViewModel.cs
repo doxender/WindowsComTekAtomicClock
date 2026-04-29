@@ -133,6 +133,15 @@ public sealed class TabViewModel : INotifyPropertyChanged
     /// <summary>The underlying TabSettings record (settings.json model).</summary>
     public TabSettings Settings => _settings;
 
+    /// <summary>
+    /// Falls back to the tab's <see cref="Label"/> if any view layer ever
+    /// renders the view-model directly (notably Dragablz tab headers
+    /// through some code paths). Without this override the default
+    /// <see cref="object.ToString"/> would print
+    /// "ComTekAtomicClock.UI.ViewModels.TabViewModel".
+    /// </summary>
+    public override string ToString() => Label;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
