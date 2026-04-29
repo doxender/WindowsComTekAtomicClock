@@ -207,6 +207,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private void CloseTab(object? param)
     {
         if (param is not TabViewModel vm) return;
+
+        // Closing the last tab in the main window shuts the app down
+        // (rather than leaving an empty MainWindow with no clock face
+        // on screen). Tabs in floating windows are handled by
+        // Dragablz's TabEmptiedHandler (closes the floating window).
+        if (Tabs.Count == 1 && Tabs.Contains(vm))
+        {
+            Application.Current?.Shutdown();
+            return;
+        }
+
         // Removing from Tabs cascades to _settings.Tabs + persistence
         // via the OnTabsCollectionChanged handler.
         Tabs.Remove(vm);

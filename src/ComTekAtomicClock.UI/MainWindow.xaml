@@ -110,32 +110,36 @@
             <dragablz:TabablzControl.InterTabController>
                 <dragablz:InterTabController InterTabClient="{StaticResource MainInterTabClient}"/>
             </dragablz:TabablzControl.InterTabController>
-            <dragablz:TabablzControl.ItemTemplate>
-                <DataTemplate>
-                    <!--
-                      Tab header: the timezone label, plus a small ▾
-                      affordance that opens TabSettings for THIS tab
-                      (not the SelectedTab — the user might click ▾
-                      on a tab they're not currently viewing).
-                    -->
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Label}"
-                                   VerticalAlignment="Center"
-                                   FontSize="13"/>
-                        <Button Content="&#x25BE;"
-                                Margin="6,0,0,0"
-                                Padding="4,0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                FontSize="10"
-                                Cursor="Hand"
-                                ToolTip="Tab settings…"
-                                Command="{Binding DataContext.OpenTabSettingsForCommand,
-                                          RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding}"/>
-                    </StackPanel>
-                </DataTemplate>
-            </dragablz:TabablzControl.ItemTemplate>
+            <!--
+              Tab header rendering: TabViewModel.ToString() returns
+              the Label, which Dragablz uses as the tab header text.
+              (Wpf.Ui's restyled TabItem template fights with our
+              ItemTemplate, so we lean on the ToString fallback rather
+              than chasing the styling battle.)
+
+              For changing the timezone / theme of a tab, the user has
+              two affordances:
+                · Double-click the tab → opens TabSettings for it.
+                · Right-click the tab → context menu with "Tab
+                  settings…" and "Close tab" entries.
+            -->
+            <dragablz:TabablzControl.ItemContainerStyle>
+                <Style TargetType="dragablz:DragablzItem">
+                    <EventSetter Event="MouseDoubleClick"
+                                 Handler="TabItem_DoubleClick"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Tab settings…"
+                                          Click="TabContextSettings_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Close tab"
+                                          Click="TabContextClose_Click"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </dragablz:TabablzControl.ItemContainerStyle>
 
             <dragablz:TabablzControl.ContentTemplate>
                 <DataTemplate>
@@ -174,27 +178,34 @@
 
                         <!--
                           ✕ overlay in the upper-right of the tab
-                          content. Closes THIS tab. Duplicates the
-                          tab-strip's "x" button so users looking at
-                          the clock face don't have to track up to
-                          the strip to close the tab.
+                          content. Just the glyph — no Wpf.Ui Button
+                          chrome — so it sits flush over the clock
+                          face. Black foreground reads on the
+                          light-themed faces (Boulder Slate, Aero
+                          Glass, Daylight); on the dark themes the
+                          MouseOver state lifts opacity.
+                          Margin pushed inward so it sits clearly
+                          inside the clock area, not on the rim.
                         -->
-                        <ui:Button HorizontalAlignment="Right"
-                                   VerticalAlignment="Top"
-                                   Margin="0,10,10,0"
-                                   Width="32" Height="32"
-                                   Padding="0"
-                                   Appearance="Secondary"
-                                   ToolTip="Close this tab"
-                                   Command="{Binding DataContext.CloseTabCommand,
-                                             RelativeSource={RelativeSource AncestorType=Window}}"
-                                   CommandParameter="{Binding}">
+                        <Button HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,28,28,0"
+                                Width="22" Height="22"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                ToolTip="Close this tab"
+                                Command="{Binding DataContext.CloseTabCommand,
+                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}">
                             <TextBlock Text="&#x2715;"
-                                       FontWeight="SemiBold"
-                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       FontSize="12"
+                                       Foreground="#000"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
-                        </ui:Button>
+                        </Button>
                     </Grid>
                 </DataTemplate>
             </dragablz:TabablzControl.ContentTemplate>
