@@ -5,6 +5,7 @@
         xmlns:settings="clr-namespace:ComTekAtomicClock.Shared.Settings;assembly=ComTekAtomicClock.Shared"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="Tab settings"
+        Icon="pack://application:,,,/Assets/AppIcon.ico"
         Width="520" Height="380"
         Background="#0a1628"
         WindowStartupLocation="CenterOwner"

@@ -7,6 +7,7 @@
         xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
         mc:Ignorable="d"
         Title="ComTek Atomic Clock"
+        Icon="pack://application:,,,/Assets/AppIcon.ico"
         Height="640" Width="560"
         MinHeight="420" MinWidth="380"
         Background="#060D1A"
