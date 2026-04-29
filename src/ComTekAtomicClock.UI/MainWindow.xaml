@@ -5,19 +5,183 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ComTekAtomicClock.UI"
         xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
+        xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
+        xmlns:settings="clr-namespace:ComTekAtomicClock.Shared.Settings;assembly=ComTekAtomicClock.Shared"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="ComTek Atomic Clock"
-        Height="500" Width="500"
+        Height="640" Width="560"
+        MinHeight="420" MinWidth="380"
         Background="#060D1A"
         WindowStartupLocation="CenterScreen">
-    <!--
-      Step 5 placeholder MainWindow: a single Atomic Lab clock face
-      bound to the local time zone. Tabs, settings gear, free-floating
-      windows, and the §1.9 service-not-running banner come in step 6.
-    -->
-    <Grid>
-        <controls:ClockFaceControl Margin="20"
-                                   HorizontalAlignment="Stretch"
-                                   VerticalAlignment="Stretch"/>
-    </Grid>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Theme enum values for the Theme dropdown -->
+        <ObjectDataProvider x:Key="ThemeValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="settings:Theme"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </Window.Resources>
+
+    <DockPanel>
+
+        <!-- ============================== Menu Bar ============================== -->
+        <Menu DockPanel.Dock="Top" Background="#0a1628" Foreground="#D8D2BC">
+            <MenuItem Header="_File" Foreground="#D8D2BC">
+                <MenuItem Header="E_xit" Click="ExitMenu_Click"/>
+            </MenuItem>
+            <MenuItem Header="_View" Foreground="#D8D2BC">
+                <MenuItem Header="(tabs come from settings.json — § 1.2 popover lands later)"
+                          IsEnabled="False"/>
+            </MenuItem>
+            <MenuItem Header="_Help" Foreground="#D8D2BC">
+                <MenuItem Header="_About"
+                          Command="{Binding OpenAboutCommand}"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ============================== §1.9 Banner =========================== -->
+        <Border DockPanel.Dock="Top"
+                Background="#7a3a1a"
+                BorderBrush="#a85a2a"
+                BorderThickness="0,0,0,1"
+                Padding="16,10"
+                Visibility="{Binding BannerVisible, Converter={StaticResource BoolToVis}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right"
+                        Content="{Binding BannerButtonText}"
+                        Command="{Binding InstallServiceCommand}"
+                        Padding="14,6"
+                        FontWeight="SemiBold"
+                        Margin="12,0,0,0"
+                        Background="#FFB000"
+                        Foreground="#0a0a0a"
+                        BorderThickness="0"
+                        Cursor="Hand"/>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="{Binding BannerHeadlineText}"
+                               FontWeight="SemiBold"
+                               FontSize="13"
+                               Foreground="#fff5d8"/>
+                    <TextBlock Text="The clock will keep displaying time, but won't be synced to NIST until the service is running."
+                               FontSize="11"
+                               Foreground="#f0e0c0"
+                               TextWrapping="Wrap"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Tab Strip ============================= -->
+        <TabControl x:Name="MainTabs"
+                    ItemsSource="{Binding Tabs}"
+                    SelectedItem="{Binding SelectedTab}"
+                    Background="#060D1A"
+                    BorderBrush="#1A2A4A"
+                    BorderThickness="0,1,0,0"
+                    Padding="0">
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="&#x2699;"
+                                FontSize="14"
+                                Padding="6,0"
+                                Margin="6,0,0,0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                ToolTip="Tab settings"
+                                Click="GearButton_Click"
+                                Tag="{Binding}"/>
+                        <TextBlock Text="{Binding Label}"
+                                   VerticalAlignment="Center"
+                                   FontSize="13"/>
+                    </DockPanel>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid Background="#060D1A">
+                        <controls:ClockFaceControl
+                            Margin="20"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            TimeZone="{Binding TimeZone}"
+                            Theme="{Binding Theme}"
+                            SmoothSecondHand="{Binding SmoothSecondHand}"/>
+                    </Grid>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+
+        <!-- ============================== Settings Popup ======================== -->
+        <!--
+          One shared Popup; its DataContext is set to the active
+          TabViewModel each time the gear is clicked. Color pickers,
+          time-format selector, second-hand override, and the reset
+          link all land in step 6b — for now we expose just the
+          time-zone selector and the theme dropdown.
+        -->
+        <Popup x:Name="SettingsPopup"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               Placement="Bottom"
+               PopupAnimation="Fade">
+            <Border Background="#0e1a30"
+                    BorderBrush="#FFB000"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="16"
+                    MinWidth="380">
+                <StackPanel>
+                    <TextBlock Text="Tab settings"
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               Foreground="#FFB000"
+                               Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Time zone"
+                               FontSize="11"
+                               Foreground="#A8A39A"
+                               Margin="0,0,0,4"/>
+                    <ComboBox x:Name="TimezoneCombo"
+                              ItemsSource="{Binding Source={x:Static services:TimeZoneCatalog.All}}"
+                              SelectedValuePath="IanaId"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValue="{Binding TimeZoneId, UpdateSourceTrigger=PropertyChanged}"
+                              IsEditable="True"
+                              IsTextSearchEnabled="True"
+                              TextSearch.TextPath="DisplayName"
+                              MaxDropDownHeight="320"
+                              Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Theme"
+                               FontSize="11"
+                               Foreground="#A8A39A"
+                               Margin="0,0,0,4"/>
+                    <ComboBox x:Name="ThemeCombo"
+                              ItemsSource="{Binding Source={StaticResource ThemeValues}}"
+                              SelectedItem="{Binding Theme, UpdateSourceTrigger=PropertyChanged}"
+                              Margin="0,0,0,8"/>
+                    <TextBlock Text="Note: only Atomic Lab is implemented in this build. The other 11 themes will render in subsequent updates; your selection is still saved."
+                               FontSize="10"
+                               Foreground="#888"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,12"/>
+
+                    <TextBlock Text="(Color pickers, time format, and second-hand motion override coming in the next update.)"
+                               FontSize="10"
+                               Foreground="#666"
+                               TextWrapping="Wrap"
+                               FontStyle="Italic"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+    </DockPanel>
 </Window>

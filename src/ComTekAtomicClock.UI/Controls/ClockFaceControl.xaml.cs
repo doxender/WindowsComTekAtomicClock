@@ -47,6 +47,26 @@ public partial class ClockFaceControl : UserControl
         set => SetValue(TimeZoneProperty, value);
     }
 
+    public static readonly DependencyProperty ThemeProperty =
+        DependencyProperty.Register(
+            nameof(Theme),
+            typeof(Shared.Settings.Theme),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(Shared.Settings.Theme.AtomicLab));
+
+    /// <summary>
+    /// The active visual theme. Only <c>AtomicLab</c> is rendered in
+    /// this commit; the other 11 themes log a debug warning and fall
+    /// back to Atomic Lab visuals until each is implemented in
+    /// subsequent commits. The value is still persisted per-tab so
+    /// the user's selection survives restarts.
+    /// </summary>
+    public Shared.Settings.Theme Theme
+    {
+        get => (Shared.Settings.Theme)GetValue(ThemeProperty);
+        set => SetValue(ThemeProperty, value);
+    }
+
     public static readonly DependencyProperty SmoothSecondHandProperty =
         DependencyProperty.Register(
             nameof(SmoothSecondHand),
