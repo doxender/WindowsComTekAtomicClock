@@ -498,11 +498,26 @@ is updated whenever a scope, architecture, or tooling decision changes.
      - Created on first run if absent, populated with defaults
        (Atomic Lab theme, hourly sync, no extra tabs, single tab
        bound to the system's local time zone).
-     - The Service reads its own sync server / interval / Event
-       Log source from a separate `service.json` in the same
-       directory; written by the UI, read by the Service. This
-       split avoids cross-process write contention on the
-       user-settings file.
+     - The Service has its own per-machine config at:
+
+         %ProgramData%\ComTekAtomicClock\service.json
+
+       (NOT in the user's %APPDATA% — the Service runs as
+       LocalSystem, which has a different AppData root than any
+       interactive user. %ProgramData% is shared across all users
+       and across the Service's identity.)
+     - The Service reads sync server, sync interval, "confirm large
+       sync corrections" toggle, large-offset threshold, and Event
+       Log source name from `service.json`. The UI writes this file
+       whenever those settings change. Until the UI has written it
+       at least once, the Service falls back to hardcoded defaults
+       (`time.nist.gov`, 1-hour interval, threshold 5 s).
+     - The MSIX installer (and the development-time
+       `ComTekAtomicClock.ServiceInstaller` per § 1.9) creates
+       `%ProgramData%\ComTekAtomicClock\` with NTFS ACLs that grant
+       all interactive Users read/write on the directory so any
+       user's UI process can update `service.json` without
+       elevation.
 
 2.11 Telemetry and crash reporting
      - Two opt-in toggles in global settings (§ 1.8), both default
