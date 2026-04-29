@@ -1,5 +1,10 @@
 # ComTek Atomic Clock — Windows
 
+> [!WARNING]
+> **ALPHA — pre-release / not yet tested for public use.**
+>
+> This project is under active development. Code, behavior, settings format, packaging, and the requirements spec all change without notice between commits. Installing the bundled Windows Service will adjust your system clock against NIST. Do not use this app for any timekeeping that matters to you — production servers, deadline-sensitive work, anything regulated. Wait for the first signed `0.1.0` release tag before relying on it.
+
 A Windows desktop clock that synchronizes to the NIST atomic clock in Boulder, CO and displays multiple time zones with both digital and analog faces.
 
 ## Features

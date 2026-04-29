@@ -30,16 +30,39 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,16">
-            <TextBlock Text="ComTek Atomic Clock"
-                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
-                       FontSize="22" FontWeight="SemiBold"
-                       Foreground="#FFB000"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="ComTek Atomic Clock"
+                           FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                           FontSize="22" FontWeight="SemiBold"
+                           Foreground="#FFB000"
+                           VerticalAlignment="Center"/>
+                <Border Background="#7a3a1a"
+                        BorderBrush="#FFB000"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="6,2"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="ALPHA"
+                               FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="#fff5d8"/>
+                </Border>
+            </StackPanel>
             <TextBlock x:Name="VersionText"
                        Text="Version 0.1.0-dev"
                        FontFamily="Consolas, Courier New"
                        FontSize="11"
                        Foreground="#A8A39A"
                        Margin="0,2,0,0"/>
+            <TextBlock Text="Pre-release — not yet tested for public use. Behavior and settings format may change between commits."
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="11"
+                       Foreground="#FFB000"
+                       Opacity="0.85"
+                       TextWrapping="Wrap"
+                       Margin="0,8,0,0"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,0,0,12">
