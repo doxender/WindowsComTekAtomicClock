@@ -1,12 +1,23 @@
-﻿<Window x:Class="ComTekAtomicClock.UI.MainWindow"
+<Window x:Class="ComTekAtomicClock.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ComTekAtomicClock.UI"
+        xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="ComTek Atomic Clock"
+        Height="500" Width="500"
+        Background="#060D1A"
+        WindowStartupLocation="CenterScreen">
+    <!--
+      Step 5 placeholder MainWindow: a single Atomic Lab clock face
+      bound to the local time zone. Tabs, settings gear, free-floating
+      windows, and the §1.9 service-not-running banner come in step 6.
+    -->
     <Grid>
-
+        <controls:ClockFaceControl Margin="20"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch"/>
     </Grid>
 </Window>
