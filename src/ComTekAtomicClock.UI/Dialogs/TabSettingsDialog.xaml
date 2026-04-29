@@ -1,0 +1,101 @@
+<Window x:Class="ComTekAtomicClock.UI.Dialogs.TabSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
+        xmlns:settings="clr-namespace:ComTekAtomicClock.Shared.Settings;assembly=ComTekAtomicClock.Shared"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        Title="Tab settings"
+        Width="520" Height="380"
+        Background="#0a1628"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Window.Resources>
+        <ObjectDataProvider x:Key="ThemeValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="settings:Theme"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0"
+                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                   FontSize="18" FontWeight="SemiBold"
+                   Foreground="#FFB000"
+                   Margin="0,0,0,4">
+            <Run x:Name="TabHeaderText" Text="Tab settings"/>
+        </TextBlock>
+        <TextBlock x:Name="EditingTabLabel" Grid.Row="1"
+                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                   FontSize="11"
+                   Foreground="#A8A39A"
+                   Margin="0,0,0,18"/>
+
+        <!-- Time zone -->
+        <TextBlock Grid.Row="2"
+                   Text="Time zone"
+                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                   FontSize="11"
+                   Foreground="#A8A39A"
+                   Margin="0,0,0,4"/>
+        <ComboBox x:Name="TimezoneCombo" Grid.Row="3"
+                  ItemsSource="{Binding Source={x:Static services:TimeZoneCatalog.All}}"
+                  SelectedValuePath="IanaId"
+                  DisplayMemberPath="DisplayName"
+                  IsEditable="True"
+                  IsTextSearchEnabled="True"
+                  TextSearch.TextPath="DisplayName"
+                  MaxDropDownHeight="240"
+                  Margin="0,0,0,16"/>
+
+        <!-- Theme -->
+        <TextBlock Grid.Row="4"
+                   Text="Theme"
+                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                   FontSize="11"
+                   Foreground="#A8A39A"
+                   Margin="0,0,0,4"/>
+        <StackPanel Grid.Row="5">
+            <ComboBox x:Name="ThemeCombo"
+                      ItemsSource="{Binding Source={StaticResource ThemeValues}}"
+                      Margin="0,0,0,8"/>
+            <TextBlock Text="Atomic Lab is the only theme rendered in this build. Other selections are persisted but currently fall back to Atomic Lab visuals; per-theme rendering lands in subsequent updates."
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="10"
+                       Foreground="#888"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="6"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,18,0,0">
+            <Button Content="Cancel"
+                    Width="100" Height="30"
+                    Margin="0,0,8,0"
+                    IsCancel="True"
+                    Click="CancelButton_Click"/>
+            <Button Content="Save"
+                    Width="100" Height="30"
+                    IsDefault="True"
+                    Background="#FFB000"
+                    Foreground="#0a0a0a"
+                    BorderThickness="0"
+                    FontWeight="SemiBold"
+                    Click="SaveButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

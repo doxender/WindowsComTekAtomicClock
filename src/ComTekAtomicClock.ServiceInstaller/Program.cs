@@ -1,23 +1,33 @@
 // ComTekAtomicClock.ServiceInstaller
 //
 // The privileged helper described in requirements.txt § 1.9. Always
-// runs elevated (app.manifest enforces requireAdministrator). Detects
-// the current state of the ComTekAtomicClockSvc Windows Service and
-// performs only the minimum action required:
+// runs elevated (app.manifest enforces requireAdministrator).
 //
-//   - Service running                -> no-op, exit 0
-//   - Service installed but stopped  -> sc.exe start
-//   - Service not installed          -> create %ProgramData%\ComTekAtomicClock\
-//                                       with broad ACLs, then sc.exe create + start
+// Modes:
 //
-// Resolves the path to ComTekAtomicClock.Service.exe in this order:
+//   Install (default — no `--uninstall`):
+//     - Service running                -> no-op, exit 0
+//     - Service installed but stopped  -> sc.exe start
+//     - Service not installed          -> create %ProgramData%\
+//                                         ComTekAtomicClock\ with
+//                                         broad ACLs, then sc.exe
+//                                         create + start
+//
+//   Uninstall (`--uninstall`):
+//     - Stops the service if running.
+//     - sc.exe delete to remove the SCM registration.
+//     - Removes %ProgramData%\ComTekAtomicClock\ (per-machine config).
+//     - With `--purge-user-data`, also removes the per-user
+//       %APPDATA%\ComTekAtomicClock\ folder.
+//
+// Resolves the path to ComTekAtomicClock.Service.exe in this order
+// (install mode only):
 //   1. Explicit `--service-exe <path>` command-line argument.
 //   2. Sibling exe in the same directory as this helper (the MSIX
 //      package layout per § 2.7 puts both exes in the same folder).
 //
 // Exits 0 on success, 1 on any failure with the error written to
-// stderr. The UI surfaces non-zero exit + stderr as a toast/dialog
-// per § 1.9.
+// stderr. The UI surfaces non-zero exit + stderr per § 1.9.
 
 using System.Diagnostics;
 using System.Runtime.Versioning;
@@ -31,7 +41,29 @@ const string ServiceName       = "ComTekAtomicClockSvc";
 const string DisplayName       = "ComTek Atomic Clock — time sync";
 const string ProgramDataFolder = "ComTekAtomicClock";
 
+var uninstall      = args.Any(a => a == "--uninstall");
+var purgeUserData  = args.Any(a => a == "--purge-user-data");
+
 try
+{
+    if (uninstall)
+        return RunUninstall(purgeUserData);
+    else
+        return RunInstall(args);
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"ERROR: {ex.Message}");
+    if (ex.InnerException is not null)
+        Console.Error.WriteLine($"  Inner: {ex.InnerException.Message}");
+    return 1;
+}
+
+// =====================================================================
+// Install
+// =====================================================================
+
+static int RunInstall(string[] args)
 {
     var state = DetectServiceState(ServiceName);
     Console.Out.WriteLine($"Detected state: {state}");
@@ -66,16 +98,103 @@ try
         }
 
         default:
-            // Should be unreachable since the enum is exhaustive above.
             throw new InvalidOperationException($"Unexpected ServiceState: {state}");
     }
 }
-catch (Exception ex)
+
+// =====================================================================
+// Uninstall
+// =====================================================================
+
+static int RunUninstall(bool purgeUserData)
 {
-    Console.Error.WriteLine($"ERROR: {ex.Message}");
-    if (ex.InnerException is not null)
-        Console.Error.WriteLine($"  Inner: {ex.InnerException.Message}");
-    return 1;
+    var state = DetectServiceState(ServiceName);
+    Console.Out.WriteLine($"Detected state: {state}");
+
+    if (state == ServiceState.NotInstalled)
+    {
+        Console.Out.WriteLine($"Service '{ServiceName}' is not installed; nothing to remove from SCM.");
+    }
+    else
+    {
+        if (state == ServiceState.Running)
+        {
+            Console.Out.WriteLine("Stopping service...");
+            try
+            {
+                using var sc = new ServiceController(ServiceName);
+                if (sc.Status != ServiceControllerStatus.Stopped &&
+                    sc.Status != ServiceControllerStatus.StopPending)
+                {
+                    sc.Stop();
+                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: stop failed: {ex.Message}; continuing.");
+            }
+            Console.Out.WriteLine("Service stopped.");
+        }
+
+        Console.Out.WriteLine($"Deleting SCM registration for '{ServiceName}'...");
+        RunSc($"delete {ServiceName}");
+        Console.Out.WriteLine("sc.exe delete completed.");
+    }
+
+    // Remove per-machine config.
+    var programDataDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        ProgramDataFolder);
+    if (Directory.Exists(programDataDir))
+    {
+        Console.Out.WriteLine($"Removing {programDataDir}...");
+        try
+        {
+            Directory.Delete(programDataDir, recursive: true);
+            Console.Out.WriteLine("Removed.");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Warning: could not remove {programDataDir}: {ex.Message}");
+        }
+    }
+    else
+    {
+        Console.Out.WriteLine($"{programDataDir} does not exist; skipping.");
+    }
+
+    // Optionally remove per-user settings.json directory.
+    if (purgeUserData)
+    {
+        var userAppData = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            ProgramDataFolder);
+        if (Directory.Exists(userAppData))
+        {
+            Console.Out.WriteLine($"Removing user-data directory {userAppData}...");
+            try
+            {
+                Directory.Delete(userAppData, recursive: true);
+                Console.Out.WriteLine("User-data directory removed.");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: could not remove {userAppData}: {ex.Message}");
+            }
+        }
+        else
+        {
+            Console.Out.WriteLine($"{userAppData} does not exist; skipping.");
+        }
+    }
+    else
+    {
+        Console.Out.WriteLine("User-data directory preserved (pass --purge-user-data to remove).");
+    }
+
+    Console.Out.WriteLine("Uninstall complete.");
+    return 0;
 }
 
 // =====================================================================
@@ -104,7 +223,6 @@ static ServiceState DetectServiceState(string serviceName)
 
 static string ResolveServiceExePath(string[] args)
 {
-    // 1. Explicit argument wins.
     for (var i = 0; i < args.Length - 1; i++)
     {
         if (args[i] == "--service-exe")
@@ -117,7 +235,6 @@ static string ResolveServiceExePath(string[] args)
         }
     }
 
-    // 2. Sibling in same directory as this helper.
     var thisDir = Path.GetDirectoryName(Environment.ProcessPath)
                   ?? throw new InvalidOperationException("Could not determine helper's directory.");
     var sibling = Path.Combine(thisDir, "ComTekAtomicClock.Service.exe");
@@ -130,12 +247,6 @@ static string ResolveServiceExePath(string[] args)
         $"or pass --service-exe <full path>.");
 }
 
-/// <summary>
-/// Ensure %ProgramData%\ComTekAtomicClock\ exists with NTFS ACLs that
-/// grant Authenticated Users Modify (so any logged-in user's
-/// unprivileged UI can write service.json there). Inheritance flags
-/// propagate the rule to files created in the directory later.
-/// </summary>
 static void EnsureProgramDataDirectory()
 {
     var dir = Path.Combine(
@@ -161,9 +272,6 @@ static void EnsureProgramDataDirectory()
 
 static void CreateService(string serviceName, string displayName, string binPath)
 {
-    // sc.exe parsing of the create command requires the syntax
-    // `param= value` with a SPACE after the `=`, no quotes around the
-    // param name, and any value with spaces wrapped in quotes.
     var binPathQuoted = "\"" + binPath + "\"";
     var displayQuoted = "\"" + displayName + "\"";
     var args = $"create {serviceName} binPath= {binPathQuoted} start= auto DisplayName= {displayQuoted}";

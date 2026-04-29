@@ -1,22 +1,13 @@
 // ComTekAtomicClock.UI.ViewModels.MainWindowViewModel
 //
-// Top-level view-model for MainWindow. Loads settings.json on startup
-// (creating defaults on first run per § 1.10), wraps each TabSettings
-// in a TabViewModel, polls the Service lifecycle state on a timer for
-// the §1.9 banner, and exposes commands for the Help -> About menu
-// and the banner's install button.
+// Top-level VM. Loads settings.json on startup (creating defaults on
+// first run per § 1.10), wraps each TabSettings in a TabViewModel,
+// polls the Service lifecycle for the §1.9 banner, exposes commands
+// for menu actions (About, Add Tab, Remove Tab, Tab Settings,
+// Install Service, Uninstall Service).
 //
-// Scope of this commit (Step 6):
-//   - Tabs and per-tab settings popover bindings.
-//   - Service-state polling -> banner visibility + button label.
-//   - About command.
-//   - Install/start helper invocation.
-//
-// Deferred to Step 6b / later commits:
-//   - Real IPC client integration (last-sync status display).
-//   - Color picker UI / overrides.
-//   - Free-floating windows (§ 1.3).
-//   - Tray icon (§ 1.7).
+// IPC integration (live last-sync status in a status bar) lands in
+// the next commit.
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -40,7 +31,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         _settings = SettingsStore.LoadAppSettings();
         Tabs = new ObservableCollection<TabViewModel>(
-            _settings.Tabs.Select(t => new TabViewModel(t)));
+            _settings.Tabs.Select(WrapTab));
+
         if (Tabs.Count == 0)
         {
             // Settings file existed but had no tabs (edge case);
@@ -48,15 +40,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             var defaults = SettingsStore.CreateDefaultAppSettings();
             var fresh = defaults.Tabs[0];
             _settings.Tabs.Add(fresh);
-            Tabs.Add(new TabViewModel(fresh));
+            Tabs.Add(WrapTab(fresh));
         }
 
         SelectedTab = Tabs[0];
 
         // Poll the Service every 4 s. Inexpensive (just enumerates
         // the local SCM) and snappy enough that the banner reflects
-        // reality within a heartbeat of the user installing or
-        // stopping the service.
+        // reality within a heartbeat of an install or stop.
         _serviceStatePoll = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(4),
@@ -64,11 +55,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _serviceStatePoll.Tick += (_, _) => RefreshServiceState();
         _serviceStatePoll.Start();
 
-        OpenAboutCommand    = new RelayCommand(OpenAbout);
-        InstallServiceCommand = new RelayCommand(LaunchInstallerAndPoll);
+        OpenAboutCommand           = new RelayCommand(OpenAbout);
+        InstallServiceCommand      = new RelayCommand(LaunchInstallerAndPoll);
+        UninstallServiceCommand    = new RelayCommand(LaunchUninstallerAndPoll);
+        OpenTabSettingsCommand     = new RelayCommand(OpenTabSettings, _ => SelectedTab is not null);
+        AddTabCommand              = new RelayCommand(AddTab);
+        RemoveTabCommand           = new RelayCommand(RemoveTab, _ => Tabs.Count > 1);
 
         RefreshServiceState();
     }
+
+    private TabViewModel WrapTab(TabSettings t) => new(t);
 
     /// <summary>The displayed tabs.</summary>
     public ObservableCollection<TabViewModel> Tabs { get; }
@@ -101,6 +98,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(BannerVisible));
             OnPropertyChanged(nameof(BannerButtonText));
             OnPropertyChanged(nameof(BannerHeadlineText));
+            OnPropertyChanged(nameof(ServiceStatusText));
         }
     }
 
@@ -120,8 +118,100 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _                                         => string.Empty,
     };
 
-    public RelayCommand InstallServiceCommand { get; }
-    public RelayCommand OpenAboutCommand     { get; }
+    /// <summary>Displayed in the bottom status bar.</summary>
+    public string ServiceStatusText => ServiceState switch
+    {
+        ServiceLifecycleState.Running             => "Service: Running",
+        ServiceLifecycleState.InstalledNotRunning => "Service: Installed but stopped",
+        _                                         => "Service: Not installed",
+    };
+
+    // --------------------------------------------------------------
+    // Commands
+    // --------------------------------------------------------------
+
+    public RelayCommand InstallServiceCommand   { get; }
+    public RelayCommand UninstallServiceCommand { get; }
+    public RelayCommand OpenAboutCommand        { get; }
+    public RelayCommand OpenTabSettingsCommand  { get; }
+    public RelayCommand AddTabCommand           { get; }
+    public RelayCommand RemoveTabCommand        { get; }
+
+    private void OpenAbout(object? _)
+    {
+        var dlg = new AboutDialog
+        {
+            Owner = Application.Current?.MainWindow,
+        };
+        dlg.ShowDialog();
+    }
+
+    private void OpenTabSettings(object? _)
+    {
+        if (SelectedTab is null) return;
+
+        var dlg = new TabSettingsDialog(SelectedTab)
+        {
+            Owner = Application.Current?.MainWindow,
+        };
+        var result = dlg.ShowDialog();
+        if (result == true)
+        {
+            // SaveAppSettings persists the in-memory changes the dialog
+            // already wrote back into TabSettings via the TabViewModel.
+            try
+            {
+                SettingsStore.SaveAppSettings(_settings);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    Application.Current?.MainWindow!,
+                    $"Settings were updated in memory but could not be saved to disk.\n\n{ex.Message}",
+                    "Save failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+    }
+
+    private void AddTab(object? _)
+    {
+        // New tab defaults to UTC + the global default theme. The user
+        // can rename/edit via Tab -> Settings.
+        var newTab = new TabSettings
+        {
+            TimeZoneId = "UTC",
+            Theme      = _settings.Global.DefaultTheme,
+            TimeFormat = TimeFormatMode.Auto,
+        };
+        _settings.Tabs.Add(newTab);
+        var vm = WrapTab(newTab);
+        Tabs.Add(vm);
+        SelectedTab = vm;
+        TryPersist();
+    }
+
+    private void RemoveTab(object? _)
+    {
+        if (Tabs.Count <= 1) return; // never remove the last tab
+        if (SelectedTab is null) return;
+
+        var index = Tabs.IndexOf(SelectedTab);
+        var settingsRecord = SelectedTab.Settings;
+        Tabs.Remove(SelectedTab);
+        _settings.Tabs.Remove(settingsRecord);
+
+        // Select the neighbor that was at the same index, or the new last.
+        SelectedTab = Tabs[Math.Min(index, Tabs.Count - 1)];
+        TryPersist();
+    }
+
+    private void TryPersist()
+    {
+        try { SettingsStore.SaveAppSettings(_settings); }
+        catch { /* best-effort; UI continues with in-memory state */ }
+    }
 
     private void LaunchInstallerAndPoll(object? _ = null)
     {
@@ -136,29 +226,49 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                 MessageBoxImage.Warning);
             return;
         }
+        QuickPollServiceState();
+    }
 
-        // Helper runs asynchronously after UAC consent. Re-poll a few
-        // times over the next ~10 s so the banner dismisses promptly
-        // once the service comes up.
+    private void LaunchUninstallerAndPoll(object? _ = null)
+    {
+        var confirm = MessageBox.Show(
+            Application.Current?.MainWindow!,
+            "This will stop and remove the ComTek Atomic Clock Windows Service\n" +
+            "and delete %ProgramData%\\ComTekAtomicClock\\.\n\n" +
+            "Your per-user settings (%APPDATA%\\ComTekAtomicClock\\settings.json)\n" +
+            "will be preserved.\n\nContinue?",
+            "Uninstall the time-sync service",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        var result = ServiceLauncher.LaunchServiceUninstaller(purgeUserData: false);
+        if (!result.Started)
+        {
+            MessageBox.Show(
+                Application.Current?.MainWindow!,
+                result.ErrorMessage ?? "Unknown error.",
+                "Could not uninstall the time-sync service",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+        QuickPollServiceState();
+    }
+
+    private void QuickPollServiceState()
+    {
+        // Helper runs asynchronously. Re-poll every second for ~10 s
+        // so the banner / status bar reflects reality promptly.
         var attempts = 0;
         var quickPoll = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         quickPoll.Tick += (_, _) =>
         {
             attempts++;
             RefreshServiceState();
-            if (ServiceState == ServiceLifecycleState.Running || attempts >= 10)
-                quickPoll.Stop();
+            if (attempts >= 10) quickPoll.Stop();
         };
         quickPoll.Start();
-    }
-
-    private void OpenAbout(object? _ = null)
-    {
-        var dlg = new AboutDialog
-        {
-            Owner = Application.Current?.MainWindow,
-        };
-        dlg.ShowDialog();
     }
 
     private void RefreshServiceState()
