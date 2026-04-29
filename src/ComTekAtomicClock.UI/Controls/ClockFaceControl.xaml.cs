@@ -26,17 +26,53 @@ namespace ComTekAtomicClock.UI.Controls;
 
 public partial class ClockFaceControl : UserControl
 {
-    /// <summary>
-    /// IANA time zone driving this face. Defaults to local.
-    /// In step 6+ this is bound from the active TabSettings.
-    /// </summary>
-    public TimeZoneInfo TimeZone { get; set; } = TimeZoneInfo.Local;
+    // ---------------------------------------------------------------
+    // DependencyProperties so each tab can bind its own zone / motion.
+    // ---------------------------------------------------------------
+
+    public static readonly DependencyProperty TimeZoneProperty =
+        DependencyProperty.Register(
+            nameof(TimeZone),
+            typeof(TimeZoneInfo),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(TimeZoneInfo.Local));
 
     /// <summary>
-    /// True for sub-second sweep, false for 1 Hz step. Defaults to
-    /// the Atomic Lab theme default (smooth) — see design/README.md.
+    /// IANA time zone driving this face. Defaults to local.
+    /// Bound from the parent <see cref="ViewModels.TabViewModel"/>.
     /// </summary>
-    public bool SmoothSecondHand { get; set; } = true;
+    public TimeZoneInfo TimeZone
+    {
+        get => (TimeZoneInfo)GetValue(TimeZoneProperty);
+        set => SetValue(TimeZoneProperty, value);
+    }
+
+    public static readonly DependencyProperty SmoothSecondHandProperty =
+        DependencyProperty.Register(
+            nameof(SmoothSecondHand),
+            typeof(bool),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(true, OnSmoothSecondHandChanged));
+
+    /// <summary>
+    /// True for sub-second sweep (~20 fps), false for 1 Hz step.
+    /// Atomic Lab's theme default is smooth — see design/README.md.
+    /// </summary>
+    public bool SmoothSecondHand
+    {
+        get => (bool)GetValue(SmoothSecondHandProperty);
+        set => SetValue(SmoothSecondHandProperty, value);
+    }
+
+    private static void OnSmoothSecondHandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ClockFaceControl c && c._timer != null)
+        {
+            c._timer.Interval = (bool)e.NewValue
+                ? TimeSpan.FromMilliseconds(50)
+                : TimeSpan.FromSeconds(1);
+        }
+    }
 
     private readonly DispatcherTimer _timer;
 
@@ -95,6 +131,15 @@ public partial class ClockFaceControl : UserControl
         SecondHandRotate.Angle = second * 6.0;    //   60 sec   -> 360 deg, so  6 deg/sec
 
         DigitalReadout.Text = local.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+
+        // Date line above the time. Format: WED · APRIL 29
+        // (3-letter day · full month · day-of-month). Uppercase to
+        // match the NIST · BOULDER · CO legend's typographic register.
+        // InvariantCulture for now; localization is on the deferred
+        // list in the requirements doc.
+        DateReadout.Text = local
+            .ToString("ddd · MMMM d", CultureInfo.InvariantCulture)
+            .ToUpperInvariant();
     }
 
     /// <summary>

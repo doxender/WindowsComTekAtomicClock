@@ -2,7 +2,7 @@
     x:Class="ComTekAtomicClock.UI.Controls.ClockFaceControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Width="400" Height="400"
+    MinWidth="200" MinHeight="200"
     Background="Transparent"
     SnapsToDevicePixels="True"
     UseLayoutRounding="True">
@@ -140,32 +140,43 @@
                      Fill="{StaticResource FaceBrush}"/>
 
             <!--
-              Integrated digital readout panel. Sub-window inside the
-              analog face per the SVG layout. The label below the time
-              is a theme-specific accent, not user-overridable.
+              Integrated digital readout panel. Three lines now:
+                · top:    date (day-of-week · month · day)
+                · middle: time HH:MM:SS
+                · bottom: NIST · BOULDER · CO legend (theme-specific)
+              The date is in the Numbers/Digital amber but at smaller
+              size and lower opacity so the time stays the focal point.
+              Panel grew from 44 -> 60 px tall to fit cleanly.
             -->
-            <Border Width="132" Height="44"
-                    Canvas.Left="134" Canvas.Top="242"
+            <Border Width="146" Height="60"
+                    Canvas.Left="127" Canvas.Top="234"
                     Background="{StaticResource DigitalPanelBrush}"
                     BorderBrush="{StaticResource DigitalBrush}"
                     BorderThickness="0.6"
                     CornerRadius="4">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Margin="0,2,0,2">
+                            Margin="0,3,0,3">
+                    <TextBlock x:Name="DateReadout"
+                               Text=""
+                               Foreground="{StaticResource DigitalBrush}"
+                               Opacity="0.85"
+                               FontFamily="Consolas, Courier New"
+                               FontSize="9"
+                               HorizontalAlignment="Center"/>
                     <TextBlock x:Name="DigitalReadout"
                                Text="--:--:--"
                                Foreground="{StaticResource DigitalBrush}"
                                FontFamily="Consolas, Courier New"
                                FontWeight="Bold" FontSize="20"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               Margin="0,1,0,1"/>
                     <TextBlock Text="NIST · BOULDER · CO"
                                Foreground="{StaticResource DigitalBrush}"
                                Opacity="0.7"
                                FontFamily="Consolas, Courier New"
                                FontSize="7"
-                               HorizontalAlignment="Center"
-                               Margin="0,2,0,0"/>
+                               HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
 
