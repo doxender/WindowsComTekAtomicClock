@@ -36,35 +36,15 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <!-- ============================== Menu Bar ============================== -->
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File">
-                <MenuItem Header="E_xit" Click="ExitMenu_Click"/>
-            </MenuItem>
-
-            <MenuItem Header="_Tabs">
-                <MenuItem Header="Tab _settings…"
-                          Command="{Binding OpenTabSettingsCommand}"
-                          InputGestureText="Ctrl+,"/>
-                <Separator/>
-                <MenuItem Header="_Add new tab"
-                          Command="{Binding AddTabCommand}"/>
-                <MenuItem Header="_Remove this tab"
-                          Command="{Binding RemoveTabCommand}"/>
-            </MenuItem>
-
-            <MenuItem Header="_Service">
-                <MenuItem Header="_Install / start the time-sync service"
-                          Command="{Binding InstallServiceCommand}"/>
-                <MenuItem Header="_Uninstall the time-sync service…"
-                          Command="{Binding UninstallServiceCommand}"/>
-            </MenuItem>
-
-            <MenuItem Header="_Help">
-                <MenuItem Header="_About ComTek Atomic Clock…"
-                          Command="{Binding OpenAboutCommand}"/>
-            </MenuItem>
-        </Menu>
+        <!--
+          Menu bar removed per Dan's UX call: the only thing above the
+          banner is now the Wpf.Ui title bar (drag / minimize / maximize
+          / close). Tab settings reachable via Ctrl+,. Add Tab via the
+          Dragablz "+" button. Remove Tab via each tab's "x" button.
+          Help/About reachable via the "?" overlay in the bottom-left
+          of the tab content. Uninstall the service via a link on the
+          About dialog.
+        -->
 
         <!-- ============================== §1.9 Banner =========================== -->
         <Border DockPanel.Dock="Top"
@@ -136,6 +116,30 @@
                             TimeZone="{Binding TimeZone}"
                             Theme="{Binding Theme}"
                             SmoothSecondHand="{Binding SmoothSecondHand}"/>
+
+                        <!--
+                          Discreet help (?) button anchored to the
+                          bottom-left of the tab content. Click opens
+                          the About dialog. Uses RelativeSource to
+                          reach the MainWindow's MainWindowViewModel
+                          since each tab's DataContext is its own
+                          TabViewModel.
+                        -->
+                        <ui:Button HorizontalAlignment="Left"
+                                   VerticalAlignment="Bottom"
+                                   Margin="10,0,0,10"
+                                   Width="32" Height="32"
+                                   Padding="0"
+                                   Appearance="Secondary"
+                                   ToolTip="About ComTek Atomic Clock"
+                                   Command="{Binding DataContext.OpenAboutCommand,
+                                             RelativeSource={RelativeSource AncestorType=Window}}">
+                            <TextBlock Text="?"
+                                       FontWeight="SemiBold"
+                                       FontSize="14"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </ui:Button>
                     </Grid>
                 </DataTemplate>
             </dragablz:TabablzControl.ContentTemplate>

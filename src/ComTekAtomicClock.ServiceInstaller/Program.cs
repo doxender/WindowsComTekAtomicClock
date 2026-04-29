@@ -274,8 +274,30 @@ static void CreateService(string serviceName, string displayName, string binPath
 {
     var binPathQuoted = "\"" + binPath + "\"";
     var displayQuoted = "\"" + displayName + "\"";
-    var args = $"create {serviceName} binPath= {binPathQuoted} start= auto DisplayName= {displayQuoted}";
+    // start= demand : on-demand start mode (NOT auto-start at boot).
+    // The UI starts the service on app launch and stops it on app
+    // exit; we don't want it consuming a service slot when nobody
+    // is using the clock app.
+    var args = $"create {serviceName} binPath= {binPathQuoted} start= demand DisplayName= {displayQuoted}";
     RunSc(args);
+
+    // Grant Authenticated Users (AU) the rights to query, start, and
+    // stop this service so the unprivileged UI can manage it across
+    // app launches without UAC. Built-in Administrators (BA) keep
+    // full control; LocalSystem (SY) keeps read+interrogate.
+    //
+    // SDDL access rights for services:
+    //   CC = SERVICE_QUERY_CONFIG       LC = SERVICE_QUERY_STATUS
+    //   SW = SERVICE_ENUMERATE_DEPENDENTS  LO = SERVICE_INTERROGATE
+    //   RP = SERVICE_START               WP = SERVICE_STOP
+    //   CR = SERVICE_USER_DEFINED_CONTROL  RC = READ_CONTROL
+    //
+    // AU gets CCLCSWRPWPLOCRRC: query/start/stop/interrogate/read.
+    var sddl =
+        "D:(A;;CCLCSWRPWPLOCRRC;;;AU)" +
+        "(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)" +
+        "(A;;CCLCSWLOCRRC;;;SY)";
+    RunSc($"sdset {serviceName} {sddl}");
 }
 
 static void StartService(string serviceName)

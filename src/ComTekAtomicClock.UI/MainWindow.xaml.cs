@@ -39,8 +39,4 @@ public partial class MainWindow : FluentWindow
             modifiers: ModifierKeys.Control));
     }
 
-    private void ExitMenu_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
 }

@@ -104,13 +104,23 @@
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <DockPanel Grid.Row="3" Margin="0,16,0,0">
             <Button x:Name="OkButton"
+                    DockPanel.Dock="Right"
                     Content="OK"
                     Width="90" Height="28"
                     Click="OkButton_Click"
                     IsDefault="True" IsCancel="True"/>
-        </StackPanel>
+            <Button x:Name="UninstallServiceButton"
+                    HorizontalAlignment="Left"
+                    Content="Uninstall the time-sync service…"
+                    Padding="10,4"
+                    Background="Transparent"
+                    Foreground="#A0E0FF"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Click="UninstallServiceButton_Click"/>
+        </DockPanel>
     </Grid>
     </DockPanel>
 </ui:FluentWindow>
