@@ -15,6 +15,7 @@
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace ComTekAtomicClock.UI;
 
@@ -26,6 +27,17 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Surface unhandled UI-thread exceptions instead of letting
+        // them silently kill the process. v0.0.14 demonstrated this
+        // gap: a Dragablz CollectionChanged.Replace edge case threw,
+        // there was no debugger attached (Release build), and the
+        // app just vanished. With this handler we get a MessageBox
+        // showing the exception type + message + first few stack
+        // frames, plus the option to keep going (e.Handled = true)
+        // so a single recoverable mishap doesn't take the app down.
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+
         TryStartService();
     }
 
@@ -33,6 +45,37 @@ public partial class App : Application
     {
         TryStopService();
         base.OnExit(e);
+    }
+
+    /// <summary>
+    /// Last-resort UI-thread exception handler. Surfaces the exception
+    /// in a MessageBox so silent crashes (especially in Release where
+    /// no debugger / no JIT-debug dialog is in play) become visible.
+    /// We mark Handled=true so the exception doesn't propagate up and
+    /// kill the process — most WPF UI-thread exceptions (binding
+    /// mishaps, dispatched-callback NPEs) are recoverable.
+    /// </summary>
+    private static void OnDispatcherUnhandledException(
+        object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        var ex = e.Exception;
+        // Trim the stack to the first ~6 frames so the dialog stays
+        // readable. Full stack still goes to debug output for anyone
+        // attached.
+        var stackLines = (ex.StackTrace ?? "(no stack)").Split('\n');
+        var trimmed = string.Join("\n",
+            stackLines.Take(6).Select(l => l.TrimEnd('\r')));
+        if (stackLines.Length > 6) trimmed += "\n…";
+
+        System.Diagnostics.Debug.WriteLine($"[UnhandledException] {ex}");
+
+        MessageBox.Show(
+            $"{ex.GetType().FullName}\n\n{ex.Message}\n\n{trimmed}",
+            "ComTek Atomic Clock — unhandled exception",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+
+        e.Handled = true;
     }
 
     /// <summary>

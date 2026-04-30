@@ -4,6 +4,21 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.15] - 2026-04-30
+
+### Fixed (regression from v0.0.14)
+
+- **Silent process exit when changing a tab's timezone in the Settings dialog (Release build).** v0.0.14 added `Tabs[idx] = tab` to `OpenTabSettingsCore` as a workaround for the tab-header-not-refreshing bug — assigning a tab back to its same `ObservableCollection` slot fires `CollectionChanged.Replace`, which was supposed to make Dragablz re-template the header in place. It worked in Debug but in Release the path threw an unhandled exception and the process vanished without surfacing anything visible to the user. The `Replace`-on-the-currently-selected-item case isn't handled gracefully by Dragablz's container management. **Reverted v0.0.14**: dropped the `Tabs[idx] = tab` line and removed the matching `Replace` early-return in `OnTabsCollectionChanged`. The original tab-header-not-refreshing bug returns (label only updates after tear-off-and-back, or after restarting the app); next workaround attempt will skip the collection mutation entirely. (`ViewModels/MainWindowViewModel.cs`.)
+
+### Added
+
+- **`DispatcherUnhandledException` handler in `App.OnStartup`.** v0.0.14's silent crash was invisible because no debugger was attached and Release WPF doesn't pop a default crash dialog. Now any unhandled UI-thread exception surfaces a `MessageBox` showing exception type + message + first 6 stack frames, and marks `e.Handled = true` so a single recoverable mishap doesn't take the app down. Full stack still goes to `Debug.WriteLine` for anyone attached. (`App.xaml.cs`.)
+
+### Carried over from v0.0.13 (still pending)
+
+- **Tab header doesn't refresh after changing TZ in Settings.** Workaround: tear the tab off and back. Permanent fix queued — next attempt will use `BindingExpression.UpdateTarget()` on the bound `TextBlock` directly (no collection mutation, no Dragablz re-template).
+- Sync-frequency dropdown (`v0.0.13`) and live last-sync display (`v0.0.11`) still un-merged on this branch.
+
 ## [0.0.14] - 2026-04-30
 
 ### Fixed

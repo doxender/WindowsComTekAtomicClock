@@ -352,21 +352,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             // already wrote back into TabSettings via the TabViewModel.
             PersistAfterDialog();
 
-            // Workaround for the tab-header-not-refreshing-after-edit
-            // bug: TabViewModel.TimeZoneId setter raises PropertyChanged
-            // for Label, and the ItemTemplate in MainWindow.xaml binds
-            // {Binding Label}, but Dragablz's tab strip in this version
-            // caches its rendered header per item and doesn't re-read
-            // on PropertyChanged. Tearing a tab off worked only because
-            // the floating window re-templated it in a fresh container.
-            //
-            // Assigning the tab back to its same index fires
-            // CollectionChanged.Replace on the ObservableCollection,
-            // which WPF treats as "re-template this item" — the kick
-            // Dragablz needs. OnTabsCollectionChanged ignores Replace
-            // so _settings.Tabs ordering / persistence is unaffected.
-            var idx = Tabs.IndexOf(tab);
-            if (idx >= 0) Tabs[idx] = tab;
+            // v0.0.14 added `Tabs[idx] = tab` here as a workaround for
+            // the tab-header-not-refreshing-after-edit bug. It worked
+            // in Debug but caused a silent process exit in Release —
+            // Dragablz's CollectionChanged.Replace handling on the
+            // currently-selected item evidently isn't graceful, and
+            // the resulting unhandled exception killed the process
+            // without surfacing in the UI. v0.0.15 reverted to the
+            // v0.0.13 behavior (label doesn't refresh in place after
+            // Save — user has to tear the tab off and back, or
+            // restart the app, to see the new label). Replacement
+            // workaround is queued; the unhandled-exception handler
+            // added in App.xaml.cs in v0.0.15 should give us visibility
+            // when we try the next approach.
         }
     }
 
@@ -459,16 +457,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Replace events are UI-only refreshes — used by
-        // OpenTabSettingsCore as a workaround to make Dragablz re-read
-        // {Binding Label} on the tab header after a settings edit. The
-        // OldItems/NewItems entries are the same TabViewModel instance,
-        // and _settings.Tabs is unchanged. Treat as a no-op for
-        // persistence; falling through would Remove + Add the same
-        // TabSettings, which would shuffle it to the end of
-        // _settings.Tabs and disturb saved tab order.
-        if (e.Action == NotifyCollectionChangedAction.Replace) return;
-
         // Mirror inserts/removes into _settings.Tabs so settings.json
         // stays in lockstep regardless of who mutated the collection
         // (Dragablz close button, Dragablz "+" via NewItemFactory, or
