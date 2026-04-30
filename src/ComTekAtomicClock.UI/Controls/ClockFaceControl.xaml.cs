@@ -407,7 +407,7 @@ public partial class ClockFaceControl : UserControl
         if (_secondRotate is not null) _secondRotate.Angle = second *  6.0;
 
         if (_digitalReadout is not null)
-            _digitalReadout.Text = local.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            _digitalReadout.Text = local.ToString("h:mm:ss tt", CultureInfo.InvariantCulture);
 
         if (_dateReadout is not null)
         {
@@ -1257,12 +1257,15 @@ public partial class ClockFaceControl : UserControl
 
         _digitalUpdater = local =>
         {
-            var hour12 = local.Hour % 12; if (hour12 == 0) hour12 = 12;
+            var (hour12, ampm) = To12HourParts(local);
             digitTextBlocks[0].Text = (hour12 / 10).ToString(CultureInfo.InvariantCulture);
             digitTextBlocks[1].Text = (hour12 % 10).ToString(CultureInfo.InvariantCulture);
             digitTextBlocks[2].Text = (local.Minute / 10).ToString(CultureInfo.InvariantCulture);
             digitTextBlocks[3].Text = (local.Minute % 10).ToString(CultureInfo.InvariantCulture);
-            secondsTb.Text = $": {local.Second:D2} SECONDS";
+            // AM/PM next to the seconds line — Flip Clock's tile faces
+            // are HH:MM only by design, so the AM/PM marker rides
+            // alongside the auxiliary seconds label.
+            secondsTb.Text = $": {local.Second:D2} SECONDS · {ampm}";
             dateTb.Text    = local.ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
         };
     }
@@ -1356,7 +1359,7 @@ public partial class ClockFaceControl : UserControl
 
         _digitalUpdater = local =>
         {
-            timeTb.Text = local.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            timeTb.Text = local.ToString("h:mm:ss tt", CultureInfo.InvariantCulture);
             marqueeDateTb.Text = local.ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
         };
 
@@ -1410,8 +1413,12 @@ public partial class ClockFaceControl : UserControl
 
         _digitalUpdater = local =>
         {
-            bigTimeTb.Text = local.ToString("HH:mm", CultureInfo.InvariantCulture);
-            secondsTb.Text = local.Second.ToString("D2", CultureInfo.InvariantCulture) + "″";
+            // 12-hour: big time stays h:mm without AM/PM marker
+            // (the brutalist serif is intentionally minimalist;
+            // adding " AM" at font-100 wouldn't fit). AM/PM rides
+            // alongside the seconds line at font-36.
+            bigTimeTb.Text = local.ToString("h:mm", CultureInfo.InvariantCulture);
+            secondsTb.Text = $"{local:ss}″ {local:tt}";
             dateTb.Text    = local.ToString("dddd · d MMMM yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
             // Display the bound TimeZone's standard offset abbreviation
             // in the upper-left context strip — falls back to a generic
@@ -1525,6 +1532,9 @@ public partial class ClockFaceControl : UserControl
 
         _digitalUpdater = local =>
         {
+            // Binary BCD stays 24-hour (programmer/encoder theme;
+            // matching the decimal range to the bit-widths is the
+            // point). H tens column needs 2 dots to express 0-23.
             var digitsByCol = new[]
             {
                 local.Hour   / 10, local.Hour   % 10,
@@ -1627,8 +1637,10 @@ public partial class ClockFaceControl : UserControl
 
         _digitalUpdater = local =>
         {
-            // Hex display: HH MM SS each rendered as 2-digit hex of
-            // the decimal value. So 10:08:42 -> 0A:08:2A.
+            // Hex stays 24-hour (programmer/encoder theme; full hour
+            // range 0-23 maps to 00-17 hex cleanly). HH:MM:SS each
+            // rendered as 2-digit hex of the decimal value. So
+            // 10:08:42 -> 0A:08:2A; 23:59:59 -> 17:3B:3B.
             hexTb.Text = $"{local.Hour:X2}:{local.Minute:X2}:{local.Second:X2}";
 
             // Day-of-week / day-of-month / month name shown as their
@@ -1660,6 +1672,22 @@ public partial class ClockFaceControl : UserControl
             swatch.Fill = new SolidColorBrush(swatchColor);
             swatchHexTb.Text = $"// the bar above is #{r:X2}{g:X2}FF — today, encoded as a color";
         };
+    }
+
+    /// <summary>
+    /// Convert a 24-hour <see cref="DateTime"/> to its 12-hour pair
+    /// (hour in 1..12, "AM"/"PM" string). Single source of truth for
+    /// the 12-hour-default rule across every digital readout — analog
+    /// faces' integrated digital readouts use a `"h:mm:ss tt"` format
+    /// string directly; encoded themes (Binary, Hex, Binary Digital)
+    /// need the integer hour separately so they can BCD/hex/binary it,
+    /// then surface the AM/PM marker as a sibling label.
+    /// </summary>
+    private static (int Hour12, string AmPm) To12HourParts(DateTime local)
+    {
+        var h12 = local.Hour % 12;
+        if (h12 == 0) h12 = 12;
+        return (h12, local.Hour < 12 ? "AM" : "PM");
     }
 
     /// <summary>
@@ -1714,7 +1742,9 @@ public partial class ClockFaceControl : UserControl
                                    40, 80, mono, 12, magenta,
                                    FontWeights.Normal, TextAnchor.Left, opacity: 0.55));
 
-        // Three big lines, each "<H|M|S> bbbbbbbb"
+        // Three big lines, each "<H|M|S> bbbbbbbb". Binary Digital
+        // stays 24-hour (programmer/encoder theme): hour fits in
+        // 5 bits (max 23 = 10111).
         var hPrefix = MakeText("H", 80, 138, mono, 30, dimMagenta, FontWeights.Bold, TextAnchor.Left);
         Dial.Children.Add(hPrefix);
         var hBitsTb = MakeText("00000", 120, 138, mono, 30, magenta, FontWeights.Bold, TextAnchor.Left);
@@ -1767,9 +1797,10 @@ public partial class ClockFaceControl : UserControl
 
         _digitalUpdater = local =>
         {
-            // Hours fit in 5 bits (max 23 = 0b10111). Minutes / seconds
-            // fit in 6 bits (max 59 = 0b111011). Convert with leading
-            // zeros so the width is fixed.
+            // 24-hour (programmer/encoder theme). Hour fits in 5 bits
+            // (max 23 = 0b10111), minutes / seconds fit in 6 bits
+            // (max 59 = 0b111011). Convert with leading zeros so the
+            // width is fixed.
             hBitsTb.Text = Convert.ToString(local.Hour,   2).PadLeft(5, '0');
             mBitsTb.Text = Convert.ToString(local.Minute, 2).PadLeft(6, '0');
             sBitsTb.Text = Convert.ToString(local.Second, 2).PadLeft(6, '0');

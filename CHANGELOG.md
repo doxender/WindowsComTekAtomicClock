@@ -4,6 +4,27 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.27] - 2026-04-30
+
+### Changed
+
+- **Digital readouts on the analog faces and the prose-style digital faces default to 12-hour time with AM/PM** (was 24-hour). The encoder-style digital faces (Binary, Hex, Binary Digital) **remain 24-hour** — Dan's call: "that doesn't apply to Binary, Hex or Binary Digital. They will always show military time." For those themes the bit-width math (5b hour fits 0-23, 6b min/sec fit 0-59) is the point of the design and 24-hour keeps the encoding clean.
+  - **`UpdateClock` shared format** flipped from `"HH:mm:ss"` → `"h:mm:ss tt"` — single-line change covers all six analog faces (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight). Now reads `"10:08:42 AM"` / `"1:23:45 PM"`.
+  - **Flip Clock** — already showed 12-hour values on the digit tiles via the existing `hour % 12` math; added `· AM`/`· PM` suffix to the `: SS SECONDS` line so the marker is unambiguous (Flip Clock's design intentionally shows HH:MM only on the cards, no room for AM/PM there).
+  - **Marquee** — `"HH:mm:ss"` → `"h:mm:ss tt"` for the big glowing center text.
+  - **Slab** — big time stays `h:mm` without AM/PM (the brutalist serif is intentionally minimalist; adding " AM" at font-100 wouldn't fit). AM/PM rides on the seconds line: `42″ AM`.
+  - **Binary, Hex, Binary Digital** — unchanged from v0.0.26: still 24-hour (`HH:mm:ss` / `local.Hour:X2` / 5-bit hour).
+
+### Added
+
+- **`To12HourParts(DateTime)` helper** — single source of truth for the (hour-1-12, "AM"/"PM") split. Used by Flip Clock today; available for any future renderer that opts into 12-hour display.
+
+### Doc audit (per pre-merge rule)
+
+- `README.md` — no change. Time-format isn't called out as a feature.
+- `Dialogs/HelpDialog.xaml` — no change. Help doesn't make claims about 12 vs 24 hour format.
+- `requirements.txt` — § 1.1 already permits user override of time format (Auto / Hour12 / Hour24); the `TimeFormat` enum exists in `SettingsModel.cs` already. This commit doesn't expose the user-override UI yet — it just changes the per-face *default*. Encoder themes keep 24-hour as their hardcoded design intent. No spec change needed.
+
 ## [0.0.26] - 2026-04-30
 
 ### Removed
