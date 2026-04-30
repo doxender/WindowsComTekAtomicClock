@@ -4,6 +4,14 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.14] - 2026-04-30
+
+### Fixed
+
+- **Tab header didn't show the new city after changing the timezone in Settings — only tearing the tab off into a floating window made the new label appear.**
+  - *Problem:* `TabViewModel.TimeZoneId` setter raises `PropertyChanged` for `Label`, and the main window's `ItemTemplate` is `<TextBlock Text="{Binding Label}"/>` — a standard reactive binding that *should* refresh. Tearing off worked because the floating window re-templated the item in a fresh container, evaluating `Label` from scratch. The original `TabablzControl` in this Dragablz version apparently caches its rendered header per item and doesn't re-read on `PropertyChanged`. Reproducible on every new tab created via the `+` button (and likely on existing tabs too — same code path).
+  - *Solution:* After the Settings dialog returns Save, `MainWindowViewModel.OpenTabSettingsCore` now assigns the edited tab back to its same slot in the `Tabs` `ObservableCollection` (`Tabs[idx] = tab`). That fires `CollectionChanged.Replace`, which WPF treats as "re-template this item" — exactly the kick Dragablz needs. `OnTabsCollectionChanged` short-circuits on `Replace` so persistence (`_settings.Tabs` ordering, `settings.json`) is unaffected. The earlier observation about analog faces' tab labels working "by accident" probably came from the load-from-disk path naturally re-templating during initial render — the bug only surfaced for in-session edits. (`ViewModels/MainWindowViewModel.cs`.)
+
 ## [0.0.13] - 2026-04-30
 
 ### Added
