@@ -4,6 +4,14 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.20] - 2026-04-30
+
+### Fixed
+
+- **Tab single-click selection unreliable while double-click always worked.** Dan's diagnostic observation: "It misses the single click, but always picks up on the double click. They must go through different handlers." Spot-on — and changes the diagnosis from a load problem to a routing problem.
+  - *Root cause:* Single-click selection went through Dragablz's intrinsic click/drag classifier, which appears to misclassify short clicks as drag-starts that never complete (mouse-up arrives before the drag threshold is exceeded, but the classifier doesn't fall back to "this was a click — select the tab"). Double-clicks went through WPF's `MouseDoubleClick` event handled by our own `TabItem_DoubleClick` (a separate code path that bypasses Dragablz's classifier), so they were unaffected. Earlier commits — Width=0 Thumb (v0.0.4), pause hidden-tab timers (v0.0.18), `ApplicationIdle` priority (v0.0.19) — all addressed *load* hypotheses; this is a routing one and they didn't help (though we keep them as defense in depth).
+  - *Solution:* New `TabItem_PreviewMouseLeftButtonDown` handler hooked via `EventSetter` in the `DragablzItem` `ItemContainerStyle`. `Preview` events tunnel DOWN through the visual tree before the regular bubbling-up event reaches Dragablz's classifier — so the handler fires *first*. It sets `MainWindowViewModel.SelectedTab` to the clicked item unconditionally. We deliberately do **NOT** mark `e.Handled = true` so Dragablz still receives the event and can run its drag-tear gesture detection on subsequent `MouseMove`. Same pattern mirrored into `FloatingClockWindow` for torn-away tabs. (`MainWindow.xaml`, `MainWindow.xaml.cs`, `FloatingClockWindow.xaml`, `FloatingClockWindow.xaml.cs`.)
+
 ## [0.0.19] - 2026-04-30
 
 ### Fixed

@@ -136,6 +136,30 @@ public partial class MainWindow : FluentWindow
     }
 
     /// <summary>
+    /// Preview-tunnel single-click selection. Dan's observation:
+    /// single clicks were missed but double-clicks always worked —
+    /// indicating they went through different code paths. Single
+    /// clicks were going through Dragablz's intrinsic click/drag
+    /// classifier (which appears to misclassify short clicks as
+    /// drag-starts that never complete), while double-clicks went
+    /// through WPF's MouseDoubleClick event handled separately. By
+    /// hooking PreviewMouseLeftButtonDown, we tunnel DOWN before
+    /// Dragablz sees the event and force the selection
+    /// unconditionally. e.Handled is intentionally NOT set so
+    /// Dragablz still receives the event and can run its drag-tear
+    /// gesture detection on subsequent MouseMove.
+    /// </summary>
+    private void TabItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe &&
+            fe.DataContext is TabViewModel vm &&
+            _vm is not null)
+        {
+            _vm.SelectedTab = vm;
+        }
+    }
+
+    /// <summary>
     /// Right-click context menu -> Tab settings…
     /// </summary>
     private void TabContextSettings_Click(object sender, RoutedEventArgs e)

@@ -84,6 +84,9 @@
                     <Setter Property="Padding" Value="10,4"/>
                     <Setter Property="FontSize" Value="13"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <!-- See MainWindow.xaml for PreviewMouseLeftButtonDown rationale. -->
+                    <EventSetter Event="PreviewMouseLeftButtonDown"
+                                 Handler="TabItem_PreviewMouseLeftButtonDown"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background"  Value="#FFFFFF"/>

@@ -224,6 +224,24 @@
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>
+                    <!--
+                      Preview-tunnel mouse-down handler that explicitly
+                      sets SelectedTab on the clicked item. Dan's
+                      observation: single clicks were missing while
+                      double-clicks always worked, indicating the
+                      single-click selection went through Dragablz's
+                      click/drag classifier (which sometimes
+                      misclassifies short clicks as drag-starts) while
+                      double-clicks went through WPF's MouseDoubleClick
+                      event (different code path). PreviewMouseLeft-
+                      ButtonDown tunnels DOWN through the tree before
+                      Dragablz's classifier sees the event, so we can
+                      set SelectedTab unconditionally. We don't set
+                      e.Handled=true so Dragablz still sees the event
+                      and can run its drag-tear gesture detection.
+                    -->
+                    <EventSetter Event="PreviewMouseLeftButtonDown"
+                                 Handler="TabItem_PreviewMouseLeftButtonDown"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu>

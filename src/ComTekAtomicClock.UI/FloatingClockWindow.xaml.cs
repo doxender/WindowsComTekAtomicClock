@@ -21,6 +21,7 @@ using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using ComTekAtomicClock.UI.Dialogs;
 using ComTekAtomicClock.UI.ViewModels;
 using Wpf.Ui.Controls;
@@ -40,6 +41,21 @@ public partial class FloatingClockWindow : FluentWindow
     // bound to the originating Button (DataContext walks via the
     // DataTemplate that wraps each tab's content).
     // ----------------------------------------------------------------
+
+    /// <summary>
+    /// Preview-tunnel single-click selection on the tab header — same
+    /// rationale as MainWindow.TabItem_PreviewMouseLeftButtonDown.
+    /// Floating windows don't bind SelectedItem to a VM SelectedTab
+    /// (Dragablz manages selection on its own internal items), so we
+    /// just set it on the tab strip directly.
+    /// </summary>
+    private void TabItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is TabViewModel vm)
+        {
+            FloatingTabs.SelectedItem = vm;
+        }
+    }
 
     /// <summary>
     /// ✕ overlay -> close this tab. Closing the last tab in a
