@@ -129,35 +129,77 @@
             <dragablz:TabablzControl.ItemContainerStyle>
                 <Style TargetType="dragablz:DragablzItem">
                     <!--
-                      Force a clean white-tab/black-text look so labels
-                      read regardless of what Wpf.Ui's dark theme is
-                      doing to the chrome around the tabs. Selected
-                      and hover get subtle differentiation; the Black
-                      foreground stays constant so the timezone label
-                      is always legible.
+                      DEFENSIVE TAB STYLING — explicit ControlTemplate.
 
-                      The Style.Resources block neutralises Dragablz's
-                      drag-thumb element on the LEFT of each tab —
-                      Wpf.Ui's accent color (yellow on Dan's machine)
-                      was painting it as an obvious ugly block. We
-                      keep the thumb in the layout (so drag-to-reorder
-                      and tear-away still work — those gestures hit-
-                      test against the Thumb) but make it visually
-                      invisible.
+                      Background story: when we forced
+                      Background=White on DragablzItem, a yellow
+                      square appeared on the LEFT of every tab. The
+                      Style.Resources approach (transparent Thumb,
+                      Width=0) didn't kill it — proving the yellow
+                      is NOT Dragablz's drag-thumb but some other
+                      element in the inherited template that Wpf.Ui's
+                      accent brush is painting.
+
+                      Rather than chasing the leak, we replace
+                      DragablzItem's ControlTemplate entirely with
+                      our own minimal version: Border + Grid with
+                      ContentPresenter (the label) and an invisible
+                      Thumb (kept for drag-to-reorder hit-testing).
+                      The Thumb's own Template is a Rectangle filled
+                      Transparent so nothing in the chain can color
+                      it.
                     -->
-                    <Style.Resources>
-                        <Style TargetType="Thumb">
-                            <Setter Property="Background"  Value="Transparent"/>
-                            <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="Width"       Value="0"/>
-                        </Style>
-                    </Style.Resources>
                     <Setter Property="Background"  Value="White"/>
                     <Setter Property="Foreground"  Value="Black"/>
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
                     <Setter Property="BorderThickness" Value="1,1,1,0"/>
                     <Setter Property="Padding" Value="10,4"/>
                     <Setter Property="FontSize" Value="13"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="dragablz:DragablzItem">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        Padding="{TemplateBinding Padding}"
+                                        SnapsToDevicePixels="True">
+                                    <Grid>
+                                        <!--
+                                          Transparent Thumb on the
+                                          bottom of the z-stack;
+                                          captures drag events for
+                                          tab reorder + tear-off but
+                                          paints nothing.
+                                        -->
+                                        <Thumb x:Name="PART_Thumb"
+                                               Background="Transparent"
+                                               BorderBrush="Transparent"
+                                               Cursor="Hand">
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Rectangle Fill="Transparent"
+                                                               IsHitTestVisible="True"/>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                        <!--
+                                          Label rendered on top of
+                                          the thumb. ContentPresenter
+                                          uses TextBlock.* attached
+                                          props to inherit our
+                                          Foreground/FontSize/FontWeight.
+                                        -->
+                                        <ContentPresenter HorizontalAlignment="Left"
+                                                          VerticalAlignment="Center"
+                                                          TextBlock.Foreground="{TemplateBinding Foreground}"
+                                                          TextBlock.FontSize="{TemplateBinding FontSize}"
+                                                          TextBlock.FontWeight="{TemplateBinding FontWeight}"/>
+                                    </Grid>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>
                     <Setter Property="ContextMenu">
