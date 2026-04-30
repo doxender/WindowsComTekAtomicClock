@@ -102,6 +102,7 @@
         <dragablz:TabablzControl x:Name="MainTabs"
                                  ItemsSource="{Binding Tabs}"
                                  SelectedItem="{Binding SelectedTab}"
+                                 DisplayMemberPath="Label"
                                  ShowDefaultCloseButton="True"
                                  ShowDefaultAddButton="True"
                                  NewItemFactory="{Binding NewTabFactory}"

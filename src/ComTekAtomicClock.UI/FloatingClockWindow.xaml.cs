@@ -4,11 +4,14 @@
 // when Dragablz fires GetNewHost. The window's TabablzControl is
 // exposed publicly as FloatingTabs so the IInterTabClient can return
 // a reference to it via NewTabHost<Window>.
+//
+// Per-tab settings (timezone, theme) are reachable from a torn-off
+// window the same way as the main window: right-click the tab header
+// or double-click it. Wiring those gestures here would require
+// duplicating the MainWindow handlers — deferred. For now, drag the
+// tab back to the main strip if you need to edit it.
 
 using System.Runtime.Versioning;
-using System.Windows;
-using ComTekAtomicClock.UI.Dialogs;
-using ComTekAtomicClock.UI.ViewModels;
 using Wpf.Ui.Controls;
 
 namespace ComTekAtomicClock.UI;
@@ -20,36 +23,4 @@ public partial class FloatingClockWindow : FluentWindow
     {
         InitializeComponent();
     }
-
-    /// <summary>
-    /// Per-tab ▾ arrow opens TabSettings for the clicked tab.
-    /// We do not have a MainWindowViewModel-style command here
-    /// because floating windows are intentionally minimal — they
-    /// just host one or more tabs and delegate everything else.
-    /// </summary>
-    private void TabSettingsArrow_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.Button btn) return;
-        if (btn.Tag is not TabViewModel tabVm) return;
-
-        var dlg = new TabSettingsDialog(tabVm) { Owner = this };
-        if (dlg.ShowDialog() == true)
-        {
-            // Persist via the main app settings (TabSettings is the
-            // same record reference that lives in AppSettings.Tabs,
-            // so it's already mutated; just trigger a save).
-            try
-            {
-                Shared.Settings.SettingsStore.SaveAppSettings(
-                    LoadCurrentSettings());
-            }
-            catch
-            {
-                // best-effort
-            }
-        }
-    }
-
-    private static Shared.Settings.AppSettings LoadCurrentSettings()
-        => Shared.Settings.SettingsStore.LoadAppSettings();
 }
