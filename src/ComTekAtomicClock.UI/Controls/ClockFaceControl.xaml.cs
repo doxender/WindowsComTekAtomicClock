@@ -119,6 +119,20 @@ public partial class ClockFaceControl : UserControl
     private TextBlock? _dateReadout;
 
     /// <summary>
+    /// True when <see cref="_dateReadout"/> is plain text on the dial
+    /// (no enclosing panel) and we need to re-measure + re-center it
+    /// after each <see cref="UpdateClock"/> tick. Boulder Slate and
+    /// Daylight set this — they place the date as bare text below the
+    /// center pin and the displayed-text width varies day-to-day
+    /// (e.g., "MAY 1" vs "DECEMBER 28"), so a one-shot center at
+    /// build time leaves it offset whenever the new text is wider or
+    /// narrower than the build-time placeholder. Themes that wrap
+    /// the date in a Border / panel with HorizontalAlignment="Center"
+    /// don't need this flag — the panel auto-centers its content.
+    /// </summary>
+    private bool _recenterDateReadoutOnUpdate;
+
+    /// <summary>
     /// Per-theme update hook for digital renderers (Flip Clock, Marquee,
     /// Slab, Binary, Hex, Binary Digital) whose visuals don't map onto
     /// the analog hour/minute/second-hand rotation pattern. Each Build*
@@ -249,6 +263,7 @@ public partial class ClockFaceControl : UserControl
         _hourRotate = _minuteRotate = _secondRotate = null;
         _digitalReadout = _dateReadout = null;
         _digitalUpdater = null;
+        _recenterDateReadoutOnUpdate = false;
 
         // Stamp the field BEFORE the build, so a re-entrant call (e.g.,
         // theme changes again mid-build via a binding ripple) is
@@ -395,9 +410,25 @@ public partial class ClockFaceControl : UserControl
             _digitalReadout.Text = local.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 
         if (_dateReadout is not null)
+        {
             _dateReadout.Text = local
                 .ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture)
                 .ToUpperInvariant();
+
+            // Re-center after the new text size is known. Themes that
+            // place the date as bare canvas text (Boulder Slate,
+            // Daylight) need this — their initial center-at-build was
+            // computed against a zero-width measure (text not set
+            // yet), and even with a placeholder the width varies
+            // day-to-day. Themes that wrap the date in a panel skip
+            // this flag and rely on the panel's HorizontalAlignment
+            // to auto-center.
+            if (_recenterDateReadoutOnUpdate)
+            {
+                _dateReadout.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(_dateReadout, Cx - _dateReadout.DesiredSize.Width / 2.0);
+            }
+        }
 
         // Per-theme digital update for renderers without rotating
         // hands (Flip Clock through Binary Digital). See
@@ -754,6 +785,9 @@ public partial class ClockFaceControl : UserControl
 
         _digitalReadout = timeTb;
         _dateReadout    = dateTb;
+        // Bare canvas text (no enclosing centered panel) — UpdateClock
+        // re-measures and re-centers each tick.
+        _recenterDateReadoutOnUpdate = true;
     }
 
     // ===============================================================
@@ -1057,6 +1091,13 @@ public partial class ClockFaceControl : UserControl
 
         _digitalReadout = timeTb;
         _dateReadout    = dateTb;
+        // Bare canvas text (no enclosing centered panel) — UpdateClock
+        // re-measures and re-centers each tick. Same fix as Boulder
+        // Slate; Dan flagged the date stuck right-of-center on this
+        // theme because the build-time measure was against an empty
+        // dateTb (Text not yet set), so Canvas.SetLeft was at Cx-0
+        // instead of Cx-half-of-rendered-width.
+        _recenterDateReadoutOnUpdate = true;
     }
 
     // ===============================================================

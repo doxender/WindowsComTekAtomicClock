@@ -4,6 +4,13 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.24] - 2026-04-30
+
+### Fixed
+
+- **Daylight (and Boulder Slate) date readout sat right-of-center.** Both themes place the date as bare canvas text (no enclosing panel). Build-time code created the `TextBlock`, called `Measure` on it *before* setting `Text`, then `Canvas.SetLeft(dateTb, Cx - DesiredSize.Width / 2.0)` — but `DesiredSize.Width` was 0 because the text wasn't set yet, so `Canvas.SetLeft` got `Cx - 0 = 200` (the dial center). When `UpdateClock` later wrote the actual text, it rendered starting at x=200 and extending rightward — visually offset from the dial center by half the text width. Got noticeable on Daylight after v0.0.22 widened the date format from `"ddd · MMMM d"` to `"ddd · MMMM d · yyyy"` (extra 8 chars).
+  - *Solution:* New `_recenterDateReadoutOnUpdate` flag, set true by Boulder Slate and Daylight. `UpdateClock` re-measures and re-centers the `_dateReadout` after writing each tick's new text. Cost: one Measure call per tick on those two themes (cheap; the TextBlock is tiny). Themes that wrap their date in a `Border` panel (Atomic Lab, Aero Glass, Cathode, Concourse) skip the flag — the panel's `HorizontalAlignment="Center"` auto-centers the inner content. (`Controls/ClockFaceControl.xaml.cs`.)
+
 ## [0.0.23] - 2026-04-30
 
 ### Fixed
