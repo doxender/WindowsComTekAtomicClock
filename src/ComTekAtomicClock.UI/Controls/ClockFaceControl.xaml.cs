@@ -162,17 +162,37 @@ public partial class ClockFaceControl : UserControl
         }
 
         AddVersionLabel();
-        AddDebugThemeLabel();
+
+        // Test-only theme-name overlay: hidden on the six analog
+        // renderers now that Dan has verified them. Still painted on
+        // the unimplemented digital themes (FlipClock, Marquee, Slab,
+        // Binary, Hex, BinaryDigital), all of which currently fall
+        // back to Atomic Lab visuals — the label shows the user's
+        // actual selection so the mismatch is obvious. Drop the
+        // !IsAnalogTheme check (or this whole call) when those
+        // renderers ship and there's no fallback to flag.
+        if (!IsAnalogTheme(Theme))
+            AddDebugThemeLabel();
     }
+
+    private static bool IsAnalogTheme(SettingsTheme t) => t switch
+    {
+        SettingsTheme.AtomicLab     => true,
+        SettingsTheme.BoulderSlate  => true,
+        SettingsTheme.AeroGlass     => true,
+        SettingsTheme.Cathode       => true,
+        SettingsTheme.Concourse     => true,
+        SettingsTheme.Daylight      => true,
+        _                           => false,
+    };
 
     /// <summary>
     /// Test-only overlay (TODO remove for public release): paints the
     /// currently-selected Theme name in small gray text near the
-    /// bottom of the dial canvas, so we can see at a glance whether
-    /// the renderer matches the selection. Six of the twelve themes
-    /// still fall back to Atomic Lab visuals; with this label visible,
-    /// the mismatch is obvious (label says "Slab", visual is Atomic
-    /// Lab).
+    /// bottom of the dial canvas. Only called for themes that still
+    /// fall back to Atomic Lab visuals (the six unimplemented digital
+    /// renderers); analog themes don't get the label since they're
+    /// rendering correctly per Dan's verification.
     /// </summary>
     private void AddDebugThemeLabel()
     {
