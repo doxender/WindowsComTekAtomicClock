@@ -52,8 +52,17 @@
 
             <dragablz:TabablzControl.ItemContainerStyle>
                 <Style TargetType="dragablz:DragablzItem">
-                    <!-- See MainWindow.xaml for the long-form rationale.
-                         Same defensive ControlTemplate override here. -->
+                    <!-- See MainWindow.xaml for rationale. -->
+                    <Style.Resources>
+                        <Style TargetType="Thumb">
+                            <Setter Property="Background"  Value="Transparent"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Width"       Value="0"/>
+                            <Setter Property="MinWidth"    Value="0"/>
+                            <Setter Property="Margin"      Value="0"/>
+                            <Setter Property="Padding"     Value="0"/>
+                        </Style>
+                    </Style.Resources>
                     <Setter Property="Background"  Value="White"/>
                     <Setter Property="Foreground"  Value="Black"/>
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
@@ -61,36 +70,6 @@
                     <Setter Property="Padding" Value="10,4"/>
                     <Setter Property="FontSize" Value="13"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="dragablz:DragablzItem">
-                                <Border Background="{TemplateBinding Background}"
-                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        Padding="{TemplateBinding Padding}"
-                                        SnapsToDevicePixels="True">
-                                    <Grid>
-                                        <Thumb x:Name="PART_Thumb"
-                                               Background="Transparent"
-                                               BorderBrush="Transparent"
-                                               Cursor="Hand">
-                                            <Thumb.Template>
-                                                <ControlTemplate TargetType="Thumb">
-                                                    <Rectangle Fill="Transparent"
-                                                               IsHitTestVisible="True"/>
-                                                </ControlTemplate>
-                                            </Thumb.Template>
-                                        </Thumb>
-                                        <ContentPresenter HorizontalAlignment="Left"
-                                                          VerticalAlignment="Center"
-                                                          TextBlock.Foreground="{TemplateBinding Foreground}"
-                                                          TextBlock.FontSize="{TemplateBinding FontSize}"
-                                                          TextBlock.FontWeight="{TemplateBinding FontWeight}"/>
-                                    </Grid>
-                                </Border>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background"  Value="#FFFFFF"/>

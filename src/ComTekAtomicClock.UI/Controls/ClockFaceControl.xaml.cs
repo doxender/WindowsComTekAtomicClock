@@ -279,9 +279,18 @@ public partial class ClockFaceControl : UserControl
         double overhang, double length, double width,
         Brush fill, double cornerRadius = 0)
     {
-        // Rectangle is drawn from (Cx - width/2, Cy - length) to
-        // (Cx + width/2, Cy + overhang). RotateTransform around (Cx, Cy).
-        var rotate = new RotateTransform(0, Cx, Cy);
+        // Rectangle is positioned in CANVAS coords from
+        //   top-left     = (Cx - width/2, Cy - length)   -> i.e. dial center, then up by `length`
+        //   bottom-right = (Cx + width/2, Cy + overhang)
+        // RotateTransform.CenterX/CenterY is interpreted in the
+        // ELEMENT'S OWN local coord space (not the canvas), where the
+        // top-left of the rect is (0, 0). The dial center in those
+        // local coords is (width/2, length). Earlier this used
+        // (Cx, Cy) which made the hands rotate around a point WAY
+        // off-canvas and effectively invisible — the bug that left
+        // Boulder Slate / Concourse / Daylight showing only their
+        // line-based second hand and the center pin.
+        var rotate = new RotateTransform(0, width / 2.0, length);
         var rect = new Rectangle
         {
             Width = width,

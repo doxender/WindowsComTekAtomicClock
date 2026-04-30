@@ -129,26 +129,36 @@
             <dragablz:TabablzControl.ItemContainerStyle>
                 <Style TargetType="dragablz:DragablzItem">
                     <!--
-                      DEFENSIVE TAB STYLING — explicit ControlTemplate.
+                      Style overrides ON TOP of Dragablz's default
+                      ControlTemplate. We tried fully replacing the
+                      template last commit and broke click-to-select
+                      and tear-away because Dragablz's selection
+                      logic depends on the original template's
+                      mouse-event routing through the Thumb. Going
+                      back to letting Dragablz own the template and
+                      only tuning brushes + a few attached properties
+                      from out here.
 
-                      Background story: when we forced
-                      Background=White on DragablzItem, a yellow
-                      square appeared on the LEFT of every tab. The
-                      Style.Resources approach (transparent Thumb,
-                      Width=0) didn't kill it — proving the yellow
-                      is NOT Dragablz's drag-thumb but some other
-                      element in the inherited template that Wpf.Ui's
-                      accent brush is painting.
-
-                      Rather than chasing the leak, we replace
-                      DragablzItem's ControlTemplate entirely with
-                      our own minimal version: Border + Grid with
-                      ContentPresenter (the label) and an invisible
-                      Thumb (kept for drag-to-reorder hit-testing).
-                      The Thumb's own Template is a Rectangle filled
-                      Transparent so nothing in the chain can color
-                      it.
+                      For the yellow accent blocks: the Style.Resources
+                      block strips Thumb + FocusVisual + accent
+                      candidates that Wpf.Ui's accent brush could be
+                      painting. If yellow persists after this, it's
+                      coming from an element outside DragablzItem's
+                      template (a TabPanel decoration, an inherited
+                      style on a sibling) and the next move is to
+                      run with VS Live Visual Tree open and identify
+                      the offending element by name.
                     -->
+                    <Style.Resources>
+                        <Style TargetType="Thumb">
+                            <Setter Property="Background"  Value="Transparent"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Width"       Value="0"/>
+                            <Setter Property="MinWidth"    Value="0"/>
+                            <Setter Property="Margin"      Value="0"/>
+                            <Setter Property="Padding"     Value="0"/>
+                        </Style>
+                    </Style.Resources>
                     <Setter Property="Background"  Value="White"/>
                     <Setter Property="Foreground"  Value="Black"/>
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
@@ -156,50 +166,6 @@
                     <Setter Property="Padding" Value="10,4"/>
                     <Setter Property="FontSize" Value="13"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="dragablz:DragablzItem">
-                                <Border Background="{TemplateBinding Background}"
-                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        Padding="{TemplateBinding Padding}"
-                                        SnapsToDevicePixels="True">
-                                    <Grid>
-                                        <!--
-                                          Transparent Thumb on the
-                                          bottom of the z-stack;
-                                          captures drag events for
-                                          tab reorder + tear-off but
-                                          paints nothing.
-                                        -->
-                                        <Thumb x:Name="PART_Thumb"
-                                               Background="Transparent"
-                                               BorderBrush="Transparent"
-                                               Cursor="Hand">
-                                            <Thumb.Template>
-                                                <ControlTemplate TargetType="Thumb">
-                                                    <Rectangle Fill="Transparent"
-                                                               IsHitTestVisible="True"/>
-                                                </ControlTemplate>
-                                            </Thumb.Template>
-                                        </Thumb>
-                                        <!--
-                                          Label rendered on top of
-                                          the thumb. ContentPresenter
-                                          uses TextBlock.* attached
-                                          props to inherit our
-                                          Foreground/FontSize/FontWeight.
-                                        -->
-                                        <ContentPresenter HorizontalAlignment="Left"
-                                                          VerticalAlignment="Center"
-                                                          TextBlock.Foreground="{TemplateBinding Foreground}"
-                                                          TextBlock.FontSize="{TemplateBinding FontSize}"
-                                                          TextBlock.FontWeight="{TemplateBinding FontWeight}"/>
-                                    </Grid>
-                                </Border>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>
                     <Setter Property="ContextMenu">
