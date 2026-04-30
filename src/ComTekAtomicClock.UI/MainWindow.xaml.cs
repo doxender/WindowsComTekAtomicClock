@@ -12,6 +12,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using ComTekAtomicClock.UI.Dialogs;
 using ComTekAtomicClock.UI.ViewModels;
 using Wpf.Ui.Controls;
@@ -64,19 +65,39 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     internal void RefreshTabHeader(TabViewModel tab)
     {
-        System.Diagnostics.Trace.WriteLine(
-            $"[MainWindow] RefreshTabHeader(\"{tab.Label}\") start");
+        // Two-phase refresh per Dan's v0.0.30 testing: the synchronous
+        // call (v0.0.21) was timing-sensitive — it ran right after
+        // TabSettingsDialog.ShowDialog() returned, but the visual tree
+        // can be mid-update at that exact instant (dialog tearing
+        // down, focus shifting, bindings settling). When we walked
+        // too early, we either missed the TextBlock or UpdateTarget()
+        // ran against a stale-state binding. Symptom: tab header
+        // sometimes didn't update; tear-off and restart always did.
+        //
+        // Phase 1: synchronous attempt — catches the common case
+        // where the visual tree is already settled. Cheap.
+        // Phase 2: dispatcher-deferred attempt at ApplicationIdle
+        // priority — runs after every higher-priority dispatcher
+        // item (input, render, data-bind), so the visual tree is
+        // guaranteed to be in its final post-dialog-close state.
+        // Catches the rare cases where phase 1 was too early.
+        DoRefreshTabHeaderNow(tab, "phase 1 (sync)");
+        Dispatcher.BeginInvoke(
+            new Action(() => DoRefreshTabHeaderNow(tab, "phase 2 (idle)")),
+            DispatcherPriority.ApplicationIdle);
+    }
 
+    private void DoRefreshTabHeaderNow(TabViewModel tab, string phase)
+    {
         // v0.0.16 walked from ContainerFromItem(tab) — i.e., the
         // DragablzItem container's own visual subtree. That walk
         // never found the header TextBlock because Dragablz renders
         // tab-strip headers in a SEPARATE subtree (a tab-strip panel
         // that's a sibling of the items panel, not a descendant of
-        // the container). The walk silently matched 0 TextBlocks,
-        // UpdateTarget() was called on nothing, and the bug
-        // persisted. v0.0.21 widens the scope to the whole
+        // the container). v0.0.21 widened the scope to the whole
         // TabablzControl and filters by DataContext to pick out the
-        // specific tab's header.
+        // specific tab's header. v0.0.31 dispatches twice (see
+        // RefreshTabHeader).
         var refreshed = 0;
         foreach (var node in EnumerateVisualDescendants(MainTabs))
         {
@@ -100,7 +121,7 @@ public partial class MainWindow : FluentWindow
         }
 
         System.Diagnostics.Trace.WriteLine(
-            $"[MainWindow] RefreshTabHeader: refreshed {refreshed} TextBlock(s)");
+            $"[MainWindow] DoRefreshTabHeaderNow({phase}): tab=\"{tab.Label}\", refreshed {refreshed} TextBlock(s)");
 
         // Re-measure / re-arrange so a longer label
         // (e.g., "UTC" → "Europe/Kiev") doesn't get clipped at the

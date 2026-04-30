@@ -4,6 +4,18 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.31] - 2026-04-30
+
+### Fixed
+
+- **Tab header still didn't reliably update when the user changed a tab's timezone in Settings** (Dan's v0.0.30 testing: "It does change on tearoff and it does reflect the correct city when restarted"). The v0.0.21 surgical refresh worked most of the time but was timing-sensitive — it ran synchronously the instant `TabSettingsDialog.ShowDialog()` returned, when the visual tree could still be mid-update from the dialog tearing down. Either the `TextBlock` walk found nothing or `UpdateTarget()` ran against a stale binding state.
+  - *Solution:* Two-phase refresh. `RefreshTabHeader` now (a) calls the existing walk + `UpdateTarget()` synchronously to catch the common case, AND (b) queues a second pass via `Dispatcher.BeginInvoke(..., ApplicationIdle)` to run after every higher-priority dispatcher item has settled. By that point, the visual tree is guaranteed to be in its final post-dialog-close state. Cheap (one extra walk in the rare-case path), bulletproof.
+  - Phase logged via `Trace.WriteLine`: `[MainWindow] DoRefreshTabHeaderNow(phase 1 (sync)): tab="Kiev", refreshed N TextBlock(s)` then `phase 2 (idle): refreshed N`. If the symptom recurs, the trace stream tells us whether phase 1 missed and phase 2 caught it (timing was the cause), or whether both refreshed 0 (deeper structural problem). (`MainWindow.xaml.cs`.)
+
+### Doc audit (per pre-merge rule)
+
+- `README.md`, `Dialogs/HelpDialog.xaml`, `requirements.txt` — no change. None describe tab-header refresh behavior; the user-facing experience after this fix is just "the new city shows up in the header without tear-off."
+
 ## [0.0.30] - 2026-04-30
 
 ### Changed
