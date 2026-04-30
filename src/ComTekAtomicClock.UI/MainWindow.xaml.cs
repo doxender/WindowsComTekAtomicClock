@@ -63,71 +63,55 @@ public partial class MainWindow : FluentWindow
     /// UpdateLayout() at the end nudges the tab strip to re-arrange
     /// in case the new text is wider than the old.
     /// </summary>
-    internal void RefreshTabHeader(TabViewModel tab)
+    /// <summary>
+    /// Per Dan's two-event rule (v0.0.32): the tab name is set at
+    /// EXACTLY two events — on Load (when the ItemTemplate creates
+    /// each tab's header TextBlock and the {Binding Label} reads
+    /// the source freshly), and HERE, on the close of the Settings
+    /// dialog. No PropertyChanged cascades, no timing-sensitive
+    /// dispatch retries, no BindingExpression.UpdateTarget — those
+    /// approaches (v0.0.21..v0.0.31) all proved unreliable in
+    /// Dragablz's tab strip.
+    ///
+    /// This walks every Application window (main + every torn-off
+    /// FloatingClockWindow), finds every TextBlock tagged
+    /// "TabHeaderText" whose DataContext is the given tab, and
+    /// imperatively sets its Text to the tab's current Label.
+    /// Bypasses bindings entirely. The Tag identifies the right
+    /// TextBlock unambiguously even after the binding gets
+    /// disconnected by an earlier direct Text set.
+    /// </summary>
+    internal static void SetTabHeaderInAllDisplays(TabViewModel tab)
     {
-        // Two-phase refresh per Dan's v0.0.30 testing: the synchronous
-        // call (v0.0.21) was timing-sensitive — it ran right after
-        // TabSettingsDialog.ShowDialog() returned, but the visual tree
-        // can be mid-update at that exact instant (dialog tearing
-        // down, focus shifting, bindings settling). When we walked
-        // too early, we either missed the TextBlock or UpdateTarget()
-        // ran against a stale-state binding. Symptom: tab header
-        // sometimes didn't update; tear-off and restart always did.
-        //
-        // Phase 1: synchronous attempt — catches the common case
-        // where the visual tree is already settled. Cheap.
-        // Phase 2: dispatcher-deferred attempt at ApplicationIdle
-        // priority — runs after every higher-priority dispatcher
-        // item (input, render, data-bind), so the visual tree is
-        // guaranteed to be in its final post-dialog-close state.
-        // Catches the rare cases where phase 1 was too early.
-        DoRefreshTabHeaderNow(tab, "phase 1 (sync)");
-        Dispatcher.BeginInvoke(
-            new Action(() => DoRefreshTabHeaderNow(tab, "phase 2 (idle)")),
-            DispatcherPriority.ApplicationIdle);
-    }
+        var newText = tab.Label;
+        var setCount = 0;
+        var windowCount = 0;
 
-    private void DoRefreshTabHeaderNow(TabViewModel tab, string phase)
-    {
-        // v0.0.16 walked from ContainerFromItem(tab) — i.e., the
-        // DragablzItem container's own visual subtree. That walk
-        // never found the header TextBlock because Dragablz renders
-        // tab-strip headers in a SEPARATE subtree (a tab-strip panel
-        // that's a sibling of the items panel, not a descendant of
-        // the container). v0.0.21 widened the scope to the whole
-        // TabablzControl and filters by DataContext to pick out the
-        // specific tab's header. v0.0.31 dispatches twice (see
-        // RefreshTabHeader).
-        var refreshed = 0;
-        foreach (var node in EnumerateVisualDescendants(MainTabs))
+        if (Application.Current is { } app)
         {
-            // Fully-qualified — the XAML's <TextBlock> is the WPF
-            // primitive, not Wpf.Ui's themed TextBlock subclass that
-            // also lives in scope via the ui: namespace.
-            if (node is not System.Windows.Controls.TextBlock tb) continue;
-
-            var be = BindingOperations.GetBindingExpression(
-                tb, System.Windows.Controls.TextBlock.TextProperty);
-            if (be is null) continue;
-            if (be.ParentBinding.Path?.Path != nameof(TabViewModel.Label)) continue;
-
-            // Filter: the same {Binding Label} appears once per tab
-            // in the tab strip; we only want to refresh the one
-            // whose DataContext is the changed tab.
-            if (!ReferenceEquals(tb.DataContext, tab)) continue;
-
-            be.UpdateTarget();
-            refreshed++;
+            foreach (Window window in app.Windows)
+            {
+                windowCount++;
+                foreach (var node in EnumerateVisualDescendants(window))
+                {
+                    if (node is System.Windows.Controls.TextBlock tb &&
+                        Equals(tb.Tag, "TabHeaderText") &&
+                        ReferenceEquals(tb.DataContext, tab))
+                    {
+                        tb.Text = newText;
+                        // Re-measure the parent so a longer label
+                        // (e.g., "UTC" → "Europe/Kiev") doesn't get
+                        // clipped at the old width.
+                        if (tb.Parent is FrameworkElement fe)
+                            fe.InvalidateMeasure();
+                        setCount++;
+                    }
+                }
+            }
         }
 
         System.Diagnostics.Trace.WriteLine(
-            $"[MainWindow] DoRefreshTabHeaderNow({phase}): tab=\"{tab.Label}\", refreshed {refreshed} TextBlock(s)");
-
-        // Re-measure / re-arrange so a longer label
-        // (e.g., "UTC" → "Europe/Kiev") doesn't get clipped at the
-        // old width.
-        if (refreshed > 0)
-            MainTabs.UpdateLayout();
+            $"[MainWindow] SetTabHeaderInAllDisplays(\"{newText}\"): set {setCount} TextBlock(s) across {windowCount} window(s)");
     }
 
     private static IEnumerable<DependencyObject> EnumerateVisualDescendants(DependencyObject root)

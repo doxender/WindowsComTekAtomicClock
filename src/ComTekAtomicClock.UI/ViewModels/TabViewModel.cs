@@ -36,7 +36,15 @@ public sealed class TabViewModel : INotifyPropertyChanged
             _resolvedTimeZone = ResolveTimeZone(value);
             OnPropertyChanged();
             OnPropertyChanged(nameof(TimeZone));
-            OnPropertyChanged(nameof(Label));
+            // Note: NO OnPropertyChanged(nameof(Label)) here.
+            // Per Dan's two-event rule (v0.0.32) the tab name is
+            // set imperatively by MainWindow.SetTabHeaderInAllDisplays
+            // when the Settings dialog closes — NOT via a
+            // PropertyChanged cascade off TimeZoneId, which Dragablz
+            // proved unreliable about honoring (v0.0.21..v0.0.31).
+            // Label's getter still computes the right value when
+            // read, so the {Binding Label} on freshly-created
+            // ItemTemplate TextBlocks (Load case) reads correctly.
         }
     }
 

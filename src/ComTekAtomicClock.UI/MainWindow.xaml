@@ -148,7 +148,21 @@
             -->
             <dragablz:TabablzControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Label}"
+                    <!--
+                      Tag="TabHeaderText" identifies this TextBlock for
+                      MainWindow.SetTabHeaderInAllDisplays(tab), which
+                      walks every Application window's visual tree and
+                      sets Text imperatively after the Settings dialog
+                      closes. The {Binding Label} stays for the Load
+                      case — initial container creation reads the
+                      value freshly via the binding. Subsequent changes
+                      go through the imperative path (per Dan's rule:
+                      tab name set only twice — on Load, and on dialog
+                      close — to avoid the Dragablz PropertyChanged
+                      cascade that proved unreliable in v0.0.21..0.0.31).
+                    -->
+                    <TextBlock Tag="TabHeaderText"
+                               Text="{Binding Label}"
                                VerticalAlignment="Center"/>
                 </DataTemplate>
             </dragablz:TabablzControl.ItemTemplate>

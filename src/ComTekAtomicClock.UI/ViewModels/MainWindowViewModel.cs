@@ -352,24 +352,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             // already wrote back into TabSettings via the TabViewModel.
             PersistAfterDialog();
 
-            // v0.0.16 surgical tab-header refresh. PropertyChanged on
-            // TabViewModel.Label fires correctly, but Dragablz in this
-            // version doesn't propagate it to the rendered tab strip;
-            // tearing the tab off was the only thing that updated it.
-            // v0.0.14 tried to force a re-template via Tabs[idx]=tab
-            // (CollectionChanged.Replace) and crashed the process —
-            // TabablzControl.OnItemsChanged literally throws
-            // NotImplementedException for Replace. Confirmed via the
-            // crash log: "Dragablz.TabablzControl.OnItemsChanged" /
-            // "Replace not implemented yet".
-            //
-            // This path skips the collection entirely: it walks the
-            // existing tab container, finds the TextBlock whose Text
-            // is bound to {Binding Label}, and calls UpdateTarget()
-            // on the binding so the TextBlock re-pulls the new value.
-            // No CollectionChanged event is raised; Dragablz never
-            // sees anything.
-            (Application.Current?.MainWindow as MainWindow)?.RefreshTabHeader(tab);
+            // v0.0.32 imperative tab-name set, per Dan's two-event
+            // rule: tab name is set on Load (ItemTemplate binding
+            // reads source freshly when the container is created)
+            // and HERE — when the Settings dialog closes. The earlier
+            // approaches (v0.0.21..v0.0.31) all relied on
+            // PropertyChanged + binding refresh to propagate the new
+            // Label, and Dragablz's tab strip didn't honor those
+            // reliably. Now we walk every Application window and
+            // imperatively set TextBlock.Text on every header tagged
+            // "TabHeaderText" whose DataContext is this tab. No
+            // binding cascade, no timing dispatch.
+            MainWindow.SetTabHeaderInAllDisplays(tab);
         }
     }
 

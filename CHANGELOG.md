@@ -4,6 +4,25 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.32] - 2026-04-30
+
+### Changed (architecture refactor — tab name is now set imperatively, two events only)
+
+Per Dan's spec after v0.0.31 *still* didn't reliably update the tab header on TZ change: "Refactor all of the code that sets the tab name. Make sure it is changed only on two events. On Load and when the change dialog closes. When the change dialog box closes, it should read the current value of the combo box and change that tab to the correct name on all instances of the display client."
+
+- **Abandoned the PropertyChanged-cascade approach entirely.** v0.0.21 (surgical `BindingExpression.UpdateTarget`), v0.0.31 (two-phase sync + ApplicationIdle dispatch), and the original `OnPropertyChanged(nameof(Label))` from the `TimeZoneId` setter all relied on Dragablz's tab strip honoring source-property changes. It doesn't, reliably. Tear-off and restart always worked because both create *fresh* containers where the `ItemTemplate`'s `{Binding Label}` reads the source from scratch — there's no cached binding to refresh.
+- **The two events:**
+  1. **Load** — when the `ItemTemplate` instantiates a header `TextBlock` for a tab (initial app start, new tab via `+`, tear-off into a floating window, drag back to the main window), the `{Binding Label}` reads the source freshly. Automatic, no code involved.
+  2. **Dialog close** — `MainWindowViewModel.OpenTabSettingsCore` now calls a new `MainWindow.SetTabHeaderInAllDisplays(tab)` after `TabSettingsDialog` returns Save. That method walks **every Application window** (main + every torn-off `FloatingClockWindow`), finds every `TextBlock` tagged `Tag="TabHeaderText"` whose `DataContext` is the changed tab, and sets `Text` directly to `tab.Label`. No binding cascade, no timing-sensitive dispatch. Bypasses Dragablz's tab-strip rendering layer entirely.
+- **The `Tag="TabHeaderText"`** attribute on the `ItemTemplate`'s `TextBlock` (added in `MainWindow.xaml` and `FloatingClockWindow.xaml`) identifies the right `TextBlock` even after the binding gets disconnected by an earlier direct `Text` set. It's the only thing that survives unchanged across both the binding-active and binding-disconnected states of the `TextBlock`.
+- **`TabViewModel.TimeZoneId` setter no longer fires `OnPropertyChanged(nameof(Label))`.** Per the two-event rule, that cascade is off-spec. `Label`'s getter still computes the correct value when read, so the Load-case binding works.
+- Removed `MainWindow.RefreshTabHeader` and `DoRefreshTabHeaderNow` (the v0.0.21..v0.0.31 lineage).
+- `Trace.WriteLine` from `SetTabHeaderInAllDisplays` reports `[MainWindow] SetTabHeaderInAllDisplays("Kiev"): set N TextBlock(s) across M window(s)` — `N=0` would diagnose a regression immediately.
+
+### Doc audit (per pre-merge rule)
+
+- `README.md`, `Dialogs/HelpDialog.xaml`, `requirements.txt` — no change. None describe tab-header refresh internals; the user-facing experience is "the new city shows up in the header without tear-off, every time."
+
 ## [0.0.31] - 2026-04-30
 
 ### Fixed

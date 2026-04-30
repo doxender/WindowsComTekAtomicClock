@@ -48,10 +48,13 @@
             <dragablz:TabablzControl.InterTabController>
                 <dragablz:InterTabController InterTabClient="{StaticResource FloatingInterTabClient}"/>
             </dragablz:TabablzControl.InterTabController>
-            <!-- See MainWindow.xaml for ItemTemplate rationale (reactive Label binding). -->
+            <!-- See MainWindow.xaml for ItemTemplate rationale.
+                 Tag="TabHeaderText" identifies the header for the
+                 imperative Text-set in MainWindow.SetTabHeaderInAllDisplays. -->
             <dragablz:TabablzControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Label}"
+                    <TextBlock Tag="TabHeaderText"
+                               Text="{Binding Label}"
                                VerticalAlignment="Center"/>
                 </DataTemplate>
             </dragablz:TabablzControl.ItemTemplate>
