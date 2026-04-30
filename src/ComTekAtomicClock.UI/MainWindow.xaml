@@ -39,7 +39,7 @@
         </ui:TitleBar>
 
         <!--
-          Menu bar removed per Dan's UX call: the only thing above the
+          Menu bar removed per our UX direction: the only thing above the
           banner is now the Wpf.Ui title bar (drag / minimize / maximize
           / close). Tab settings reachable via Ctrl+,. Add Tab via the
           Dragablz "+" button. Remove Tab via each tab's "x" button.
@@ -124,7 +124,7 @@
               kept showing the old label. Tearing the tab off forced
               the new floating window to re-add the item, which
               re-evaluated ToString() and showed the correct label,
-              which is the "tear-away fixes it" symptom Dan reported.
+              which is the "tear-away fixes it" symptom we observed.
               An explicit ItemTemplate with {Binding Label}
               subscribes to PropertyChanged and refreshes live.
 
@@ -175,7 +175,7 @@
                       sized (it stretched to fill its grid cell in the
                       DragablzItem template), intercepting clicks
                       across the entire tab and making selection take
-                      multiple click attempts (Dan's v0.0.3 testing).
+                      multiple click attempts (caught in v0.0.3 testing).
 
                       v0.0.4: keep the empty template (kills paint)
                       AND force Width=0 / MinWidth=0 (zero hit-test

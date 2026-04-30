@@ -1,7 +1,7 @@
 // ComTekAtomicClock.UI.Dialogs.TabSettingsDialog
 //
 // Modal dialog for editing a single tab's TimeZone and Theme. Replaces
-// the inline gear popover from Step 6 (which Dan flagged as ugly /
+// the inline gear popover from Step 6 (which we flagged as ugly /
 // confused with the per-tab UI). This dialog buffers changes locally
 // and only commits them to the bound TabViewModel when the user
 // clicks Save — Cancel discards.

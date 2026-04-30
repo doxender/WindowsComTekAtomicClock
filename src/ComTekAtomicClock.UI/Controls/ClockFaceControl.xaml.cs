@@ -72,7 +72,7 @@ public partial class ClockFaceControl : UserControl
         // during DataTemplate instantiation, plausibly hit by tab
         // recycling in TabablzControl), the change was silently
         // dropped and only the next OnLoaded picked it up. That fits
-        // Dan's "Tab 2 shows Flip Clock but Binary Digital selected"
+        // our "Tab 2 shows Flip Clock but Binary Digital selected"
         // symptom: tab is in a state where the DP says BinaryDigital
         // but the visuals are still from a stale render. Removing
         // the IsLoaded guard means the first render may run before
@@ -194,7 +194,7 @@ public partial class ClockFaceControl : UserControl
         AddVersionLabel();
 
         // The "theme: <name>" debug overlay — TEMPORARILY re-enabled
-        // for v0.0.9 to diagnose Dan's "Tab 2 shows Flip Clock but
+        // for v0.0.9 to diagnose our "Tab 2 shows Flip Clock but
         // Binary Digital selected" report. With the overlay on, we
         // can see at a glance whether RenderActiveTheme is dispatching
         // to the right Build*. Remove again once that bug is closed.
@@ -207,7 +207,7 @@ public partial class ClockFaceControl : UserControl
     /// bottom of the dial canvas. Only called for themes that still
     /// fall back to Atomic Lab visuals (the six unimplemented digital
     /// renderers); analog themes don't get the label since they're
-    /// rendering correctly per Dan's verification.
+    /// rendering correctly per our verification.
     /// </summary>
     private void AddDebugThemeLabel()
     {
@@ -228,7 +228,7 @@ public partial class ClockFaceControl : UserControl
 
     /// <summary>
     /// Paints the running assembly version in the upper-left of the
-    /// dial canvas. Per Dan's spec ("version should be in the clock
+    /// dial canvas. Per our spec ("version should be in the clock
     /// background, upper left"), so any build the user is looking at
     /// is identifiable at a glance. Tied to the project's
     /// &lt;Version&gt; in ComTekAtomicClock.UI.csproj — the standing
@@ -1429,7 +1429,7 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeText("MINUTES", 200, 216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
         Dial.Children.Add(MakeText("SECONDS", 320, 216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
 
-        // Per Dan: drop the decimal-time decode line; instead show
+        // Per our spec: drop the decimal-time decode line; instead show
         // the day-of-week, day-of-month, and month name as their
         // hex-ASCII codes (programmer-terminal vibe). Day-fraction
         // and the day-as-color block stay — those are still
@@ -1565,7 +1565,7 @@ public partial class ClockFaceControl : UserControl
         sBitsTb.Effect = glow.Clone();
         Dial.Children.Add(sBitsTb);
 
-        // Per Dan: drop the decimal decode line; show the day-of-week,
+        // Per our spec: drop the decimal decode line; show the day-of-week,
         // day-of-month, and month name as 8-bit binary ASCII codes
         // (mirrors the Hex theme's hex-ASCII treatment).
         var dowTb = MakeText("// dow:   00000000", 40, 254, mono, 11, magenta,

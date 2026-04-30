@@ -3,7 +3,7 @@
 // Modal gallery of all 12 clock-face themes. Reachable from the "?"
 // overlay button on each tab's clock face -> Themes… menu item. The
 // content mirrors design/themes/index.html but trimmed down to just
-// names + images per Dan's spec.
+// names + images per our spec.
 //
 // Click a tile -> apply that theme to the tab the dialog was opened
 // for, set DialogResult=true (so MainWindow can persist), and close.

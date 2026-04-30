@@ -107,7 +107,7 @@
                       torn-away tabs get the same scaling and the same
                       overlay buttons. Earlier the floating window
                       template was just the ClockFaceControl with no
-                      ✕ / ? buttons — Dan flagged that as a regression.
+                      ✕ / ? buttons — we flagged that as a regression.
                       See MainWindow.xaml for full rationale.
                     -->
                     <Viewbox Stretch="Uniform" Margin="20">

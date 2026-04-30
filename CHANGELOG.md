@@ -4,6 +4,12 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.10] - 2026-04-30
+
+### Changed
+
+- **Source-code comments depersonalized — replaced "Dan" mentions with "we" / "our".** No "Claude" mentions existed. Touched 13 comments across 7 files: `MainWindow.xaml` (3), `FloatingClockWindow.xaml` (1), `Controls/ClockFaceControl.xaml.cs` (6), `Dialogs/TabSettingsDialog.xaml.cs` (1), `Dialogs/ThemesDialog.xaml.cs` (1), `ViewModels/ThemeCatalog.cs` (1). Behavior unchanged. The user-facing copyright line in `AboutDialog.xaml` ("© 2026 Daniel V. Oxender. All rights reserved.") was intentionally preserved — it's display text, not a code comment, and the legal attribution belongs in product UI. CHANGELOG entries that reference Dan are also preserved as historical audit trail; the rule was about source comments.
+
 ## [0.0.9] - 2026-04-30
 
 ### Diagnostic build (in response to Dan's v0.0.7 bug reports)

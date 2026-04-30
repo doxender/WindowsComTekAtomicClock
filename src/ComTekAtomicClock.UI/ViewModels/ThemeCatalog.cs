@@ -7,7 +7,7 @@
 // via Resource entries in ComTekAtomicClock.UI.csproj).
 //
 // The display names and ordering match design/themes/index.html so
-// the in-app gallery matches the reference page Dan reviews against.
+// the in-app gallery matches the reference page we review against.
 // Descriptions are intentionally short — the gallery shows name + image
 // only, nothing else.
 
