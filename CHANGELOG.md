@@ -4,6 +4,23 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.9] - 2026-04-30
+
+### Diagnostic build (in response to Dan's v0.0.7 bug reports)
+
+- **Dan reported: "Tab 2 shows Flip Clock, but Binary Digital selected."** A theme→render mismatch where the persisted Theme value disagrees with what's actually painted. Code-read inspection couldn't isolate it. This build adds two probes / hardening steps so the next F5 produces actionable data.
+
+### Changed
+
+- **`OnThemeChanged` no longer guards on `IsLoaded`.** Earlier, if the `Theme` DP changed before the control's `Loaded` event fired (a small window during `DataTemplate` instantiation that's plausibly hit by `TabablzControl`'s tab-content lifecycle), the change was silently dropped and only the next `OnLoaded` picked up the value. That fits the "DP says BinaryDigital, visuals are FlipClock" symptom: tab in a state where binding has updated `Theme` but the render is from a stale earlier dispatch. Removed the gate; `RenderActiveTheme` now runs on every `Theme` change. The Canvas children are absolutely positioned via explicit Width/Height + `Canvas.SetLeft/SetTop`, so an early call (pre-layout-pass) is correct. (`Controls/ClockFaceControl.xaml.cs`.)
+
+- **`theme: <name>` debug overlay TEMPORARILY re-enabled** on every face. Lets Dan see at a glance which theme `RenderActiveTheme` actually dispatched to. If the overlay says `theme: Binary Digital` but the visuals are Flip Clock, we know `BuildBinaryDigital` is at fault; if the overlay says `theme: Flip Clock`, the DP is the one out of sync. Once the mismatch is closed the overlay comes back off (commented or build-flagged). (`RenderActiveTheme` in `ClockFaceControl.xaml.cs`.)
+
+### Open follow-ups still not addressed
+
+- **Tab clicks remain hard to register first-try, especially on Flip Clock.** Width=0 + empty `Template` + `OverridesDefaultStyle=True` on the Thumb is the current state. The next escalation tier (`IsHitTestVisible=False`, `Visibility=Collapsed`) would risk regressing drag-to-tear, which depends on the Thumb being present in some Dragablz code paths. Holding off pending data from the diagnostic overlay above.
+- **Flip Clock tab not showing city until tear-off** (carry-over from v0.0.8 follow-ups).
+
 ## [0.0.8] - 2026-04-29
 
 ### Changed

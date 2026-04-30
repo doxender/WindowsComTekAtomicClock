@@ -65,7 +65,21 @@ public partial class ClockFaceControl : UserControl
 
     private static void OnThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ClockFaceControl c && c.IsLoaded)
+        // Defensive: re-render whenever Theme changes, regardless of
+        // whether the control is currently in the loaded state. Earlier
+        // this gated on IsLoaded — but if the binding fires the Theme
+        // change between DataContext-set and Loaded (a small window
+        // during DataTemplate instantiation, plausibly hit by tab
+        // recycling in TabablzControl), the change was silently
+        // dropped and only the next OnLoaded picked it up. That fits
+        // Dan's "Tab 2 shows Flip Clock but Binary Digital selected"
+        // symptom: tab is in a state where the DP says BinaryDigital
+        // but the visuals are still from a stale render. Removing
+        // the IsLoaded guard means the first render may run before
+        // layout completes — the Canvas children are positioned by
+        // explicit Width/Height + Canvas.SetLeft/SetTop, so layout
+        // pass is unnecessary for correctness.
+        if (d is ClockFaceControl c)
             c.RenderActiveTheme();
     }
 
@@ -179,14 +193,12 @@ public partial class ClockFaceControl : UserControl
 
         AddVersionLabel();
 
-        // The "theme: <name>" debug overlay — kept around through the
-        // analog audit and the digital-theme implementation pass so
-        // theme→render mismatches were obvious — is no longer needed.
-        // All twelve themes have their own renderer now, so the
-        // overlay would just be visual clutter. AddDebugThemeLabel
-        // is preserved below in case we need it again during a
-        // future renderer change; just call it from here under a
-        // build flag if so.
+        // The "theme: <name>" debug overlay — TEMPORARILY re-enabled
+        // for v0.0.9 to diagnose Dan's "Tab 2 shows Flip Clock but
+        // Binary Digital selected" report. With the overlay on, we
+        // can see at a glance whether RenderActiveTheme is dispatching
+        // to the right Build*. Remove again once that bug is closed.
+        AddDebugThemeLabel();
     }
 
     /// <summary>
