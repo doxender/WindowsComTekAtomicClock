@@ -352,19 +352,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             // already wrote back into TabSettings via the TabViewModel.
             PersistAfterDialog();
 
-            // v0.0.14 added `Tabs[idx] = tab` here as a workaround for
-            // the tab-header-not-refreshing-after-edit bug. It worked
-            // in Debug but caused a silent process exit in Release —
-            // Dragablz's CollectionChanged.Replace handling on the
-            // currently-selected item evidently isn't graceful, and
-            // the resulting unhandled exception killed the process
-            // without surfacing in the UI. v0.0.15 reverted to the
-            // v0.0.13 behavior (label doesn't refresh in place after
-            // Save — user has to tear the tab off and back, or
-            // restart the app, to see the new label). Replacement
-            // workaround is queued; the unhandled-exception handler
-            // added in App.xaml.cs in v0.0.15 should give us visibility
-            // when we try the next approach.
+            // v0.0.16 surgical tab-header refresh. PropertyChanged on
+            // TabViewModel.Label fires correctly, but Dragablz in this
+            // version doesn't propagate it to the rendered tab strip;
+            // tearing the tab off was the only thing that updated it.
+            // v0.0.14 tried to force a re-template via Tabs[idx]=tab
+            // (CollectionChanged.Replace) and crashed the process —
+            // TabablzControl.OnItemsChanged literally throws
+            // NotImplementedException for Replace. Confirmed via the
+            // crash log: "Dragablz.TabablzControl.OnItemsChanged" /
+            // "Replace not implemented yet".
+            //
+            // This path skips the collection entirely: it walks the
+            // existing tab container, finds the TextBlock whose Text
+            // is bound to {Binding Label}, and calls UpdateTarget()
+            // on the binding so the TextBlock re-pulls the new value.
+            // No CollectionChanged event is raised; Dragablz never
+            // sees anything.
+            (Application.Current?.MainWindow as MainWindow)?.RefreshTabHeader(tab);
         }
     }
 

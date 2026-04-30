@@ -24,20 +24,41 @@ public partial class App : Application
 {
     private const string ServiceName = "ComTekAtomicClockSvc";
 
+    /// <summary>
+    /// Subscribe to the three escape-hatches for unhandled exceptions
+    /// HERE rather than in OnStartup — App's constructor runs before
+    /// any WPF code, including before base.OnStartup processes the
+    /// StartupUri and constructs MainWindow. v0.0.15's earlier
+    /// subscription site (in OnStartup, after base.OnStartup) was
+    /// too late: anything that threw during MainWindow's XAML parse,
+    /// InitializeComponent, or Loaded handler escaped before the
+    /// handler was hooked, and the process exited silently.
+    ///
+    /// The three handlers cover the three places an exception can
+    /// escape:
+    ///   · DispatcherUnhandledException — UI-thread (the dispatcher).
+    ///     Most common case. Recovers by setting e.Handled=true so
+    ///     a single recoverable mishap doesn't kill the app.
+    ///   · AppDomain.UnhandledException — non-dispatcher threads
+    ///     (background tasks, finalizers, native callbacks). These
+    ///     are usually fatal — the runtime is mid-tear-down — but
+    ///     we still surface the exception so the user knows what
+    ///     happened instead of staring at a closed window.
+    ///   · TaskScheduler.UnobservedTaskException — fire-and-forget
+    ///     Task whose exception was never awaited (e.g.,
+    ///     IpcClient.TryFetchLastSyncAsync invoked via `_ = ...`).
+    ///     Marked Observed so the process doesn't FailFast.
+    /// </summary>
+    public App()
+    {
+        DispatcherUnhandledException                 += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException   += OnAppDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException        += OnUnobservedTaskException;
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-
-        // Surface unhandled UI-thread exceptions instead of letting
-        // them silently kill the process. v0.0.14 demonstrated this
-        // gap: a Dragablz CollectionChanged.Replace edge case threw,
-        // there was no debugger attached (Release build), and the
-        // app just vanished. With this handler we get a MessageBox
-        // showing the exception type + message + first few stack
-        // frames, plus the option to keep going (e.Handled = true)
-        // so a single recoverable mishap doesn't take the app down.
-        DispatcherUnhandledException += OnDispatcherUnhandledException;
-
         TryStartService();
     }
 
@@ -48,34 +69,77 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Last-resort UI-thread exception handler. Surfaces the exception
-    /// in a MessageBox so silent crashes (especially in Release where
-    /// no debugger / no JIT-debug dialog is in play) become visible.
-    /// We mark Handled=true so the exception doesn't propagate up and
-    /// kill the process — most WPF UI-thread exceptions (binding
-    /// mishaps, dispatched-callback NPEs) are recoverable.
+    /// Dispatcher (UI-thread) handler. Marks Handled=true so a single
+    /// recoverable mishap doesn't tear the app down.
     /// </summary>
     private static void OnDispatcherUnhandledException(
         object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        var ex = e.Exception;
-        // Trim the stack to the first ~6 frames so the dialog stays
-        // readable. Full stack still goes to debug output for anyone
-        // attached.
+        ShowExceptionDialog(e.Exception, "Dispatcher");
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// AppDomain handler — fires for non-dispatcher-thread exceptions
+    /// (background tasks, finalizers, native callbacks). These are
+    /// usually fatal because the runtime is mid-tear-down by the time
+    /// we're called, but surface the exception so the user knows what
+    /// just killed the app. Dispatch to the UI thread because
+    /// MessageBox.Show on a non-UI thread is unreliable.
+    /// </summary>
+    private static void OnAppDomainUnhandledException(
+        object sender, UnhandledExceptionEventArgs e)
+    {
+        var ex = e.ExceptionObject as Exception
+                 ?? new Exception(e.ExceptionObject?.ToString() ?? "(non-Exception)");
+        var origin = e.IsTerminating ? "AppDomain (fatal)" : "AppDomain";
+        TrySurfaceOnUiThread(ex, origin);
+    }
+
+    /// <summary>
+    /// TaskScheduler handler — fires when a Task's exception was never
+    /// awaited (typical with our `_ = TryFetchLastSyncAsync()`
+    /// fire-and-forget pattern in MainWindowViewModel). Mark Observed
+    /// so the .NET runtime doesn't FailFast at the next GC.
+    /// </summary>
+    private static void OnUnobservedTaskException(
+        object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        TrySurfaceOnUiThread(e.Exception, "Task (unobserved)");
+        e.SetObserved();
+    }
+
+    private static void TrySurfaceOnUiThread(Exception ex, string origin)
+    {
+        System.Diagnostics.Debug.WriteLine($"[UnhandledException:{origin}] {ex}");
+        try
+        {
+            var d = Current?.Dispatcher;
+            if (d is null || d.HasShutdownStarted) return;
+            d.BeginInvoke(new Action(() => ShowExceptionDialog(ex, origin)));
+        }
+        catch { /* dispatcher may already be down; nothing more we can do */ }
+    }
+
+    /// <summary>
+    /// Shared rendering for any unhandled exception. Trims the stack
+    /// to the first ~6 frames so the dialog stays readable; full
+    /// stack always goes to Debug output for anyone attached.
+    /// </summary>
+    private static void ShowExceptionDialog(Exception ex, string origin)
+    {
         var stackLines = (ex.StackTrace ?? "(no stack)").Split('\n');
         var trimmed = string.Join("\n",
             stackLines.Take(6).Select(l => l.TrimEnd('\r')));
         if (stackLines.Length > 6) trimmed += "\n…";
 
-        System.Diagnostics.Debug.WriteLine($"[UnhandledException] {ex}");
+        System.Diagnostics.Debug.WriteLine($"[UnhandledException:{origin}] {ex}");
 
         MessageBox.Show(
-            $"{ex.GetType().FullName}\n\n{ex.Message}\n\n{trimmed}",
+            $"{ex.GetType().FullName}  [{origin}]\n\n{ex.Message}\n\n{trimmed}",
             "ComTek Atomic Clock — unhandled exception",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
-
-        e.Handled = true;
     }
 
     /// <summary>

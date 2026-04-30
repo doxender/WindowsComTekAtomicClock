@@ -4,6 +4,25 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.16] - 2026-04-30
+
+### Added
+
+- **Top-level exception handling done correctly.** v0.0.15's handler was subscribed in `OnStartup` *after* `base.OnStartup` — too late, since `base.OnStartup` is what processes the `StartupUri="MainWindow.xaml"` and constructs MainWindow. Anything that threw during MainWindow's XAML parse, `InitializeComponent`, or `Loaded` handler escaped before our handler was hooked, and the process exited silently.
+  - Moved subscription to `App`'s constructor — runs before any WPF code, including before `base.OnStartup`. Now everything from MainWindow construction onward is covered.
+  - Added two more escape hatches: `AppDomain.CurrentDomain.UnhandledException` (non-dispatcher-thread exceptions — background tasks, finalizers, native callbacks) and `TaskScheduler.UnobservedTaskException` (fire-and-forget Tasks like `IpcClient.TryFetchLastSyncAsync` invoked via `_ = ...`). All three handlers funnel into a single `ShowExceptionDialog` that pops a `MessageBox` with exception type + message + first 6 stack frames. Non-fatal handlers also keep the app running (`e.Handled = true` / `e.SetObserved()`). (`App.xaml.cs`.)
+  - If this had been in place earlier, v0.0.14's silent crash would have surfaced as a visible `MessageBox` showing `NotImplementedException: Replace not implemented yet` from Dragablz, and Dan wouldn't have needed Event Viewer at all.
+
+### Fixed
+
+- **Tab header now refreshes after changing TZ in Settings — without crashing.** v0.0.13's bug returns: PropertyChanged on `TabViewModel.Label` fires correctly, but Dragablz's TabablzControl in this version doesn't propagate it to the rendered tab strip; tearing the tab off was the only thing that updated it. v0.0.14 tried to force a re-template via `Tabs[idx] = tab` (`CollectionChanged.Replace`) and crashed with `Dragablz.TabablzControl.OnItemsChanged: NotImplementedException — Replace not implemented yet`.
+  - *Solution:* `MainWindow.RefreshTabHeader(tab)` walks the existing tab container's visual tree, finds the `TextBlock` whose `Text` binding targets `Label`, and calls `BindingExpression.UpdateTarget()` to force the binding to re-pull from source. No collection mutation, no container recycling, no Dragablz `Replace` path. Followed by `UpdateLayout()` on the container so a longer label (e.g., "UTC" → "Europe/Kiev") doesn't get clipped at the old width.
+  - `OpenTabSettingsCore` now calls this after the dialog returns Save instead of touching the `Tabs` collection. (`MainWindow.xaml.cs`, `ViewModels/MainWindowViewModel.cs`.)
+
+### Known dev-env issue (punted)
+
+- Running the Service from `dotnet run` (or VS multi-project F5) under your user account — even elevated — fails with `SetSystemTime: Win32 error 1314 (ERROR_PRIVILEGE_NOT_HELD)`. The Service queries NIST successfully but can't apply the correction because `SE_SYSTEMTIME_NAME` isn't enabled in the user-account token even when admin. Production install via `ServiceInstaller` runs as `LocalSystem` and is unaffected. Fix would be `AdjustTokenPrivileges` in `SystemTime.cs` to enable the privilege; deferred per Dan's call.
+
 ## [0.0.15] - 2026-04-30
 
 ### Fixed (regression from v0.0.14)

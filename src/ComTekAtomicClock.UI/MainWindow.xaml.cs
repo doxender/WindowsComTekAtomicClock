@@ -9,7 +9,9 @@ using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using ComTekAtomicClock.UI.Dialogs;
 using ComTekAtomicClock.UI.ViewModels;
 using Wpf.Ui.Controls;
@@ -34,6 +36,73 @@ public partial class MainWindow : FluentWindow
     /// stays single-sourced.
     /// </summary>
     internal MainWindowViewModel? GetViewModel() => _vm;
+
+    /// <summary>
+    /// Force the bound TextBlock in <paramref name="tab"/>'s tab-strip
+    /// header to re-pull from <see cref="TabViewModel.Label"/>.
+    ///
+    /// Background: changing <see cref="TabViewModel.TimeZoneId"/>
+    /// raises PropertyChanged for Label, and the ItemTemplate in
+    /// MainWindow.xaml binds {Binding Label}. In a stock WPF
+    /// ItemsControl the header would refresh automatically. This
+    /// version of Dragablz's TabablzControl doesn't propagate that
+    /// PropertyChanged through to the rendered tab strip — the only
+    /// way the new label appeared was tearing the tab off (which
+    /// re-templated it in a fresh container).
+    ///
+    /// v0.0.14 tried to force a re-template by assigning the tab back
+    /// to its same Tabs[idx] slot to fire CollectionChanged.Replace.
+    /// That crashed the process: TabablzControl.OnItemsChanged throws
+    /// NotImplementedException for Replace.
+    ///
+    /// This method takes a different route: walk the existing tab
+    /// container, find the TextBlock whose Text binding targets Label,
+    /// and call BindingExpression.UpdateTarget() on it. No collection
+    /// mutation, no container recycling, no Dragablz Replace path.
+    /// UpdateLayout() at the end nudges the tab strip to re-arrange
+    /// in case the new text is wider than the old.
+    /// </summary>
+    internal void RefreshTabHeader(TabViewModel tab)
+    {
+        var container = MainTabs.ItemContainerGenerator.ContainerFromItem(tab);
+        if (container is not FrameworkElement fe) return;
+
+        var refreshed = 0;
+        foreach (var node in EnumerateVisualDescendants(fe))
+        {
+            // Fully-qualified — the XAML's <TextBlock> is the WPF
+            // primitive, not Wpf.Ui's themed TextBlock subclass that
+            // also lives in scope via the ui: namespace.
+            if (node is System.Windows.Controls.TextBlock tb)
+            {
+                var be = BindingOperations.GetBindingExpression(
+                    tb, System.Windows.Controls.TextBlock.TextProperty);
+                if (be?.ParentBinding.Path?.Path == nameof(TabViewModel.Label))
+                {
+                    be.UpdateTarget();
+                    refreshed++;
+                }
+            }
+        }
+
+        // Re-measure / re-arrange the container so a longer label
+        // (e.g., "UTC" → "Europe/Kiev") doesn't get clipped at the
+        // old width.
+        if (refreshed > 0)
+            fe.UpdateLayout();
+    }
+
+    private static IEnumerable<DependencyObject> EnumerateVisualDescendants(DependencyObject root)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var grandchild in EnumerateVisualDescendants(child))
+                yield return grandchild;
+        }
+    }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
