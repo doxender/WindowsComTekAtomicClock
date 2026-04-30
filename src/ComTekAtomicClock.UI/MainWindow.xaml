@@ -135,7 +135,23 @@
                       and hover get subtle differentiation; the Black
                       foreground stays constant so the timezone label
                       is always legible.
+
+                      The Style.Resources block neutralises Dragablz's
+                      drag-thumb element on the LEFT of each tab —
+                      Wpf.Ui's accent color (yellow on Dan's machine)
+                      was painting it as an obvious ugly block. We
+                      keep the thumb in the layout (so drag-to-reorder
+                      and tear-away still work — those gestures hit-
+                      test against the Thumb) but make it visually
+                      invisible.
                     -->
+                    <Style.Resources>
+                        <Style TargetType="Thumb">
+                            <Setter Property="Background"  Value="Transparent"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Width"       Value="0"/>
+                        </Style>
+                    </Style.Resources>
                     <Setter Property="Background"  Value="White"/>
                     <Setter Property="Foreground"  Value="Black"/>
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
@@ -184,39 +200,15 @@
                             SmoothSecondHand="{Binding SmoothSecondHand}"/>
 
                         <!--
-                          Discreet help (?) button anchored to the
-                          bottom-left of the tab content. Click opens
-                          the About dialog. Uses RelativeSource to
-                          reach the MainWindow's MainWindowViewModel
-                          since each tab's DataContext is its own
-                          TabViewModel.
-                        -->
-                        <ui:Button HorizontalAlignment="Left"
-                                   VerticalAlignment="Bottom"
-                                   Margin="10,0,0,10"
-                                   Width="32" Height="32"
-                                   Padding="0"
-                                   Appearance="Secondary"
-                                   ToolTip="About ComTek Atomic Clock"
-                                   Command="{Binding DataContext.OpenAboutCommand,
-                                             RelativeSource={RelativeSource AncestorType=Window}}">
-                            <TextBlock Text="?"
-                                       FontWeight="SemiBold"
-                                       FontSize="14"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </ui:Button>
-
-                        <!--
-                          ✕ overlay in the upper-right of the tab
-                          content. Just the glyph — no Wpf.Ui Button
-                          chrome — so it sits flush over the clock
-                          face. Black foreground reads on the
-                          light-themed faces (Boulder Slate, Aero
-                          Glass, Daylight); on the dark themes the
-                          MouseOver state lifts opacity.
-                          Margin pushed inward so it sits clearly
-                          inside the clock area, not on the rim.
+                          Two stacked overlay buttons in the
+                          upper-right of the tab content:
+                            top:    ✕  (close this tab)
+                            below:  ?  (Help / About menu)
+                          Both are plain transparent buttons —
+                          no Wpf.Ui chrome — so they sit flush over
+                          the clock face. Black glyphs read on light
+                          themes; will need per-theme adjustment for
+                          dark themes (queued).
                         -->
                         <Button HorizontalAlignment="Right"
                                 VerticalAlignment="Top"
@@ -236,6 +228,32 @@
                                        Foreground="#000"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
+                        </Button>
+
+                        <Button HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,56,28,0"
+                                Width="22" Height="22"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                ToolTip="Help / About"
+                                Click="HelpButton_Click">
+                            <TextBlock Text="?"
+                                       FontWeight="Bold"
+                                       FontSize="14"
+                                       Foreground="#000"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Help…"
+                                              Click="HelpMenuItem_Click"/>
+                                    <MenuItem Header="About…"
+                                              Click="AboutMenuItem_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
                         </Button>
                     </Grid>
                 </DataTemplate>

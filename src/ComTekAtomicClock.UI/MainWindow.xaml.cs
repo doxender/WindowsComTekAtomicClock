@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using ComTekAtomicClock.UI.Dialogs;
 using ComTekAtomicClock.UI.ViewModels;
 using Wpf.Ui.Controls;
 
@@ -101,5 +102,34 @@ public partial class MainWindow : FluentWindow
             return true;
         }
         return false;
+    }
+
+    // ----------------------------------------------------------------
+    // Help / About menu (the "?" button under the "x" on each tab)
+    // ----------------------------------------------------------------
+
+    /// <summary>
+    /// Click handler on the "?" overlay button: opens its attached
+    /// ContextMenu so the user gets a 2-item menu (Help / About).
+    /// </summary>
+    private void HelpButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button btn) return;
+        if (btn.ContextMenu is null) return;
+        btn.ContextMenu.PlacementTarget = btn;
+        btn.ContextMenu.Placement       = PlacementMode.Bottom;
+        btn.ContextMenu.IsOpen          = true;
+    }
+
+    private void HelpMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new HelpDialog { Owner = this };
+        dlg.ShowDialog();
+    }
+
+    private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null) return;
+        _vm.OpenAboutCommand.Execute(null);
     }
 }
