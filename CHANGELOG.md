@@ -4,6 +4,16 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.28] - 2026-04-30
+
+### Changed
+
+- **Active tab is now Bold + 4 pt larger than inactive tabs** (font size 13 → 17 on the selected `DragablzItem`, font weight `SemiBold` → `Bold`). Per Dan's call. Combined with the existing white-background + darker-border styling, the selected tab now reads unambiguously even on a tab strip with several open. Applied to both `MainWindow.xaml`'s tab strip and `FloatingClockWindow.xaml`'s tab strip for consistency. (`MainWindow.xaml`, `FloatingClockWindow.xaml`.)
+
+### Doc audit (per pre-merge rule)
+
+- `README.md`, `Dialogs/HelpDialog.xaml`, `requirements.txt` — no change. None of them describe tab-strip typography.
+
 ## [0.0.27] - 2026-04-30
 
 ### Changed
