@@ -4,6 +4,25 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.8] - 2026-04-29
+
+### Changed
+
+- **Flip Clock now shows day · month · day-of-month** beneath the seconds line (parity with the analog faces, which all carry a date readout). New `dateTb` is updated each tick from the bound timezone's `local.ToString("ddd · MMMM d")`. Layout shifts: seconds drops from y=276 → y=274; new date line at y=292; COMTEK badge moves from y=304 → y=312. (`Controls/ClockFaceControl.xaml.cs` `BuildFlipClock`.)
+
+- **Hex theme — decimal-time decode line replaced with hex-ASCII encoding of day-of-week, day-of-month, and month name.**
+  - *Problem:* Per Dan's spec, the Hex theme is meant to express *every* on-screen value in hex. The "// dec: HH:MM:SS" decode line was an off-theme decimal artefact.
+  - *Solution:* Dropped that line. Added three lines showing the day-of-week (`THU`), day-of-month (`29`), and month name (`APRIL`) as space-separated 2-digit hex ASCII codes followed by the friendly form, e.g. `// dow: 54 48 55 (THU)`. The day-fraction line + color swatch are kept (renamed `// day:` → `// day-frac:` for disambiguation). New `ToHexAscii` helper.
+
+- **Binary Digital theme — same treatment** as Hex.
+  - *Problem:* Same as Hex — the "// dec: HH:MM:SS" line was off-theme decimal noise.
+  - *Solution:* Dropped that line. Added three lines: day-of-week / day-of-month / 3-letter month name as space-separated 8-bit binary ASCII codes plus friendly form, e.g. `// dow: 01010100 01001000 01010101 (THU)`. Day-of-week and month abbreviated to 3 letters so the line lengths stay readable. New `ToBinAscii` helper.
+
+### Open follow-ups (Dan flagged but not yet reproduced/fixed in this commit)
+
+- **Flip Clock tab not showing city until tear-off.** The `MainWindow` ItemTemplate uses `<TextBlock Text="{Binding Label}"/>`, which is reactive on `PropertyChanged` and confirmed working on the analog themes. Theme changes don't affect `Label` so the binding shouldn't differ here. Defer until reproduction; may be a heavy-paint timing artefact on the Flip Clock first render.
+- **Flip Clock tabs harder to click first-try than other themes.** Width=0 on the Thumb (v0.0.4 fix) is still in effect. Suspect the heavy first-paint of the Flip Clock canvas (~50+ shape elements) blocks the UI thread briefly and click events are dropped during that window. If reproduction confirms, fix is to move the build off the UI thread (or simplify the Flip Clock element count).
+
 ## [0.0.7] - 2026-04-29
 
 ### Added

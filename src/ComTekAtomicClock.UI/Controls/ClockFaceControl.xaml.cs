@@ -1084,11 +1084,16 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(new Ellipse { Width = 7, Height = 7, Fill = amber }.At(196.5, 162.5));
         Dial.Children.Add(new Ellipse { Width = 7, Height = 7, Fill = amber }.At(196.5, 212.5));
 
-        // ":42 SECONDS" line + COMTEK badge
-        var secondsTb = MakeText(": 42 SECONDS", 200, 276, helvetica, 10, labelFill,
+        // ":SS SECONDS" line + date readout (day · month · day-of-month
+        // — parity with the analog faces, which all carry a date line
+        // beneath their digital readout) + COMTEK badge.
+        var secondsTb = MakeText(": 00 SECONDS", 200, 274, helvetica, 10, labelFill,
                                  FontWeights.Medium, TextAnchor.Center);
         Dial.Children.Add(secondsTb);
-        Dial.Children.Add(MakeText("COMTEK · MODEL CT-1971", 200, 304, helvetica, 9, brandFill,
+        var dateTb = MakeText("THU · APRIL 30", 200, 292, helvetica, 11, labelFill,
+                              FontWeights.Medium, TextAnchor.Center);
+        Dial.Children.Add(dateTb);
+        Dial.Children.Add(MakeText("COMTEK · MODEL CT-1971", 200, 312, helvetica, 9, brandFill,
                                    FontWeights.Normal, TextAnchor.Center));
 
         _digitalUpdater = local =>
@@ -1099,6 +1104,7 @@ public partial class ClockFaceControl : UserControl
             digitTextBlocks[2].Text = (local.Minute / 10).ToString(CultureInfo.InvariantCulture);
             digitTextBlocks[3].Text = (local.Minute % 10).ToString(CultureInfo.InvariantCulture);
             secondsTb.Text = $": {local.Second:D2} SECONDS";
+            dateTb.Text    = local.ToString("ddd · MMMM d", CultureInfo.InvariantCulture).ToUpperInvariant();
         };
     }
 
@@ -1411,21 +1417,31 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeText("MINUTES", 200, 216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
         Dial.Children.Add(MakeText("SECONDS", 320, 216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
 
-        // Decoded decimal line + day-fraction line + colour swatch + cursor
-        var decTb = MakeText("// dec: 00:00:00", 40, 262, mono, 14, cyan,
-                             FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
-        Dial.Children.Add(decTb);
+        // Per Dan: drop the decimal-time decode line; instead show
+        // the day-of-week, day-of-month, and month name as their
+        // hex-ASCII codes (programmer-terminal vibe). Day-fraction
+        // and the day-as-color block stay — those are still
+        // legitimately "hex".
+        var dowTb = MakeText("// dow:   00 00 00", 40, 244, mono, 12, cyan,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(dowTb);
+        var domTb = MakeText("// dom:   00 00", 40, 260, mono, 12, cyan,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(domTb);
+        var monTb = MakeText("// month: 00 00 00", 40, 276, mono, 12, cyan,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(monTb);
 
-        var dayTb = MakeText("// day: 0x0000 / 0xFFFF (0.0% elapsed)", 40, 290, mono, 14, cyan,
+        var dayTb = MakeText("// day-frac: 0x0000 / 0xFFFF (0.0% elapsed)", 40, 298, mono, 12, cyan,
                              FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
         Dial.Children.Add(dayTb);
 
         var swatch = new Rectangle { Width = 320, Height = 14, Fill = Brushes.Black, RadiusX = 2, RadiusY = 2, Opacity = 0.85 };
-        Canvas.SetLeft(swatch, 40); Canvas.SetTop(swatch, 306);
+        Canvas.SetLeft(swatch, 40); Canvas.SetTop(swatch, 314);
         Dial.Children.Add(swatch);
 
         var swatchHexTb = MakeText("// the bar above is #0000FF — today, encoded as a color",
-                                   40, 338, mono, 12, cyan,
+                                   40, 344, mono, 11, cyan,
                                    FontWeights.Normal, TextAnchor.Left, opacity: 0.55);
         Dial.Children.Add(swatchHexTb);
 
@@ -1436,7 +1452,18 @@ public partial class ClockFaceControl : UserControl
             // Hex display: HH MM SS each rendered as 2-digit hex of
             // the decimal value. So 10:08:42 -> 0A:08:2A.
             hexTb.Text = $"{local.Hour:X2}:{local.Minute:X2}:{local.Second:X2}";
-            decTb.Text = $"// dec: {local:HH:mm:ss}";
+
+            // Day-of-week / day-of-month / month name shown as their
+            // hex-ASCII codes followed by the friendly form. e.g.
+            //   // dow:   54 48 55  (THU)
+            //   // dom:   32 39     (29)
+            //   // month: 41 50 52 49 4C  (APRIL)
+            var dow   = local.ToString("ddd",  CultureInfo.InvariantCulture).ToUpperInvariant();
+            var dom   = local.Day.ToString(CultureInfo.InvariantCulture);
+            var month = local.ToString("MMMM", CultureInfo.InvariantCulture).ToUpperInvariant();
+            dowTb.Text = $"// dow:   {ToHexAscii(dow)}  ({dow})";
+            domTb.Text = $"// dom:   {ToHexAscii(dom)}  ({dom})";
+            monTb.Text = $"// month: {ToHexAscii(month)}  ({month})";
 
             // Day fraction: seconds elapsed since midnight, scaled to
             // 0–0xFFFF. The 16-bit value drives a hex string + colour.
@@ -1444,7 +1471,7 @@ public partial class ClockFaceControl : UserControl
             var fraction = secsSinceMidnight / 86400.0;
             var dayU16 = (ushort)Math.Min(0xFFFF, Math.Round(fraction * 0xFFFF));
             var pct = fraction * 100.0;
-            dayTb.Text = $"// day: 0x{dayU16:X4} / 0xFFFF ({pct:F1}% elapsed)";
+            dayTb.Text = $"// day-frac: 0x{dayU16:X4} / 0xFFFF ({pct:F1}% elapsed)";
 
             // Color = (dayU16 >> 8, dayU16 & 0xFF, 0xFF).
             var r = (byte)(dayU16 >> 8);
@@ -1454,6 +1481,20 @@ public partial class ClockFaceControl : UserControl
             swatchHexTb.Text = $"// the bar above is #{r:X2}{g:X2}FF — today, encoded as a color";
         };
     }
+
+    /// <summary>
+    /// Render an ASCII string as space-separated 2-digit hex codes —
+    /// "MON" -> "4D 4F 4E". Used by the Hex theme for date encoding.
+    /// </summary>
+    private static string ToHexAscii(string s) =>
+        string.Join(" ", s.Select(c => ((int)c).ToString("X2", CultureInfo.InvariantCulture)));
+
+    /// <summary>
+    /// Render an ASCII string as space-separated 8-bit binary codes —
+    /// "MON" -> "01001101 01001111 01001110". Used by Binary Digital.
+    /// </summary>
+    private static string ToBinAscii(string s) =>
+        string.Join(" ", s.Select(c => Convert.ToString((int)c, 2).PadLeft(8, '0')));
 
     // ===============================================================
     // Theme: Binary Digital (pure binary text terminal)
@@ -1512,19 +1553,28 @@ public partial class ClockFaceControl : UserControl
         sBitsTb.Effect = glow.Clone();
         Dial.Children.Add(sBitsTb);
 
-        var decTb = MakeText("// dec: 00:00:00", 40, 270, mono, 14, magenta,
-                             FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
-        Dial.Children.Add(decTb);
+        // Per Dan: drop the decimal decode line; show the day-of-week,
+        // day-of-month, and month name as 8-bit binary ASCII codes
+        // (mirrors the Hex theme's hex-ASCII treatment).
+        var dowTb = MakeText("// dow:   00000000", 40, 254, mono, 11, magenta,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(dowTb);
+        var domTb = MakeText("// dom:   00000000", 40, 270, mono, 11, magenta,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(domTb);
+        var monTb = MakeText("// mon:   00000000", 40, 286, mono, 11, magenta,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(monTb);
 
         Dial.Children.Add(MakeText("// widths: 5b hour · 6b min · 6b sec · MSB first",
-                                   40, 295, mono, 11, dimMagenta, FontWeights.Normal, TextAnchor.Left));
+                                   40, 308, mono, 10, dimMagenta, FontWeights.Normal, TextAnchor.Left));
 
         // Decorative noise rows (static — same as the SVG's faux bit
         // grid; doesn't reflect time)
         Dial.Children.Add(MakeText("11010 · 01100 · 11100 · 01000 · 10101 · 10010 · 00111 · 11001",
-                                   40, 328, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
+                                   40, 332, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
         Dial.Children.Add(MakeText("01001 · 11011 · 00100 · 11110 · 01010 · 10000 · 11000 · 00101",
-                                   40, 342, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
+                                   40, 346, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
 
         Dial.Children.Add(MakeText("$ _", 40, 372, mono, 14, magentaBr,
                                    FontWeights.Normal, TextAnchor.Left));
@@ -1537,7 +1587,17 @@ public partial class ClockFaceControl : UserControl
             hBitsTb.Text = Convert.ToString(local.Hour,   2).PadLeft(5, '0');
             mBitsTb.Text = Convert.ToString(local.Minute, 2).PadLeft(6, '0');
             sBitsTb.Text = Convert.ToString(local.Second, 2).PadLeft(6, '0');
-            decTb.Text = $"// dec: {local:HH:mm:ss}";
+
+            // Day / date / month as 8-bit binary ASCII codes followed
+            // by the friendly form. Lengths get long fast (8 bits ×
+            // n chars + spaces), so day-of-week and month abbreviate
+            // to 3 letters (THU / APR) and day-of-month to 1–2 chars.
+            var dow   = local.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant();
+            var dom   = local.Day.ToString(CultureInfo.InvariantCulture);
+            var month = local.ToString("MMM", CultureInfo.InvariantCulture).ToUpperInvariant();
+            dowTb.Text = $"// dow: {ToBinAscii(dow)} ({dow})";
+            domTb.Text = $"// dom: {ToBinAscii(dom)} ({dom})";
+            monTb.Text = $"// mon: {ToBinAscii(month)} ({month})";
         };
     }
 }
