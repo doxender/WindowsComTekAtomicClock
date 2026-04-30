@@ -168,7 +168,28 @@ public partial class ClockFaceControl : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _timer = new DispatcherTimer
+        // ApplicationIdle priority is one tier below Background and
+        // two tiers below Input. The dispatcher fires this timer ONLY
+        // when no Input, Loaded, Render, DataBind, Normal, or
+        // Background work is pending — i.e., when the UI thread is
+        // genuinely idle. Means click events on the tab strip always
+        // pre-empt clock-face redraws; the user no longer needs 5-10
+        // clicks to switch tabs because a tick is in progress.
+        //
+        // Trade-off: under heavy UI activity, ticks can be skipped.
+        // For a clock this is benign — UpdateClock reads
+        // DateTime.UtcNow on every fire, so a missed tick just means
+        // the next visible frame jumps ahead a few ms. No drift, no
+        // integration error. (A simulation/game loop would be
+        // different; for our case skipping is the correct answer.)
+        //
+        // Default DispatcherTimer priority is Background, which is
+        // one tier ABOVE ApplicationIdle but still below Input. We
+        // were getting click drops there because by the time a tick
+        // fired (Background), it ran to completion before any Input
+        // queued during that tick could process. ApplicationIdle
+        // closes that gap — input always wins.
+        _timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
         {
             Interval = SmoothSecondHand
                 ? TimeSpan.FromMilliseconds(50)

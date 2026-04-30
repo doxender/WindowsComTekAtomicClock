@@ -4,6 +4,16 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.19] - 2026-04-30
+
+### Fixed
+
+- **Tab clicks still intermittent (1-5 needed) on three open tabs after v0.0.18.** v0.0.18 paused timers on hidden tabs (cut load from N×20Hz to 1×20Hz), but the visible tab's tick handler was still doing enough per-frame work — especially on heavy digital themes (Hex sets 7+ TextBlock.Text properties + creates a SolidColorBrush per tick; Binary mutates 20 ellipse Fills + Effects per tick) — to keep the dispatcher busy enough that mouse-down/up routing through the tab strip got disrupted, and `DispatcherTimer.Background` (the default priority) was just one tier below `Input` so a tick already in progress would block click delivery until the tick completed.
+  - *Solution:* Drop `DispatcherTimer` priority from default `Background` to `ApplicationIdle` — one tier lower than Background, two tiers below Input. The timer now fires *only when the UI thread is genuinely idle*; any pending input event always pre-empts the clock-face redraw. Single tab clicks register first-try.
+  - *Trade-off:* under heavy UI activity, ticks can be skipped. For a clock this is benign — `UpdateClock` reads `DateTime.UtcNow` afresh on every fire, so a skipped tick just means the next visible frame jumps ahead a few ms. No drift, no integration error.
+  - Per Dan's framing: he asked for the "wait for other events" pattern from his fast-loop work — `ApplicationIdle` priority is the WPF-native expression of that idea.
+  - (`Controls/ClockFaceControl.xaml.cs` `OnLoaded`.)
+
 ## [0.0.18] - 2026-04-30
 
 ### Fixed
