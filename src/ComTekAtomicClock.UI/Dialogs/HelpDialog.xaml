@@ -61,7 +61,7 @@
 
                     <TextBlock Text="• Tear off into its own window" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
                     <TextBlock TextWrapping="Wrap" LineHeight="18" Foreground="#D8D2BC" FontSize="12" Margin="0,0,0,10"
-                               Text="Drag a tab outside the tab strip and release. It pops into its own floating window that you can move and resize independently. Drag it back to the main strip to reattach. Closing a floating window with a tab still inside reattaches the tab automatically."/>
+                               Text="Tearing a tab off works the same way as in Google Chrome: grab the tab header and drag it down/away from the tab strip — when you cross the strip's edge it pops into its own floating window that you can move and resize independently. Drag it back over the main strip to reattach. Closing a floating window with a tab still inside reattaches the tab automatically."/>
 
                     <TextBlock Text="• Close a tab" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
                     <TextBlock TextWrapping="Wrap" LineHeight="18" Foreground="#D8D2BC" FontSize="12" Margin="0,0,0,16"
