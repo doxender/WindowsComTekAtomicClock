@@ -92,15 +92,71 @@
 
             <dragablz:TabablzControl.ContentTemplate>
                 <DataTemplate>
-                    <Grid>
-                        <controls:ClockFaceControl
-                            Margin="20"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            TimeZone="{Binding TimeZone}"
-                            Theme="{Binding Theme}"
-                            SmoothSecondHand="{Binding SmoothSecondHand}"/>
-                    </Grid>
+                    <!--
+                      Mirrors MainWindow.xaml's clock-face template so
+                      torn-away tabs get the same scaling and the same
+                      overlay buttons. Earlier the floating window
+                      template was just the ClockFaceControl with no
+                      ✕ / ? buttons — Dan flagged that as a regression.
+                      See MainWindow.xaml for full rationale.
+                    -->
+                    <Viewbox Stretch="Uniform" Margin="20">
+                        <Grid Width="400" Height="400">
+                            <controls:ClockFaceControl
+                                Width="400" Height="400"
+                                TimeZone="{Binding TimeZone}"
+                                Theme="{Binding Theme}"
+                                SmoothSecondHand="{Binding SmoothSecondHand}"/>
+
+                            <Button HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,14,16,0"
+                                    Width="22" Height="22"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Close this tab"
+                                    Click="CloseTabButton_Click"
+                                    CommandParameter="{Binding}">
+                                <TextBlock Text="&#x2715;"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{Binding OverlayGlyphBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Button>
+
+                            <Button HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,42,16,0"
+                                    Width="22" Height="22"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Help / About"
+                                    Click="HelpButton_Click">
+                                <TextBlock Text="?"
+                                           FontWeight="Bold"
+                                           FontSize="14"
+                                           Foreground="{Binding OverlayGlyphBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Themes…"
+                                                  Click="ThemesMenuItem_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="Help…"
+                                                  Click="HelpMenuItem_Click"/>
+                                        <MenuItem Header="About…"
+                                                  Click="AboutMenuItem_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </Grid>
+                    </Viewbox>
                 </DataTemplate>
             </dragablz:TabablzControl.ContentTemplate>
         </dragablz:TabablzControl>

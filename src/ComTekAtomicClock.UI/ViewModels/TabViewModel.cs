@@ -8,6 +8,7 @@
 
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 using ComTekAtomicClock.Shared.Settings;
 
 namespace ComTekAtomicClock.UI.ViewModels;
@@ -52,8 +53,45 @@ public sealed class TabViewModel : INotifyPropertyChanged
             if (_settings.Theme == value) return;
             _settings.Theme = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(OverlayGlyphBrush));
         }
     }
+
+    /// <summary>
+    /// Foreground brush for the per-tab "✕" close-button and "?" help-button
+    /// glyphs that sit in the upper-right corner of the clock-face area.
+    /// White on dark themes, near-black on light themes — earlier the glyphs
+    /// were hardcoded #000 and disappeared on Cathode / Atomic Lab / Aero
+    /// Glass / Concourse / etc. (anything with a dark backdrop). Keyed off
+    /// Theme so the brush re-evaluates whenever the user switches faces.
+    /// </summary>
+    public Brush OverlayGlyphBrush =>
+        IsDarkTheme(Theme) ? Brushes.White : _darkGlyph;
+
+    private static readonly Brush _darkGlyph =
+        new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x10));
+
+    /// <summary>
+    /// Per-theme background-luminance classification for the glyph-color
+    /// decision. Reasoning per theme is in design/README.md (palette
+    /// section); update both when adding new themes.
+    /// </summary>
+    private static bool IsDarkTheme(Theme t) => t switch
+    {
+        Theme.AtomicLab     => true,   // dark navy face
+        Theme.BoulderSlate  => false,  // page cream + white face
+        Theme.AeroGlass     => true,   // wallpaper-blue acrylic
+        Theme.Cathode       => true,   // CRT black
+        Theme.Concourse     => true,   // charcoal
+        Theme.Daylight      => false,  // cream/white
+        Theme.FlipClock     => false,  // white tile cards
+        Theme.Marquee       => true,   // theater red+black
+        Theme.Slab          => true,   // brutalist concrete dark
+        Theme.Binary        => true,   // BCD board dark
+        Theme.Hex           => true,   // terminal dark
+        Theme.BinaryDigital => true,   // pure black terminal
+        _                   => true,
+    };
 
     public TimeFormatMode TimeFormat
     {

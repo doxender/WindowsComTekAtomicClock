@@ -216,75 +216,92 @@
 
             <dragablz:TabablzControl.ContentTemplate>
                 <DataTemplate>
-                    <Grid>
-                        <controls:ClockFaceControl
-                            Margin="20"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            TimeZone="{Binding TimeZone}"
-                            Theme="{Binding Theme}"
-                            SmoothSecondHand="{Binding SmoothSecondHand}"/>
+                    <!--
+                      Layout: outer Viewbox uniformly scales a fixed
+                      400x400 logical canvas to fit the available tab
+                      content area. The 400x400 frame matches the
+                      design SVGs and ClockFaceControl's own internal
+                      400x400 Canvas. Both the clock face AND the
+                      overlay buttons live inside this frame, so:
+                        · Buttons stay anchored to the dial's
+                          upper-right corner regardless of window
+                          size — earlier they sat in the wider tab-
+                          content Grid and floated way out to the
+                          window edge on landscape windows.
+                        · Buttons scale with the clock face — bigger
+                          window, proportionally bigger buttons.
+                      Margin="20" on the Viewbox is the breathing
+                      room between the dial and the surrounding
+                      panel chrome.
+                    -->
+                    <Viewbox Stretch="Uniform" Margin="20">
+                        <Grid Width="400" Height="400">
+                            <controls:ClockFaceControl
+                                Width="400" Height="400"
+                                TimeZone="{Binding TimeZone}"
+                                Theme="{Binding Theme}"
+                                SmoothSecondHand="{Binding SmoothSecondHand}"/>
 
-                        <!--
-                          Two stacked overlay buttons in the
-                          upper-right of the tab content:
-                            top:    ✕  (close this tab)
-                            below:  ?  (Help / About menu)
-                          Both are plain transparent buttons —
-                          no Wpf.Ui chrome — so they sit flush over
-                          the clock face. Black glyphs read on light
-                          themes; will need per-theme adjustment for
-                          dark themes (queued).
-                        -->
-                        <Button HorizontalAlignment="Right"
-                                VerticalAlignment="Top"
-                                Margin="0,28,28,0"
-                                Width="22" Height="22"
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                ToolTip="Close this tab"
-                                Command="{Binding DataContext.CloseTabCommand,
-                                          RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding}">
-                            <TextBlock Text="&#x2715;"
-                                       FontWeight="Bold"
-                                       FontSize="12"
-                                       Foreground="#000"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Button>
+                            <!--
+                              ✕ close tab and ? help/about overlay
+                              buttons. Foreground bound to
+                              TabViewModel.OverlayGlyphBrush so dark
+                              themes (Cathode, Atomic Lab, Aero Glass,
+                              etc.) get white glyphs and light themes
+                              (Boulder Slate, Daylight) get
+                              near-black. Position is in the 400x400
+                              logical canvas — the Viewbox scales it.
+                            -->
+                            <Button HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,14,16,0"
+                                    Width="22" Height="22"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Close this tab"
+                                    Command="{Binding DataContext.CloseTabCommand,
+                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}">
+                                <TextBlock Text="&#x2715;"
+                                           FontWeight="Bold"
+                                           FontSize="12"
+                                           Foreground="{Binding OverlayGlyphBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Button>
 
-                        <Button HorizontalAlignment="Right"
-                                VerticalAlignment="Top"
-                                Margin="0,56,28,0"
-                                Width="22" Height="22"
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                ToolTip="Help / About"
-                                Click="HelpButton_Click">
-                            <TextBlock Text="?"
-                                       FontWeight="Bold"
-                                       FontSize="14"
-                                       Foreground="#000"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                            <Button.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Themes…"
-                                              Click="ThemesMenuItem_Click"/>
-                                    <Separator/>
-                                    <MenuItem Header="Help…"
-                                              Click="HelpMenuItem_Click"/>
-                                    <MenuItem Header="About…"
-                                              Click="AboutMenuItem_Click"/>
-                                </ContextMenu>
-                            </Button.ContextMenu>
-                        </Button>
-                    </Grid>
+                            <Button HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,42,16,0"
+                                    Width="22" Height="22"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Help / About"
+                                    Click="HelpButton_Click">
+                                <TextBlock Text="?"
+                                           FontWeight="Bold"
+                                           FontSize="14"
+                                           Foreground="{Binding OverlayGlyphBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Themes…"
+                                                  Click="ThemesMenuItem_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="Help…"
+                                                  Click="HelpMenuItem_Click"/>
+                                        <MenuItem Header="About…"
+                                                  Click="AboutMenuItem_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </Grid>
+                    </Viewbox>
                 </DataTemplate>
             </dragablz:TabablzControl.ContentTemplate>
         </dragablz:TabablzControl>

@@ -27,6 +27,14 @@ public partial class MainWindow : FluentWindow
         Loaded += OnLoaded;
     }
 
+    /// <summary>
+    /// Accessor for sibling windows (notably FloatingClockWindow) that
+    /// need to dispatch to a VM command — e.g., the Themes… picker on a
+    /// torn-away tab routes through the main VM so SaveAppSettings
+    /// stays single-sourced.
+    /// </summary>
+    internal MainWindowViewModel? GetViewModel() => _vm;
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _vm = new MainWindowViewModel();
