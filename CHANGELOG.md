@@ -4,6 +4,17 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.23] - 2026-04-30
+
+### Fixed
+
+- **Right-click on a tab → "Tab settings…" menu item didn't open the Settings dialog.** Same handler reaches both the Tab settings and Close tab menu items; the original `TryGetTabFromContextMenuClick` helper walked from `MenuItem` → `LogicalTreeHelper.GetParent` → `ContextMenu` → `PlacementTarget` → `DataContext`. In some Dragablz scenarios that walk silently failed (returns null at one of the steps; handler quietly does nothing) — this is the same family of "context menu in a Setter.Value behaves subtly different from when declared inline" issue that bit the v0.0.16 RefreshTabHeader walk.
+  - *Solution:* Renamed and rewrote the helper as `TryFindTabFromContextMenuItem`, which now tries three strategies in order:
+    1. `MenuItem.DataContext` directly — works when DataContext propagates from the ContextMenu down to the MenuItem (which is the normal WPF behavior).
+    2. Walk up to ContextMenu, then `PlacementTarget.DataContext` — the original strategy.
+    3. `ContextMenu.DataContext` directly — sometimes set even when PlacementTarget isn't.
+  - Each click now logs the outcome via `Trace.WriteLine` ("strategy 1: MenuItem.DataContext" / "strategy 2: PlacementTarget=..." / "all strategies failed"), so any future regression is immediately diagnosable without code changes. Old `TryGetTabFromContextMenuClick` name kept as a thin alias so the `?`-overlay handlers (Themes / Help / About) keep compiling. (`MainWindow.xaml.cs`.)
+
 ## [0.0.22] - 2026-04-30
 
 ### Changed

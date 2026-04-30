@@ -181,8 +181,14 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     private void TabContextSettings_Click(object sender, RoutedEventArgs e)
     {
-        if (TryGetTabFromContextMenuClick(sender, out var vm) && _vm is not null)
-            _vm.OpenTabSettingsForCommand.Execute(vm);
+        System.Diagnostics.Trace.WriteLine("[MainWindow] TabContextSettings_Click fired");
+        if (!TryFindTabFromContextMenuItem(sender, out var vm) || _vm is null)
+        {
+            System.Diagnostics.Trace.WriteLine("  could not resolve TabViewModel");
+            return;
+        }
+        System.Diagnostics.Trace.WriteLine($"  resolved tab: {vm.Label}");
+        _vm.OpenTabSettingsForCommand.Execute(vm);
     }
 
     /// <summary>
@@ -190,37 +196,86 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     private void TabContextClose_Click(object sender, RoutedEventArgs e)
     {
-        if (TryGetTabFromContextMenuClick(sender, out var vm) && _vm is not null)
-            _vm.CloseTabCommand.Execute(vm);
+        System.Diagnostics.Trace.WriteLine("[MainWindow] TabContextClose_Click fired");
+        if (!TryFindTabFromContextMenuItem(sender, out var vm) || _vm is null)
+        {
+            System.Diagnostics.Trace.WriteLine("  could not resolve TabViewModel");
+            return;
+        }
+        System.Diagnostics.Trace.WriteLine($"  resolved tab: {vm.Label}");
+        _vm.CloseTabCommand.Execute(vm);
     }
 
     /// <summary>
-    /// Walk from the clicked MenuItem up to the ContextMenu, then to
-    /// its PlacementTarget (the DragablzItem the user right-clicked),
-    /// and read its DataContext (the bound TabViewModel). The
-    /// fully-qualified System.Windows.Controls types disambiguate
-    /// against Wpf.Ui's MenuItem / ContextMenu, both of which our
-    /// XAML uses (the Style.Setter Property="ContextMenu" creates a
-    /// System.Windows.Controls.ContextMenu, not a ui: one).
+    /// Find the <see cref="TabViewModel"/> behind a context-menu
+    /// MenuItem click. Tries three strategies in order and returns
+    /// on the first success — the layered approach is intentional
+    /// because v0.0.22 testing showed the original PlacementTarget-walk
+    /// (now fallback #2) was unreliable in some Dragablz scenarios:
+    ///
+    ///   1. The MenuItem's own DataContext. ContextMenu inherits
+    ///      DataContext from its PlacementTarget, and that
+    ///      propagates down to the MenuItem. When this works, it's
+    ///      the cleanest path.
+    ///   2. Walk up logical-tree to ContextMenu, then its
+    ///      PlacementTarget's DataContext. Original v0.0.x approach.
+    ///   3. Walk up logical-tree to ContextMenu, look at its parent
+    ///      MenuItem(s) DataContext. Catches nested-menu structures
+    ///      that step #2 misses.
+    ///
+    /// Trace-logs which strategy succeeded (or failed) so any future
+    /// regression is visible without source changes.
     /// </summary>
-    private static bool TryGetTabFromContextMenuClick(object sender, out TabViewModel vm)
+    private static bool TryFindTabFromContextMenuItem(object sender, out TabViewModel vm)
     {
         vm = null!;
         if (sender is not System.Windows.Controls.MenuItem mi) return false;
 
+        // Strategy 1: MenuItem.DataContext directly.
+        if (mi.DataContext is TabViewModel viaContext)
+        {
+            System.Diagnostics.Trace.WriteLine("  strategy 1: MenuItem.DataContext");
+            vm = viaContext;
+            return true;
+        }
+
+        // Walk up to find the enclosing ContextMenu.
         DependencyObject? cursor = mi;
         while (cursor is not null and not System.Windows.Controls.ContextMenu)
             cursor = LogicalTreeHelper.GetParent(cursor);
-        if (cursor is not System.Windows.Controls.ContextMenu ctx) return false;
-
-        if (ctx.PlacementTarget is FrameworkElement target &&
-            target.DataContext is TabViewModel tabVm)
+        if (cursor is not System.Windows.Controls.ContextMenu ctx)
         {
-            vm = tabVm;
+            System.Diagnostics.Trace.WriteLine("  no ContextMenu ancestor found");
+            return false;
+        }
+
+        // Strategy 2: ContextMenu.PlacementTarget.DataContext.
+        if (ctx.PlacementTarget is FrameworkElement target &&
+            target.DataContext is TabViewModel viaTarget)
+        {
+            System.Diagnostics.Trace.WriteLine(
+                $"  strategy 2: PlacementTarget={target.GetType().Name}.DataContext");
+            vm = viaTarget;
             return true;
         }
+
+        // Strategy 3: ContextMenu.DataContext (inherited from PlacementTarget).
+        if (ctx.DataContext is TabViewModel viaCtxData)
+        {
+            System.Diagnostics.Trace.WriteLine("  strategy 3: ContextMenu.DataContext");
+            vm = viaCtxData;
+            return true;
+        }
+
+        System.Diagnostics.Trace.WriteLine(
+            $"  all strategies failed; PlacementTarget={ctx.PlacementTarget?.GetType().Name ?? "null"}");
         return false;
     }
+
+    // Old name kept as an alias so the ?-overlay handlers
+    // (ThemesMenuItem_Click etc.) keep compiling without changes.
+    private static bool TryGetTabFromContextMenuClick(object sender, out TabViewModel vm)
+        => TryFindTabFromContextMenuItem(sender, out vm);
 
     // ----------------------------------------------------------------
     // Help / About menu (the "?" button under the "x" on each tab)
