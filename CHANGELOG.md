@@ -4,6 +4,23 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.25] - 2026-04-30
+
+### Documentation
+
+Pre-merge doc-audit pass per the new standing rule (Dan, 2026-04-30): "update all documentation always for all projects before a merge and push."
+
+- **`README.md` Features list** reorganized to separate shipped features from planned ones. Shipped: 12 themes, Chrome-style tabs with tear-off, multi-window, NIST sync (12h default, 6/12/24 selectable), live last-sync display, per-tab/per-machine settings persistence. Planned (explicitly called out, was previously claimed as shipped): always-on-desktop overlay (`requirements.txt` § 1.4), system tray, MSIX packaging (§ 2.7), Flip Clock + Marquee animation hooks.
+- **`README.md` NIST/NTP usage notes** — the "service defaults to **hourly** sync" line was stale since v0.0.13 changed the default to 12 hours. Updated to mention the 6 / 12 / 24 user-selectable cadence too.
+- **`Dialogs/HelpDialog.xaml`** — three sections updated:
+  - "Edit a tab" — now notes the Settings dialog's two-section layout (THIS TAB + ALL CLOCKS ON THIS PC).
+  - New "Pick a different theme" section — points users at the `?` overlay → Themes… gallery (added in v0.0.x but never made it to Help text).
+  - "The time-sync service" — sync cadence updated to 12h default + 6/12/24 selector.
+  - "Status bar" — "Last sync readout will surface in a future update" replaced with a description of the live readout (which actually shipped in v0.0.11) plus the +/− sign convention for clock corrections.
+- **`design/README.md`** reviewed; no change (it describes design *intent*, current).
+
+Standing version-bump rule: v0.0.24 → v0.0.25.
+
 ## [0.0.24] - 2026-04-30
 
 ### Fixed

@@ -9,12 +9,19 @@ A Windows desktop clock that synchronizes to the NIST atomic clock in Boulder, C
 
 ## Features
 
-- Digital and analog clock faces (user-selectable per window)
-- Tabbed multi-time-zone view in the main app
-- Multiple independent clock windows, each pinned to a different location/time zone
-- Optional always-on-desktop overlay (transparent, click-through window)
-- Background Windows Service that periodically syncs the system clock to NIST Boulder via SNTP
-- System tray integration
+- 12 selectable clock faces — six analog (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight) and six digital (Flip Clock, Marquee, Slab, Binary, Hex, Binary Digital). Picker reachable from the `?` overlay on each tab → **Themes…**.
+- Tabbed multi-time-zone view, Chrome-style — drag to reorder, drag-out to tear into a floating window, drag back to reattach.
+- Multiple independent clock windows (the floating-window form), each pinned to its own time zone + theme.
+- Background Windows Service that syncs the system clock to NIST Boulder via SNTP. **Default cadence: every 12 hours** (user-selectable 6 / 12 / 24 in Settings → "All clocks on this PC").
+- Live last-sync display in the status bar (`Last sync: 12s ago (corrected −8.7 ms)`).
+- Per-tab time-zone + theme; per-machine sync frequency. All persisted across launches.
+
+### Planned (not yet implemented)
+
+- Always-on-desktop overlay mode (transparent, click-through window) — `requirements.txt` § 1.4.
+- System tray integration (minimize-to-tray, quick switcher).
+- MSIX packaging + signing — `requirements.txt` § 2.7.
+- Animation hooks for Flip Clock (card-flip transitions) and Marquee (chase-bulb wave).
 
 ## Architecture
 
@@ -67,7 +74,7 @@ sc.exe start ComTekAtomicClockSvc
 ## NIST / NTP usage notes
 
 - Default sync server: `time.nist.gov` (anycast to the Boulder cluster).
-- NIST asks SNTP clients to poll **no more than once every 4 seconds** per server. The service defaults to **hourly** sync, which is well within the published guidance.
+- NIST asks SNTP clients to poll **no more than once every 4 seconds** per server. The service defaults to **every 12 hours** (user-selectable 6 / 12 / 24 in Settings), which is well within the published guidance.
 - All NIST time servers are publicly available; no API key required. See <https://tf.nist.gov/tf-cgi/servers.cgi>.
 
 ## Repository layout

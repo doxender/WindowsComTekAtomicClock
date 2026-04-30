@@ -53,7 +53,11 @@
 
                     <TextBlock Text="• Edit a tab (timezone, theme)" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
                     <TextBlock TextWrapping="Wrap" LineHeight="18" Foreground="#D8D2BC" FontSize="12" Margin="0,0,0,10"
-                               Text="Double-click the tab header, OR right-click the tab and choose &quot;Tab settings…&quot;, OR press Ctrl+, while the tab is active. The settings dialog has Save / Cancel."/>
+                               Text="Double-click the tab header, OR right-click the tab and choose &quot;Tab settings…&quot;, OR press Ctrl+, while the tab is active. The Settings dialog has two sections: &quot;THIS TAB&quot; (time zone, theme) and &quot;ALL CLOCKS ON THIS PC&quot; (sync frequency — applies to every tab and to the system clock itself). Save / Cancel."/>
+
+                    <TextBlock Text="• Pick a different theme" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
+                    <TextBlock TextWrapping="Wrap" LineHeight="18" Foreground="#D8D2BC" FontSize="12" Margin="0,0,0,10"
+                               Text="Click the &quot;?&quot; overlay button on the clock face → &quot;Themes…&quot; for a 12-tile gallery (six analog, six digital). Click a tile to apply that theme to the tab and persist."/>
 
                     <TextBlock Text="• Reorder tabs" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
                     <TextBlock Text="Drag a tab horizontally within the strip to change its position."
@@ -73,7 +77,7 @@
                     <TextBlock TextWrapping="Wrap" LineHeight="18"
                                Foreground="#D8D2BC" FontSize="12"
                                Margin="0,0,0,10"
-                               Text="A separate Windows Service queries NIST's stratum-1 time servers in Boulder, CO and adjusts your system clock. It only runs while the clock app is open — it auto-starts when you launch the app and stops when you close it."/>
+                               Text="A separate Windows Service queries NIST's stratum-1 time servers in Boulder, CO and adjusts your system clock. It only runs while the clock app is open — it auto-starts when you launch the app and stops when you close it. Default sync cadence is every 12 hours; change it in any tab's Settings dialog under &quot;ALL CLOCKS ON THIS PC&quot; (6 / 12 / 24 hours)."/>
                     <TextBlock TextWrapping="Wrap" LineHeight="18"
                                Foreground="#D8D2BC" FontSize="12"
                                Margin="0,0,0,16"
@@ -85,7 +89,7 @@
                     <TextBlock TextWrapping="Wrap" LineHeight="18"
                                Foreground="#D8D2BC" FontSize="12"
                                Margin="0,0,0,10"
-                               Text="The bottom of the window shows the current service state (Running / Installed but stopped / Not installed). The &quot;Last sync&quot; readout will surface live offset + age once that integration lands in a future update."/>
+                               Text="The bottom of the window shows the current service state (Running / Installed but stopped / Not installed) and the live last-sync readout — &quot;Last sync: 12s ago (corrected −8.7 ms)&quot;, refreshed every second. − means the system clock was running fast and was pulled back; + means it was slow and was pushed forward."/>
                 </StackPanel>
             </ScrollViewer>
 
