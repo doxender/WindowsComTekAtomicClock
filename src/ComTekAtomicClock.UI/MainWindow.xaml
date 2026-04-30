@@ -107,6 +107,8 @@
                                  ShowDefaultAddButton="True"
                                  NewItemFactory="{Binding NewTabFactory}"
                                  ConsolidateOrphanedItems="True"
+                                 Background="White"
+                                 BorderBrush="#C0C0C0"
                                  Padding="0">
             <dragablz:TabablzControl.InterTabController>
                 <dragablz:InterTabController InterTabClient="{StaticResource MainInterTabClient}"/>
@@ -126,6 +128,20 @@
             -->
             <dragablz:TabablzControl.ItemContainerStyle>
                 <Style TargetType="dragablz:DragablzItem">
+                    <!--
+                      Force a clean white-tab/black-text look so labels
+                      read regardless of what Wpf.Ui's dark theme is
+                      doing to the chrome around the tabs. Selected
+                      and hover get subtle differentiation; the Black
+                      foreground stays constant so the timezone label
+                      is always legible.
+                    -->
+                    <Setter Property="Background"  Value="White"/>
+                    <Setter Property="Foreground"  Value="Black"/>
+                    <Setter Property="BorderBrush" Value="#C0C0C0"/>
+                    <Setter Property="BorderThickness" Value="1,1,1,0"/>
+                    <Setter Property="Padding" Value="10,4"/>
+                    <Setter Property="FontSize" Value="13"/>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>
                     <Setter Property="ContextMenu">
@@ -139,6 +155,20 @@
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background"  Value="#FFFFFF"/>
+                            <Setter Property="BorderBrush" Value="#808080"/>
+                            <Setter Property="FontWeight"  Value="SemiBold"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="False">
+                            <Setter Property="Background"  Value="#E8E8E8"/>
+                            <Setter Property="BorderBrush" Value="#C0C0C0"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F5F5F5"/>
+                        </Trigger>
+                    </Style.Triggers>
                 </Style>
             </dragablz:TabablzControl.ItemContainerStyle>
 

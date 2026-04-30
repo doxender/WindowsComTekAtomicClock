@@ -43,10 +43,36 @@
                                  ShowDefaultCloseButton="True"
                                  ShowDefaultAddButton="False"
                                  ConsolidateOrphanedItems="True"
+                                 Background="White"
+                                 BorderBrush="#C0C0C0"
                                  Padding="0">
             <dragablz:TabablzControl.InterTabController>
                 <dragablz:InterTabController InterTabClient="{StaticResource FloatingInterTabClient}"/>
             </dragablz:TabablzControl.InterTabController>
+
+            <dragablz:TabablzControl.ItemContainerStyle>
+                <Style TargetType="dragablz:DragablzItem">
+                    <Setter Property="Background"  Value="White"/>
+                    <Setter Property="Foreground"  Value="Black"/>
+                    <Setter Property="BorderBrush" Value="#C0C0C0"/>
+                    <Setter Property="BorderThickness" Value="1,1,1,0"/>
+                    <Setter Property="Padding" Value="10,4"/>
+                    <Setter Property="FontSize" Value="13"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background"  Value="#FFFFFF"/>
+                            <Setter Property="BorderBrush" Value="#808080"/>
+                            <Setter Property="FontWeight"  Value="SemiBold"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="False">
+                            <Setter Property="Background"  Value="#E8E8E8"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F5F5F5"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </dragablz:TabablzControl.ItemContainerStyle>
 
             <dragablz:TabablzControl.ContentTemplate>
                 <DataTemplate>
