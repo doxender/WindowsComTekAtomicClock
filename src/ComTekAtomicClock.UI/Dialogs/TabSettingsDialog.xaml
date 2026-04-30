@@ -5,9 +5,9 @@
         xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
         xmlns:settings="clr-namespace:ComTekAtomicClock.Shared.Settings;assembly=ComTekAtomicClock.Shared"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        Title="Tab settings"
+        Title="Settings"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
-        Width="520" Height="380"
+        Width="560" Height="540"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
@@ -24,92 +24,149 @@
 
     <DockPanel>
         <ui:TitleBar DockPanel.Dock="Top"
-                     Title="Tab settings"
+                     Title="Settings"
                      ShowMaximize="False"
                      ShowMinimize="False">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
             </ui:TitleBar.Icon>
         </ui:TitleBar>
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <!-- Header + editing-tab subline -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0"
-                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
-                   FontSize="18" FontWeight="SemiBold"
-                   Foreground="#FFB000"
-                   Margin="0,0,0,4">
-            <Run x:Name="TabHeaderText" Text="Tab settings"/>
-        </TextBlock>
-        <TextBlock x:Name="EditingTabLabel" Grid.Row="1"
-                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
-                   FontSize="11"
-                   Foreground="#A8A39A"
-                   Margin="0,0,0,18"/>
+                <!-- Section: This tab -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
 
-        <!-- Time zone -->
-        <TextBlock Grid.Row="2"
-                   Text="Time zone"
-                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
-                   FontSize="11"
-                   Foreground="#A8A39A"
-                   Margin="0,0,0,4"/>
-        <ComboBox x:Name="TimezoneCombo" Grid.Row="3"
-                  ItemsSource="{Binding Source={x:Static services:TimeZoneCatalog.All}}"
-                  SelectedValuePath="IanaId"
-                  DisplayMemberPath="DisplayName"
-                  IsEditable="True"
-                  IsTextSearchEnabled="True"
-                  TextSearch.TextPath="DisplayName"
-                  MaxDropDownHeight="240"
-                  Margin="0,0,0,16"/>
+                <!-- Section: All clocks on this PC -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
 
-        <!-- Theme -->
-        <TextBlock Grid.Row="4"
-                   Text="Theme"
-                   FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
-                   FontSize="11"
-                   Foreground="#A8A39A"
-                   Margin="0,0,0,4"/>
-        <StackPanel Grid.Row="5">
-            <ComboBox x:Name="ThemeCombo"
+                <!-- Spacer + buttons -->
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock Grid.Row="0"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="18" FontWeight="SemiBold"
+                       Foreground="#FFB000"
+                       Margin="0,0,0,4">
+                <Run x:Name="TabHeaderText" Text="Settings"/>
+            </TextBlock>
+            <TextBlock x:Name="EditingTabLabel" Grid.Row="1"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="11"
+                       Foreground="#A8A39A"
+                       Margin="0,0,0,18"/>
+
+            <!-- ===================== Section: This tab ===================== -->
+            <TextBlock Grid.Row="2"
+                       Text="THIS TAB"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#FFB000"
+                       Opacity="0.85"
+                       Margin="0,0,0,8"/>
+
+            <!-- Time zone -->
+            <TextBlock Grid.Row="3"
+                       Text="Time zone"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="11"
+                       Foreground="#A8A39A"
+                       Margin="0,0,0,4"/>
+            <ComboBox x:Name="TimezoneCombo" Grid.Row="4"
+                      ItemsSource="{Binding Source={x:Static services:TimeZoneCatalog.All}}"
+                      SelectedValuePath="IanaId"
+                      DisplayMemberPath="DisplayName"
+                      IsEditable="True"
+                      IsTextSearchEnabled="True"
+                      TextSearch.TextPath="DisplayName"
+                      MaxDropDownHeight="240"
+                      Margin="0,0,0,12"/>
+
+            <!-- Theme -->
+            <TextBlock Grid.Row="5"
+                       Text="Theme"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="11"
+                       Foreground="#A8A39A"
+                       Margin="0,0,0,4"/>
+            <ComboBox x:Name="ThemeCombo" Grid.Row="6"
                       ItemsSource="{Binding Source={StaticResource ThemeValues}}"
-                      Margin="0,0,0,8"/>
-            <TextBlock Text="Atomic Lab is the only theme rendered in this build. Other selections are persisted but currently fall back to Atomic Lab visuals; per-theme rendering lands in subsequent updates."
+                      Margin="0,0,0,18"/>
+
+            <!-- =============== Section: All clocks on this PC =============== -->
+            <!--
+              Machine-wide setting. Lives in the same dialog because we
+              don't want a second "Preferences" entry point cluttering
+              the ? overlay menu, but the section heading + subtext make
+              the broader scope explicit so users don't think they're
+              just tweaking this one tab. Persisted in service.json under
+              %ProgramData%, which the Service re-reads each sync loop.
+            -->
+            <TextBlock Grid.Row="7"
+                       Text="ALL CLOCKS ON THIS PC"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#FFB000"
+                       Opacity="0.85"
+                       Margin="0,4,0,4"/>
+            <TextBlock Grid.Row="8"
                        FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
                        FontSize="10"
                        Foreground="#888"
-                       TextWrapping="Wrap"/>
-        </StackPanel>
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,8"
+                       Text="Applies to every tab and to the system clock itself — controls how often the time-sync service queries NIST atomic time."/>
 
-        <!-- Buttons -->
-        <StackPanel Grid.Row="6"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,18,0,0">
-            <Button Content="Cancel"
-                    Width="100" Height="30"
-                    Margin="0,0,8,0"
-                    IsCancel="True"
-                    Click="CancelButton_Click"/>
-            <Button Content="Save"
-                    Width="100" Height="30"
-                    IsDefault="True"
-                    Background="#FFB000"
-                    Foreground="#0a0a0a"
-                    BorderThickness="0"
-                    FontWeight="SemiBold"
-                    Click="SaveButton_Click"/>
-        </StackPanel>
-    </Grid>
+            <TextBlock Grid.Row="9"
+                       Text="Sync frequency"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="11"
+                       Foreground="#A8A39A"
+                       Margin="0,0,0,4"/>
+            <ComboBox x:Name="SyncIntervalCombo" Grid.Row="10"
+                      Margin="0,0,0,12">
+                <!--
+                  Tag carries the interval as integer hours; the visible
+                  text is the friendly label. Code-behind round-trips
+                  these to TimeSpan when reading/writing service.json.
+                -->
+                <ComboBoxItem Content="Every 6 hours"  Tag="6"/>
+                <ComboBoxItem Content="Every 12 hours" Tag="12"/>
+                <ComboBoxItem Content="Every 24 hours" Tag="24"/>
+            </ComboBox>
+
+            <!-- Buttons -->
+            <StackPanel Grid.Row="12"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="0,18,0,0">
+                <Button Content="Cancel"
+                        Width="100" Height="30"
+                        Margin="0,0,8,0"
+                        IsCancel="True"
+                        Click="CancelButton_Click"/>
+                <Button Content="Save"
+                        Width="100" Height="30"
+                        IsDefault="True"
+                        Background="#FFB000"
+                        Foreground="#0a0a0a"
+                        BorderThickness="0"
+                        FontWeight="SemiBold"
+                        Click="SaveButton_Click"/>
+            </StackPanel>
+        </Grid>
     </DockPanel>
 </ui:FluentWindow>

@@ -237,7 +237,14 @@ public sealed class ServiceConfig
     public int SchemaVersion { get; set; } = 1;
 
     public string SyncServer { get; set; } = "time.nist.gov";
-    public TimeSpan SyncInterval { get; set; } = TimeSpan.FromHours(1);
+    /// <summary>
+    /// How often the Service queries NIST. Default 12 hours (the
+    /// middle of the three choices we offer in the Settings dialog:
+    /// every 6 / 12 / 24 hours). Hand-edits to other values in
+    /// service.json are still honored — the SyncWorker clamps to
+    /// [15 min, 24 hr] per § 1.5.
+    /// </summary>
+    public TimeSpan SyncInterval { get; set; } = TimeSpan.FromHours(12);
     public bool ConfirmLargeSyncCorrections { get; set; } = false;
     public int LargeOffsetThresholdSeconds { get; set; } = 5;
     public string EventLogSource { get; set; } = "ComTekAtomicClock";

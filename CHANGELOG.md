@@ -4,6 +4,25 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.13] - 2026-04-30
+
+### Added
+
+- **Sync-frequency dropdown in the Settings dialog** with three choices: Every 6 hours / Every 12 hours / Every 24 hours. Lives in the existing per-tab Settings dialog under a new clearly-labeled `ALL CLOCKS ON THIS PC` section so users know it's machine-wide and not per-tab. Persists to `%ProgramData%\ComTekAtomicClock\service.json`; the Service re-reads on each sync loop iteration (no restart needed).
+  - *Why this dialog:* avoids adding a new "Preferences" entry point on the `?` overlay menu (per Dan: "I don't want to add a new settings button"). The two scopes are visually separated by section headings (`THIS TAB` vs `ALL CLOCKS ON THIS PC`) and a one-sentence subtext on the machine-wide section reinforces that the choice applies to every tab and to the system clock itself.
+  - *No IPC needed:* `ServiceInstaller` already grants Authenticated Users `Modify` on `%ProgramData%\ComTekAtomicClock\` (an existing ACL grant from the install flow), so the unprivileged UI process can write `service.json` directly. The Service's `SyncWorker.LoadIntervalFromConfig` already re-reads on every loop iteration and clamps to `[15 min, 24 hr]` per `requirements.txt § 1.5`. End-to-end change is UI-only.
+  - *Round-trip behavior:* on dialog open, the stored interval is matched against the three offered choices and the closest is pre-selected — so a power user who hand-edited `service.json` to 1 hour sees the dropdown sit on `Every 6 hours` (the closest of the three). Saving overwrites with the chosen canonical value.
+  - *Failure mode:* if the directory doesn't exist yet (Service never installed) or write is denied, per-tab fields still save and a non-blocking warning explains why the machine-wide save was skipped. Will retry next time the dialog opens.
+
+### Changed
+
+- **Settings dialog title `Tab settings` → `Settings`**, since it now mixes per-tab and machine-wide scopes. The menu items that *open* the dialog (double-click tab header, right-click → `Tab settings…`, Ctrl+,) keep their wording — the gesture is still per-tab. (`Dialogs/TabSettingsDialog.xaml`.)
+- **Default `ServiceConfig.SyncInterval` 1 hour → 12 hours.** Matches the new dropdown's middle option. Existing installs that already have a `service.json` keep whatever interval they had; only fresh installs (or installs where `service.json` is absent) pick up the new default. Hourly is still a valid hand-edited value and the Service honors it. (`Shared/Settings/SettingsModel.cs`.)
+
+### Architecture note for future readers
+
+The dialog now writes two files on Save: `%APPDATA%\ComTekAtomicClock\settings.json` (per-user, per-tab settings via the existing `TabViewModel` path) and `%ProgramData%\ComTekAtomicClock\service.json` (machine-wide, via `SettingsStore.SaveServiceConfig`). Cancel discards both. The two writes are independent — if the machine-wide write fails, per-tab still succeeds — which is intentional since the failure modes are different (machine-wide can fail when the Service isn't installed; per-tab can't).
+
 ## [0.0.12] - 2026-04-30
 
 ### Changed
