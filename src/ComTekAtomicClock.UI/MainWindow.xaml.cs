@@ -64,32 +64,49 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     internal void RefreshTabHeader(TabViewModel tab)
     {
-        var container = MainTabs.ItemContainerGenerator.ContainerFromItem(tab);
-        if (container is not FrameworkElement fe) return;
+        System.Diagnostics.Trace.WriteLine(
+            $"[MainWindow] RefreshTabHeader(\"{tab.Label}\") start");
 
+        // v0.0.16 walked from ContainerFromItem(tab) — i.e., the
+        // DragablzItem container's own visual subtree. That walk
+        // never found the header TextBlock because Dragablz renders
+        // tab-strip headers in a SEPARATE subtree (a tab-strip panel
+        // that's a sibling of the items panel, not a descendant of
+        // the container). The walk silently matched 0 TextBlocks,
+        // UpdateTarget() was called on nothing, and the bug
+        // persisted. v0.0.21 widens the scope to the whole
+        // TabablzControl and filters by DataContext to pick out the
+        // specific tab's header.
         var refreshed = 0;
-        foreach (var node in EnumerateVisualDescendants(fe))
+        foreach (var node in EnumerateVisualDescendants(MainTabs))
         {
             // Fully-qualified — the XAML's <TextBlock> is the WPF
             // primitive, not Wpf.Ui's themed TextBlock subclass that
             // also lives in scope via the ui: namespace.
-            if (node is System.Windows.Controls.TextBlock tb)
-            {
-                var be = BindingOperations.GetBindingExpression(
-                    tb, System.Windows.Controls.TextBlock.TextProperty);
-                if (be?.ParentBinding.Path?.Path == nameof(TabViewModel.Label))
-                {
-                    be.UpdateTarget();
-                    refreshed++;
-                }
-            }
+            if (node is not System.Windows.Controls.TextBlock tb) continue;
+
+            var be = BindingOperations.GetBindingExpression(
+                tb, System.Windows.Controls.TextBlock.TextProperty);
+            if (be is null) continue;
+            if (be.ParentBinding.Path?.Path != nameof(TabViewModel.Label)) continue;
+
+            // Filter: the same {Binding Label} appears once per tab
+            // in the tab strip; we only want to refresh the one
+            // whose DataContext is the changed tab.
+            if (!ReferenceEquals(tb.DataContext, tab)) continue;
+
+            be.UpdateTarget();
+            refreshed++;
         }
 
-        // Re-measure / re-arrange the container so a longer label
+        System.Diagnostics.Trace.WriteLine(
+            $"[MainWindow] RefreshTabHeader: refreshed {refreshed} TextBlock(s)");
+
+        // Re-measure / re-arrange so a longer label
         // (e.g., "UTC" → "Europe/Kiev") doesn't get clipped at the
         // old width.
         if (refreshed > 0)
-            fe.UpdateLayout();
+            MainTabs.UpdateLayout();
     }
 
     private static IEnumerable<DependencyObject> EnumerateVisualDescendants(DependencyObject root)

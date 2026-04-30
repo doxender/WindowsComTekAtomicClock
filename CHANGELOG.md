@@ -4,6 +4,13 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.21] - 2026-04-30
+
+### Fixed
+
+- **Tab header still didn't refresh after Settings save (regression / latent bug exposed once single-click was fixed in v0.0.20).** v0.0.16 added `RefreshTabHeader` to fix this, but it had a subtle bug: the visual-tree walk started from `MainTabs.ItemContainerGenerator.ContainerFromItem(tab)` — the `DragablzItem` container — and Dragablz renders the tab-strip header in a *separate* visual subtree (a tab-strip panel that's a sibling of the items panel, not a descendant of the container). The walk never found the header `TextBlock`, `UpdateTarget()` was called on nothing, and the function quietly did nothing. The bug had been latent through v0.0.16–v0.0.20 because the original symptom was masked by the click-routing bug (Dan couldn't easily reproduce because tab clicks themselves were broken).
+  - *Solution:* Widen the visual-tree walk to start from `MainTabs` itself (the whole `TabablzControl`), so both the items panel AND the tab-strip panel are traversed. Filter by `DataContext == tab` so we refresh only the changed tab's header — multiple `TextBlock`s share the same `{Binding Label}` ItemTemplate (one per tab) and we don't want to disturb the others. Also added `Trace.WriteLine` at start + with the refresh count, so any future regression is visible in the trace stream. (`MainWindow.xaml.cs` `RefreshTabHeader`.)
+
 ## [0.0.20] - 2026-04-30
 
 ### Fixed
