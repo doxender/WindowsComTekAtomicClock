@@ -84,7 +84,19 @@
             </StatusBarItem>
             <Separator/>
             <StatusBarItem>
-                <TextBlock Text="Last sync: (not yet wired — Step 6d)"
+                <!--
+                  Live last-sync display. Bound to MainWindowViewModel
+                  .LastSyncText, which is re-rendered every second so the
+                  relative-time component stays current. Source data is
+                  fetched over the named-pipe IPC every 5 s while the
+                  service is running. Format examples:
+                    "Last sync: 12s ago (corrected −8.7 ms)"
+                    "Last sync: 47m ago (corrected +2.3 s)"
+                    "Last sync: pending…"
+                    "Last sync: service not running"
+                    "Last sync failed: <reason>"
+                -->
+                <TextBlock Text="{Binding LastSyncText}"
                            Opacity="0.6"/>
             </StatusBarItem>
         </StatusBar>

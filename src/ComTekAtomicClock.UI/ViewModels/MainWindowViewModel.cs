@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Threading;
+using ComTekAtomicClock.Shared.Ipc;
 using ComTekAtomicClock.Shared.Settings;
 using ComTekAtomicClock.UI.Dialogs;
 using ComTekAtomicClock.UI.Services;
@@ -27,6 +28,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 {
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _serviceStatePoll;
+
+    // --- Live last-sync display state ---
+    // Strategy: one DispatcherTimer at 1 Hz drives the status-bar
+    // text. Every tick we re-render LastSyncText from the cached
+    // SyncStatus so the relative-time component ("12s ago") refreshes
+    // live. Every 5th tick we ALSO kick off an async IPC refresh of
+    // the cached snapshot. A single IpcClient is held across calls,
+    // reconnected on demand if the pipe closed (service stopped /
+    // restarted). All IPC errors are swallowed back to a fallback
+    // string so the status bar never blocks or shows a stack trace.
+    private readonly DispatcherTimer _lastSyncTimer;
+    private IpcClient? _ipcClient;
+    private SyncStatus? _lastSyncStatus;
+    private int _lastSyncTickCounter;
+    private const int LastSyncFetchEveryNTicks = 5; // 5 s
 
     public MainWindowViewModel()
     {
@@ -63,6 +79,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         };
         _serviceStatePoll.Tick += (_, _) => RefreshServiceState();
         _serviceStatePoll.Start();
+
+        // Live-last-sync timer (1 Hz). See _lastSyncTimer field doc
+        // above for the cadence rationale.
+        _lastSyncTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1),
+        };
+        _lastSyncTimer.Tick += OnLastSyncTick;
+        _lastSyncTimer.Start();
 
         OpenAboutCommand           = new RelayCommand(OpenAbout);
         InstallServiceCommand      = new RelayCommand(LaunchInstallerAndPoll);
@@ -137,6 +162,135 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ServiceLifecycleState.InstalledNotRunning => "Service: Installed but stopped",
         _                                         => "Service: Not installed",
     };
+
+    // --------------------------------------------------------------
+    // Live last-sync display (right-hand status bar item)
+    // --------------------------------------------------------------
+
+    private string _lastSyncText = "Last sync: pending…";
+
+    /// <summary>
+    /// Right-hand status-bar text. Re-rendered every second so the
+    /// relative-time component stays current ("3s ago" → "4s ago").
+    /// Source data is <see cref="_lastSyncStatus"/>, which is refreshed
+    /// over IPC every <see cref="LastSyncFetchEveryNTicks"/> ticks.
+    /// </summary>
+    public string LastSyncText
+    {
+        get => _lastSyncText;
+        private set
+        {
+            if (_lastSyncText == value) return;
+            _lastSyncText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private void OnLastSyncTick(object? sender, EventArgs e)
+    {
+        _lastSyncTickCounter++;
+        if (_lastSyncTickCounter >= LastSyncFetchEveryNTicks
+            && ServiceState == ServiceLifecycleState.Running)
+        {
+            _lastSyncTickCounter = 0;
+            // Fire-and-forget. The async method handles its own
+            // exceptions (catch-all to a swallow) so we never let a
+            // pipe hiccup propagate up the timer thread.
+            _ = TryFetchLastSyncAsync();
+        }
+        LastSyncText = FormatLastSync(_lastSyncStatus, ServiceState);
+    }
+
+    private async Task TryFetchLastSyncAsync()
+    {
+        try
+        {
+            if (_ipcClient is null || !_ipcClient.IsConnected)
+            {
+                await DisposeIpcClientAsync().ConfigureAwait(false);
+                _ipcClient = new IpcClient();
+                await _ipcClient.ConnectAsync(timeoutMs: 1500).ConfigureAwait(false);
+            }
+
+            var req = IpcEnvelope.Create(IpcMessageType.LastSyncStatusRequest, "{}");
+            var resp = await _ipcClient.SendRequestAsync(req, CancellationToken.None)
+                                       .ConfigureAwait(false);
+            if (resp is null) return;
+
+            var status = IpcWireFormat.UnwrapPayload<SyncStatus>(resp);
+            if (status is null) return;
+
+            _lastSyncStatus = status;
+        }
+        catch
+        {
+            // Pipe transient errors are common during service
+            // start/stop transitions. Drop the broken connection so
+            // the next tick reconnects fresh; let the formatter
+            // surface the stale-or-missing state to the user.
+            await DisposeIpcClientAsync().ConfigureAwait(false);
+        }
+    }
+
+    private async Task DisposeIpcClientAsync()
+    {
+        if (_ipcClient is null) return;
+        try { await _ipcClient.DisposeAsync().ConfigureAwait(false); }
+        catch { /* best effort */ }
+        _ipcClient = null;
+    }
+
+    /// <summary>
+    /// Render the cached <see cref="SyncStatus"/> + service state into
+    /// a human-readable status-bar string. Pure function; no I/O.
+    /// </summary>
+    internal static string FormatLastSync(SyncStatus? status, ServiceLifecycleState state)
+    {
+        if (state != ServiceLifecycleState.Running)
+            return "Last sync: service not running";
+
+        if (status is null || status.AttemptedAtUtc == DateTimeOffset.MinValue)
+            return "Last sync: pending…";
+
+        var ago = DateTimeOffset.UtcNow - status.AttemptedAtUtc;
+        var agoText = FormatAgo(ago);
+
+        if (status.Success)
+        {
+            if (status.OffsetSeconds is double offset)
+                return $"Last sync: {agoText} ({FormatDrift(offset)})";
+            return $"Last sync: {agoText}";
+        }
+
+        // Failure path. Trim the error message so it doesn't push the
+        // status bar to two lines on a narrow window.
+        var err = status.ErrorMessage ?? "unknown error";
+        if (err.Length > 60) err = err[..57] + "…";
+        return $"Last sync failed: {err}";
+    }
+
+    private static string FormatAgo(TimeSpan ago)
+    {
+        if (ago.TotalSeconds < 0)     return "(future timestamp?)";
+        if (ago.TotalSeconds < 5)     return "just now";
+        if (ago.TotalSeconds < 60)    return $"{(int)ago.TotalSeconds}s ago";
+        if (ago.TotalMinutes < 60)    return $"{(int)ago.TotalMinutes}m ago";
+        if (ago.TotalHours   < 24)    return $"{(int)ago.TotalHours}h ago";
+        return $"{(int)ago.TotalDays}d ago";
+    }
+
+    private static string FormatDrift(double seconds)
+    {
+        // Sign: positive offset = our clock was FAST relative to
+        // NIST and was pulled back (corrected by `-offset`). Negative
+        // offset = we were slow and were pushed forward. Display the
+        // *correction direction* (intuitive for users).
+        var sign = seconds >= 0 ? "−" : "+";
+        var abs  = Math.Abs(seconds);
+        if (abs < 1.0)   return $"corrected {sign}{abs * 1000:F1} ms";
+        if (abs < 60.0)  return $"corrected {sign}{abs:F2} s";
+        return $"corrected {sign}{abs / 60:F1} min";
+    }
 
     // --------------------------------------------------------------
     // Commands

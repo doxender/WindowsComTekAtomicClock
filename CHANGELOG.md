@@ -4,6 +4,22 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.11] - 2026-04-30
+
+### Added
+
+- **Live last-sync display in the status bar.** Replaces the `Last sync: (not yet wired — Step 6d)` placeholder that's been there since the early scaffold.
+  - *Problem to solve:* Service has been syncing to NIST hourly since v0.0.x — the named-pipe IPC contract (`PipeNames.UiToService`, `IpcMessageType.LastSyncStatusRequest/Response`, `SyncStatus` payload), the Service-side handler (`LiveIpcRequestHandler` reads from `SyncStateProvider`), and the UI-side client (`Services/IpcClient`) all existed. The UI just wasn't asking. So users had no visible confirmation the service was doing its job until the system clock visibly corrected itself.
+  - *Solution:* `MainWindowViewModel` now owns a 1 Hz `DispatcherTimer` plus a held `IpcClient`. Each tick re-formats `LastSyncText` from the cached `SyncStatus` (so the relative-time component "12s ago" updates live without re-querying the pipe). Every 5th tick (≈ 5 s) it ALSO refreshes the cached snapshot via `LastSyncStatusRequest`. Exceptions during the IPC round-trip are swallowed — pipe transients during service start/stop are common — and the connection is dropped so the next tick reconnects fresh. Status bar binds to `LastSyncText`.
+  - *Format examples:*
+    - `Last sync: just now (corrected −8.7 ms)` (success, sub-second drift; − sign means clock was pulled back)
+    - `Last sync: 47m ago (corrected +2.3 s)` (success, multi-second drift; + means pushed forward)
+    - `Last sync: pending…` (service running but no sync attempt yet)
+    - `Last sync: service not running` (service stopped or not installed)
+    - `Last sync failed: <error>` (last attempt errored; message truncated to 60 chars)
+  - Files: `ViewModels/MainWindowViewModel.cs` (new `LastSyncText` property, `OnLastSyncTick`, `TryFetchLastSyncAsync`, `FormatLastSync`/`FormatAgo`/`FormatDrift` helpers, `_lastSyncTimer` + `_ipcClient` fields), `MainWindow.xaml` (replaced placeholder TextBlock).
+  - Closes the Step-6d carry-over flagged in v0.0.x. Service-push notifications (the `ConfirmLargeOffsetRequest` toast flow per `requirements.txt` § 2.5) remain a separate follow-up — that needs a server-push read-loop on `IpcClient`, not just request/response polling.
+
 ## [0.0.10] - 2026-04-30
 
 ### Changed
