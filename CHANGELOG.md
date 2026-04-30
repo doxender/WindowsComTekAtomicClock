@@ -4,6 +4,16 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.29] - 2026-04-30
+
+### Changed
+
+- **Active-tab font size 17 → 19** (+2 pt from v0.0.28's setting). Now the active tab is 6 pt larger than inactive (base 13). Per Dan: "Add two more points to the active tab font." Applied to both `MainWindow.xaml` and `FloatingClockWindow.xaml` for consistency.
+
+### Doc audit (per pre-merge rule)
+
+- `README.md`, `Dialogs/HelpDialog.xaml`, `requirements.txt` — no change. None describe tab-strip typography.
+
 ## [0.0.28] - 2026-04-30
 
 ### Changed

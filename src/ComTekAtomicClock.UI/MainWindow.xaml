@@ -257,15 +257,17 @@
                             <Setter Property="Background"  Value="#FFFFFF"/>
                             <Setter Property="BorderBrush" Value="#808080"/>
                             <!--
-                              Active-tab emphasis per Dan: Bold + 4 pt
+                              Active-tab emphasis per Dan: Bold + 6 pt
                               larger than inactive (base FontSize=13 →
-                              17 active). Combined with the white
+                              19 active; bumped +2 from the v0.0.28
+                              setting of 17 after Dan asked for two
+                              more points). Combined with the white
                               background + darker border, the selected
-                              tab now reads unambiguously even on a
-                              full strip.
+                              tab reads unambiguously even on a full
+                              strip.
                             -->
                             <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="FontSize"   Value="17"/>
+                            <Setter Property="FontSize"   Value="19"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="False">
                             <Setter Property="Background"  Value="#E8E8E8"/>

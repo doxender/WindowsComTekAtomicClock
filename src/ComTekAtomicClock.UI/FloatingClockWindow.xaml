@@ -91,9 +91,9 @@
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background"  Value="#FFFFFF"/>
                             <Setter Property="BorderBrush" Value="#808080"/>
-                            <!-- See MainWindow.xaml: Bold + 4 pt larger active. -->
+                            <!-- See MainWindow.xaml: Bold + 6 pt larger active. -->
                             <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="FontSize"   Value="17"/>
+                            <Setter Property="FontSize"   Value="19"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="False">
                             <Setter Property="Background"  Value="#E8E8E8"/>
