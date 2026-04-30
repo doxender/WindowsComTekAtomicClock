@@ -27,6 +27,14 @@ Every preview is rendered at the same fixed time — **10:08:42** — so the eye
 
 For analog themes (1–6) the integrated digital readout can be hidden per window via a toggle in the tab/window settings, leaving a pure analog face. Themes 7–12 are inherently digital and the toggle is hidden.
 
+### In-app gallery
+
+The 12 SVGs in [`themes/`](themes/) are also linked into the WPF UI assembly as resources and rendered live (via SharpVectors) inside the in-app **Themes** picker. To open it:
+
+> `?` overlay button on any tab's clock face → **Themes…**
+
+Picking a tile applies that theme to the originating tab and persists `settings.json`. The gallery in [`themes/index.html`](themes/index.html) remains the canonical reference (color swatches, descriptions, hover states); the in-app picker is intentionally trimmed to image + name only.
+
 ### Analog second-hand motion defaults
 
 Per `requirements.txt` § 1.1, each analog theme picks a default cadence for the second hand. The user can override per tab or per window via a `Theme default / Smooth / Stepped` selector in the settings popover.

@@ -132,4 +132,17 @@ public partial class MainWindow : FluentWindow
         if (_vm is null) return;
         _vm.OpenAboutCommand.Execute(null);
     }
+
+    /// <summary>
+    /// "?" overlay -> Themes… menu item. Walks the ContextMenu back to
+    /// the help button (its PlacementTarget) to find which TabViewModel
+    /// initiated the menu, then dispatches to the VM command which
+    /// opens the gallery and persists on a successful pick.
+    /// </summary>
+    private void ThemesMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null) return;
+        if (TryGetTabFromContextMenuClick(sender, out var vm))
+            _vm.OpenThemesPickerForCommand.Execute(vm);
+    }
 }

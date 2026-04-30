@@ -149,14 +149,32 @@
                       run with VS Live Visual Tree open and identify
                       the offending element by name.
                     -->
+                    <!--
+                      Yellow-block / dark-active-box fix:
+                      Setting Width=0 / Background=Transparent on the
+                      Thumb (previous attempt) didn't kill the paint —
+                      the Dragablz default Thumb template was rendering
+                      with its own brushes (yellow when inactive, dark
+                      gray when the tab is selected). Overriding the
+                      Thumb's TEMPLATE itself with an empty transparent
+                      Border bypasses whatever brushes the original
+                      template references. Natural Width preserved so
+                      Dragablz's drag-to-tear hit-testing still routes
+                      through the Thumb element — only the visual is
+                      gone.
+                    -->
                     <Style.Resources>
                         <Style TargetType="Thumb">
+                            <Setter Property="OverridesDefaultStyle" Value="True"/>
                             <Setter Property="Background"  Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="Width"       Value="0"/>
-                            <Setter Property="MinWidth"    Value="0"/>
-                            <Setter Property="Margin"      Value="0"/>
-                            <Setter Property="Padding"     Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Border Background="Transparent"/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </Style.Resources>
                     <Setter Property="Background"  Value="White"/>
@@ -256,6 +274,9 @@
                                        VerticalAlignment="Center"/>
                             <Button.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Themes…"
+                                              Click="ThemesMenuItem_Click"/>
+                                    <Separator/>
                                     <MenuItem Header="Help…"
                                               Click="HelpMenuItem_Click"/>
                                     <MenuItem Header="About…"

@@ -155,9 +155,82 @@ public partial class ClockFaceControl : UserControl
             // Themes not yet implemented in WPF fall back to Atomic Lab.
             // Their TabViewModel.Theme persistence is unaffected; the
             // user's selection is remembered for when each theme ships.
+            // The DEBUG theme label (added below) shows the actual
+            // selected theme regardless of fallback, so the user can
+            // see which themes still need their renderer.
             default:                          BuildAtomicLab();    break;
         }
+
+        AddVersionLabel();
+        AddDebugThemeLabel();
     }
+
+    /// <summary>
+    /// Test-only overlay (TODO remove for public release): paints the
+    /// currently-selected Theme name in small gray text near the
+    /// bottom of the dial canvas, so we can see at a glance whether
+    /// the renderer matches the selection. Six of the twelve themes
+    /// still fall back to Atomic Lab visuals; with this label visible,
+    /// the mismatch is obvious (label says "Slab", visual is Atomic
+    /// Lab).
+    /// </summary>
+    private void AddDebugThemeLabel()
+    {
+        var name = ThemeFriendlyName(Theme);
+        var label = new TextBlock
+        {
+            Text = $"theme: {name}",
+            FontFamily = new FontFamily("Consolas, Courier New, monospace"),
+            FontSize = 9,
+            Foreground = new SolidColorBrush(Color.FromArgb(0xA0, 0x80, 0x80, 0x80)),
+            TextAlignment = TextAlignment.Center,
+        };
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Canvas.SetLeft(label, Cx - label.DesiredSize.Width / 2.0);
+        Canvas.SetTop(label, 388);
+        Dial.Children.Add(label);
+    }
+
+    /// <summary>
+    /// Paints the running assembly version in the upper-left of the
+    /// dial canvas. Per Dan's spec ("version should be in the clock
+    /// background, upper left"), so any build the user is looking at
+    /// is identifiable at a glance. Tied to the project's
+    /// &lt;Version&gt; in ComTekAtomicClock.UI.csproj — the standing
+    /// version-bump rule keeps these in sync.
+    /// </summary>
+    private void AddVersionLabel()
+    {
+        var asm = typeof(ClockFaceControl).Assembly;
+        var ver = asm.GetName().Version?.ToString(3) ?? "0.0.0";
+        var label = new TextBlock
+        {
+            Text = $"v{ver}",
+            FontFamily = new FontFamily("Consolas, Courier New, monospace"),
+            FontSize = 9,
+            Foreground = new SolidColorBrush(Color.FromArgb(0x90, 0x80, 0x80, 0x80)),
+        };
+        Canvas.SetLeft(label, 6);
+        Canvas.SetTop(label, 4);
+        Dial.Children.Add(label);
+    }
+
+    private static string ThemeFriendlyName(SettingsTheme t) => t switch
+    {
+        SettingsTheme.AtomicLab     => "Atomic Lab",
+        SettingsTheme.BoulderSlate  => "Boulder Slate",
+        SettingsTheme.AeroGlass     => "Aero Glass",
+        SettingsTheme.Cathode       => "Cathode",
+        SettingsTheme.Concourse     => "Concourse",
+        SettingsTheme.Daylight      => "Daylight",
+        SettingsTheme.FlipClock     => "Flip Clock",
+        SettingsTheme.Marquee       => "Marquee",
+        SettingsTheme.Slab          => "Slab",
+        SettingsTheme.Binary        => "Binary",
+        SettingsTheme.Hex           => "Hex",
+        SettingsTheme.BinaryDigital => "Binary Digital",
+        _                           => t.ToString(),
+    };
 
     /// <summary>
     /// Read current time in the bound zone and update hand rotations
@@ -414,24 +487,51 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(hourBaton);   _hourRotate   = hRot;
         Dial.Children.Add(minuteBaton); _minuteRotate = mRot;
 
-        // Second hand: red rod with disc at the tip (the SBB stop signal)
-        var sRot = new RotateTransform(0, Cx, Cy);
+        // Second hand: red rod with disc at the tip (the SBB stop
+        // signal). The line and the disc need to rotate as a unit
+        // around the dial center (Cx, Cy). Wrapping them in a
+        // dedicated 400x400 sub-canvas (same dimensions as Dial) lets
+        // both children use absolute canvas coords AND share a single
+        // RotateTransform on the host. Earlier this re-used one
+        // RotateTransform across both the line and the disc — but
+        // RotateTransform.Center is interpreted in EACH ELEMENT'S
+        // OWN local coord space. The Line's local frame (with its
+        // X1/Y1/X2/Y2 expressed in the parent canvas's coords)
+        // happens to match Dial's frame, so (Cx, Cy) worked there.
+        // The Ellipse, positioned via Canvas.SetLeft/SetTop, has a
+        // local origin at its top-left — so (Cx, Cy) in the disc's
+        // local frame = canvas (Cx + LeftOffset, Cy + TopOffset),
+        // far off in the lower-right of the dial. Result: the disc
+        // orbited that off-canvas point in a wide spiral instead of
+        // tracking the line. Hosting both inside a sub-canvas whose
+        // own local frame matches Dial's eliminates the per-element
+        // offset confusion — one RotateTransform, one center, both
+        // children rotate together.
+        var secondGroup = new Canvas
+        {
+            Width = 400, Height = 400,
+            IsHitTestVisible = false,
+        };
+
         var sLine = new Line
         {
             X1 = Cx, Y1 = Cy + 22, X2 = Cx, Y2 = Cy - 118,
             Stroke = sbbRed, StrokeThickness = 2.5,
-            RenderTransform = sRot,
         };
         var sDisc = new Ellipse
         {
             Width = 28, Height = 28,
             Fill = sbbRed,
-            RenderTransform = sRot,
         };
         Canvas.SetLeft(sDisc, Cx - 14);
         Canvas.SetTop(sDisc,  Cy - 132);
-        Dial.Children.Add(sLine);
-        Dial.Children.Add(sDisc);
+
+        secondGroup.Children.Add(sLine);
+        secondGroup.Children.Add(sDisc);
+
+        var sRot = new RotateTransform(0, Cx, Cy);
+        secondGroup.RenderTransform = sRot;
+        Dial.Children.Add(secondGroup);
         _secondRotate = sRot;
 
         Dial.Children.Add(new Ellipse { Width = 10, Height = 10, Fill = black }.At(Cx - 5, Cy - 5));

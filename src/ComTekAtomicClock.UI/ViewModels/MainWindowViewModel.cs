@@ -69,6 +69,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         UninstallServiceCommand    = new RelayCommand(LaunchUninstallerAndPoll);
         OpenTabSettingsCommand     = new RelayCommand(OpenTabSettings, _ => SelectedTab is not null);
         OpenTabSettingsForCommand  = new RelayCommand(OpenTabSettingsFor);
+        OpenThemesPickerForCommand = new RelayCommand(OpenThemesPickerFor);
         AddTabCommand              = new RelayCommand(AddTab);
         RemoveTabCommand           = new RelayCommand(RemoveTab, _ => Tabs.Count > 1);
         CloseTabCommand            = new RelayCommand(CloseTab);
@@ -151,6 +152,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// which targets the SelectedTab.
     /// </summary>
     public RelayCommand OpenTabSettingsForCommand { get; }
+    /// <summary>
+    /// Opens the Themes gallery dialog (12-tile grid) for the tab passed
+    /// as the command parameter. Bound to the per-tab "?" -> Themes…
+    /// menu item. Picking a tile mutates TabViewModel.Theme and the
+    /// dialog returns DialogResult=true so we persist.
+    /// </summary>
+    public RelayCommand OpenThemesPickerForCommand { get; }
     public RelayCommand AddTabCommand            { get; }
     public RelayCommand RemoveTabCommand         { get; }
     /// <summary>Removes the tab passed as the command parameter (used by
@@ -188,19 +196,40 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         {
             // SaveAppSettings persists the in-memory changes the dialog
             // already wrote back into TabSettings via the TabViewModel.
-            try
-            {
-                SettingsStore.SaveAppSettings(_settings);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    Application.Current?.MainWindow!,
-                    $"Settings were updated in memory but could not be saved to disk.\n\n{ex.Message}",
-                    "Save failed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-            }
+            PersistAfterDialog();
+        }
+    }
+
+    private void OpenThemesPickerFor(object? param)
+    {
+        if (param is not TabViewModel vm) return;
+        var dlg = new ThemesDialog(vm)
+        {
+            Owner = Application.Current?.MainWindow,
+        };
+        var result = dlg.ShowDialog();
+        if (result == true)
+        {
+            // The dialog mutated TabViewModel.Theme directly; mirror to
+            // disk via SettingsStore.SaveAppSettings.
+            PersistAfterDialog();
+        }
+    }
+
+    private void PersistAfterDialog()
+    {
+        try
+        {
+            SettingsStore.SaveAppSettings(_settings);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                Application.Current?.MainWindow!,
+                $"Settings were updated in memory but could not be saved to disk.\n\n{ex.Message}",
+                "Save failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
     }
 
