@@ -4,6 +4,15 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.18] - 2026-04-30
+
+### Fixed
+
+- **Tab clicks intermittent — sometimes 5–10 clicks needed to switch tabs.** Persistent symptom from v0.0.4 onward; Width=0 on the Dragablz Thumb fixed click-stealing on the active tab but didn't fix the underlying load.
+  - *Root cause:* Dragablz's `TabablzControl` keeps non-selected tabs **loaded but visually collapsed** — `Unloaded` doesn't fire on tab switch. So with four open tabs, four `ClockFaceControl` instances each ran their own `DispatcherTimer` at 20 Hz (smooth analog) or 1 Hz (stepped/digital). Total: ~80 dispatcher ticks per second doing measure/arrange/text work, even though three of them paint into hidden visual subtrees the user can't see. `DispatcherTimer` defaults to `Background` priority which is supposed to yield to `Input` events, but with the dispatcher queue this full, mouse-down/mouse-up routing through the tab strip got disrupted enough that single clicks landed unreliably.
+  - *Solution:* `ClockFaceControl` now subscribes to `IsVisibleChanged`. When the tab becomes invisible (Dragablz tab switch), the per-clock timer stops. When it becomes visible again, the timer restarts AND `UpdateClock` runs immediately so the freshly-shown frame is already current (otherwise a 50 ms-to-1 s window of stale display, and the v0.0.17 self-heal would only catch a theme mismatch on the next tick). Cuts dispatcher load from N timers × 20 Hz to 1 timer × 20 Hz. (`Controls/ClockFaceControl.xaml.cs`.)
+  - *Compat:* `OnLoaded`/`OnUnloaded` retained — they cover the case where a tab is fully removed (closed, or app shutdown). `IsVisibleChanged` covers the visible/hidden transitions while still loaded. Both paths are safe to fire and the timer's null-check + Start/Stop are idempotent.
+
 ## [0.0.17] - 2026-04-30
 
 ### Fixed

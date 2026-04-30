@@ -161,8 +161,9 @@ public partial class ClockFaceControl : UserControl
     public ClockFaceControl()
     {
         InitializeComponent();
-        Loaded   += OnLoaded;
-        Unloaded += OnUnloaded;
+        Loaded            += OnLoaded;
+        Unloaded          += OnUnloaded;
+        IsVisibleChanged  += OnIsVisibleChanged;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -184,6 +185,37 @@ public partial class ClockFaceControl : UserControl
     {
         _timer?.Stop();
         _timer = null;
+    }
+
+    /// <summary>
+    /// Pause the per-clock animation timer when this tab isn't on
+    /// screen (Dragablz's TabablzControl keeps non-selected tabs
+    /// loaded but visually collapsed, so OnUnloaded does not fire on
+    /// tab switch). With one timer per tab firing at 20 Hz, four
+    /// open tabs produce 80 dispatcher ticks per second — enough
+    /// background work to starve mouse-click events on the tab strip
+    /// (Dan reported needing 5–10 clicks to switch tabs reliably).
+    /// Pausing the inactive tabs' timers cuts the load to one
+    /// timer's worth and restores first-click responsiveness.
+    ///
+    /// On becoming visible again, force an immediate <see cref="UpdateClock"/>
+    /// so the freshly-shown frame is already correct (otherwise the
+    /// user would briefly see stale time / a stale theme until the
+    /// next 50 ms tick — and the self-heal added in v0.0.17 only
+    /// fires inside UpdateClock).
+    /// </summary>
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_timer is null) return;
+        if ((bool)e.NewValue)
+        {
+            UpdateClock();
+            _timer.Start();
+        }
+        else
+        {
+            _timer.Stop();
+        }
     }
 
     private void RenderActiveTheme()
