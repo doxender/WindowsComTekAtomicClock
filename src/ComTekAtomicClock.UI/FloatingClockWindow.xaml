@@ -82,7 +82,8 @@
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
                     <Setter Property="BorderThickness" Value="1,1,1,0"/>
                     <Setter Property="Padding" Value="10,4"/>
-                    <Setter Property="FontSize" Value="13"/>
+                    <!-- See MainWindow.xaml: inactive 9 pt, active 19 pt. -->
+                    <Setter Property="FontSize" Value="9"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                     <!-- See MainWindow.xaml for PreviewMouseLeftButtonDown rationale. -->
                     <EventSetter Event="PreviewMouseLeftButtonDown"

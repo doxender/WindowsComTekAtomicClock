@@ -220,7 +220,14 @@
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
                     <Setter Property="BorderThickness" Value="1,1,1,0"/>
                     <Setter Property="Padding" Value="10,4"/>
-                    <Setter Property="FontSize" Value="13"/>
+                    <!--
+                      Inactive-tab base FontSize. Was 13; dropped to
+                      9 (-4 pt) per Dan to widen the contrast with
+                      the active tab (which the IsSelected=True
+                      trigger raises to 19, Bold). Active tab is
+                      now ~2× the inactive size.
+                    -->
+                    <Setter Property="FontSize" Value="9"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>

@@ -4,6 +4,16 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.30] - 2026-04-30
+
+### Changed
+
+- **Inactive tab font size 13 → 9** (−4 pt). Per Dan: "make the inactive tabs city names 4 points smaller." Combined with the active tab at 19 / Bold (v0.0.29), the active tab is now roughly 2× the size of the inactive ones — selected vs. unselected reads at a glance. Applied to both `MainWindow.xaml`'s and `FloatingClockWindow.xaml`'s tab strips. Implementation: changed the base `FontSize` setter in the `DragablzItem` `ItemContainerStyle`; the `IsSelected=True` trigger continues to override to 19 when a tab is selected.
+
+### Doc audit (per pre-merge rule)
+
+- `README.md`, `Dialogs/HelpDialog.xaml`, `requirements.txt` — no change. None describe tab-strip typography.
+
 ## [0.0.29] - 2026-04-30
 
 ### Changed
