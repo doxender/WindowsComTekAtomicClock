@@ -1098,14 +1098,14 @@ public partial class ClockFaceControl : UserControl
 
         // ":SS SECONDS" line + date readout (day · month · day-of-month
         // — parity with the analog faces, which all carry a date line
-        // beneath their digital readout) + COMTEK badge.
+        // beneath their digital readout) + COMTEKGLOBAL badge.
         var secondsTb = MakeText(": 00 SECONDS", 200, 274, helvetica, 10, labelFill,
                                  FontWeights.Medium, TextAnchor.Center);
         Dial.Children.Add(secondsTb);
         var dateTb = MakeText("THU · APRIL 30", 200, 292, helvetica, 11, labelFill,
                               FontWeights.Medium, TextAnchor.Center);
         Dial.Children.Add(dateTb);
-        Dial.Children.Add(MakeText("COMTEK · MODEL CT-1971", 200, 312, helvetica, 9, brandFill,
+        Dial.Children.Add(MakeText("COMTEKGLOBAL · MODEL CT-1971", 200, 312, helvetica, 9, brandFill,
                                    FontWeights.Normal, TextAnchor.Center));
 
         _digitalUpdater = local =>
@@ -1412,7 +1412,7 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficG, Opacity = 0.7 }.At(42, 12));
 
         var mono = new FontFamily("Cascadia Code, Consolas, Lucida Console, monospace");
-        Dial.Children.Add(MakeText("comtek :: hex_clock.exe", 200, 21, mono, 11, cyan,
+        Dial.Children.Add(MakeText("comtekglobal :: hex_clock.exe", 200, 21, mono, 11, cyan,
                                    FontWeights.Normal, TextAnchor.Center, opacity: 0.6));
 
         Dial.Children.Add(MakeText("// time encoded as hexadecimal (per unit)",
@@ -1540,7 +1540,7 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficG, Opacity = 0.7 }.At(42, 12));
 
         var mono = new FontFamily("Cascadia Code, Consolas, Lucida Console, monospace");
-        Dial.Children.Add(MakeText("comtek :: bin_clock.exe", 200, 21, mono, 11, magenta,
+        Dial.Children.Add(MakeText("comtekglobal :: bin_clock.exe", 200, 21, mono, 11, magenta,
                                    FontWeights.Normal, TextAnchor.Center, opacity: 0.7));
         Dial.Children.Add(MakeText("// time encoded as binary text (per unit)",
                                    40, 80, mono, 12, magenta,

@@ -4,6 +4,12 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.12] - 2026-04-30
+
+### Changed
+
+- **Clock-face brand text "ComTek" → "ComTekGlobal"** on the three faces that paint the wordmark. Case style preserved: all-caps on the Flip Clock badge (`COMTEK · MODEL CT-1971` → `COMTEKGLOBAL · MODEL CT-1971`), lowercase on the Hex and Binary Digital terminal title bars (`comtek :: hex_clock.exe` → `comtekglobal :: hex_clock.exe`, `comtek :: bin_clock.exe` → `comtekglobal :: bin_clock.exe`). Window titles, dialog titles, service identifiers, namespace names, and the user-facing copyright line in `AboutDialog` are unchanged — Dan's request was scoped to clock-face text. (`Controls/ClockFaceControl.xaml.cs`.)
+
 ## [0.0.11] - 2026-04-30
 
 ### Added
