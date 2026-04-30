@@ -410,6 +410,16 @@ public partial class ClockFaceControl : UserControl
         var redSecond   = new SolidColorBrush(Color.FromRgb(0xFF, 0x30, 0x30));
         var panelBg     = new SolidColorBrush(Color.FromRgb(0x04, 0x0B, 0x04));
 
+        // Full-canvas backdrop (matches design/themes/atomic-lab.svg's
+        // <rect width="400" height="400" fill="url(#bg-al)"/>). Without
+        // this, the corners outside the bezel were transparent — the
+        // host TabablzControl's white background showed through, and
+        // the white ✕ / ? overlay glyphs (chosen for Atomic Lab's dark
+        // face) became white-on-white and disappeared. Every other
+        // analog renderer already paints a 400x400 backdrop; this was
+        // the lone gap.
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = faceBrush }
+            .At(0, 0));
         Dial.Children.Add(new Ellipse { Width = 344, Height = 344, Fill = bezelBrush }
             .At(Cx - 172, Cy - 172));
         Dial.Children.Add(new Ellipse { Width = 320, Height = 320, Fill = faceBrush }

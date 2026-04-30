@@ -102,7 +102,6 @@
         <dragablz:TabablzControl x:Name="MainTabs"
                                  ItemsSource="{Binding Tabs}"
                                  SelectedItem="{Binding SelectedTab}"
-                                 DisplayMemberPath="Label"
                                  ShowDefaultCloseButton="True"
                                  ShowDefaultAddButton="True"
                                  NewItemFactory="{Binding NewTabFactory}"
@@ -114,11 +113,20 @@
                 <dragablz:InterTabController InterTabClient="{StaticResource MainInterTabClient}"/>
             </dragablz:TabablzControl.InterTabController>
             <!--
-              Tab header rendering: TabViewModel.ToString() returns
-              the Label, which Dragablz uses as the tab header text.
-              (Wpf.Ui's restyled TabItem template fights with our
-              ItemTemplate, so we lean on the ToString fallback rather
-              than chasing the styling battle.)
+              Tab header rendering: explicit ItemTemplate with a
+              reactive {Binding Label} binding. Earlier we used
+              DisplayMemberPath="Label" + a ToString() override on
+              TabViewModel, but in this Dragablz version
+              DisplayMemberPath captures the value once at item-add
+              time and doesn't refresh on PropertyChanged — so when
+              the user changed a tab's timezone via the settings
+              dialog, the underlying model updated but the tab header
+              kept showing the old label. Tearing the tab off forced
+              the new floating window to re-add the item, which
+              re-evaluated ToString() and showed the correct label,
+              which is the "tear-away fixes it" symptom Dan reported.
+              An explicit ItemTemplate with {Binding Label}
+              subscribes to PropertyChanged and refreshes live.
 
               For changing the timezone / theme of a tab, the user has
               two affordances:
@@ -126,6 +134,12 @@
                 · Right-click the tab → context menu with "Tab
                   settings…" and "Close tab" entries.
             -->
+            <dragablz:TabablzControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Label}"
+                               VerticalAlignment="Center"/>
+                </DataTemplate>
+            </dragablz:TabablzControl.ItemTemplate>
             <dragablz:TabablzControl.ItemContainerStyle>
                 <Style TargetType="dragablz:DragablzItem">
                     <!--
@@ -152,22 +166,34 @@
                     <!--
                       Yellow-block / dark-active-box fix:
                       Setting Width=0 / Background=Transparent on the
-                      Thumb (previous attempt) didn't kill the paint —
-                      the Dragablz default Thumb template was rendering
-                      with its own brushes (yellow when inactive, dark
-                      gray when the tab is selected). Overriding the
-                      Thumb's TEMPLATE itself with an empty transparent
-                      Border bypasses whatever brushes the original
-                      template references. Natural Width preserved so
-                      Dragablz's drag-to-tear hit-testing still routes
-                      through the Thumb element — only the visual is
-                      gone.
+                      Thumb (very early attempt) didn't kill the paint —
+                      the Dragablz default Thumb TEMPLATE was rendering
+                      with its own brushes (yellow inactive, dark gray
+                      selected). v0.0.2 added OverridesDefaultStyle=True
+                      + Template-override-with-empty-Border, which
+                      killed the paint but left the Thumb naturally
+                      sized (it stretched to fill its grid cell in the
+                      DragablzItem template), intercepting clicks
+                      across the entire tab and making selection take
+                      multiple click attempts (Dan's v0.0.3 testing).
+
+                      v0.0.4: keep the empty template (kills paint)
+                      AND force Width=0 / MinWidth=0 (zero hit-test
+                      area, so the Thumb no longer steals clicks
+                      meant for selection). Drag-to-tear still works
+                      because Dragablz's tear-away hooks the
+                      DragablzItem's MouseMove gesture, not the
+                      Thumb's drag events directly.
                     -->
                     <Style.Resources>
                         <Style TargetType="Thumb">
                             <Setter Property="OverridesDefaultStyle" Value="True"/>
                             <Setter Property="Background"  Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Width"       Value="0"/>
+                            <Setter Property="MinWidth"    Value="0"/>
+                            <Setter Property="Margin"      Value="0"/>
+                            <Setter Property="Padding"     Value="0"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="Thumb">

@@ -39,7 +39,6 @@
           drag-back works.
         -->
         <dragablz:TabablzControl x:Name="FloatingTabs"
-                                 DisplayMemberPath="Label"
                                  ShowDefaultCloseButton="True"
                                  ShowDefaultAddButton="False"
                                  ConsolidateOrphanedItems="True"
@@ -49,6 +48,13 @@
             <dragablz:TabablzControl.InterTabController>
                 <dragablz:InterTabController InterTabClient="{StaticResource FloatingInterTabClient}"/>
             </dragablz:TabablzControl.InterTabController>
+            <!-- See MainWindow.xaml for ItemTemplate rationale (reactive Label binding). -->
+            <dragablz:TabablzControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Label}"
+                               VerticalAlignment="Center"/>
+                </DataTemplate>
+            </dragablz:TabablzControl.ItemTemplate>
 
             <dragablz:TabablzControl.ItemContainerStyle>
                 <Style TargetType="dragablz:DragablzItem">
@@ -58,6 +64,10 @@
                             <Setter Property="OverridesDefaultStyle" Value="True"/>
                             <Setter Property="Background"  Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Width"       Value="0"/>
+                            <Setter Property="MinWidth"    Value="0"/>
+                            <Setter Property="Margin"      Value="0"/>
+                            <Setter Property="Padding"     Value="0"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="Thumb">
