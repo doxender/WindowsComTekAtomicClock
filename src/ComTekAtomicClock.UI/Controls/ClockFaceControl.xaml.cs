@@ -396,7 +396,7 @@ public partial class ClockFaceControl : UserControl
 
         if (_dateReadout is not null)
             _dateReadout.Text = local
-                .ToString("ddd · MMMM d", CultureInfo.InvariantCulture)
+                .ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture)
                 .ToUpperInvariant();
 
         // Per-theme digital update for renderers without rotating
@@ -1208,7 +1208,7 @@ public partial class ClockFaceControl : UserControl
         var secondsTb = MakeText(": 00 SECONDS", 200, 274, helvetica, 10, labelFill,
                                  FontWeights.Medium, TextAnchor.Center);
         Dial.Children.Add(secondsTb);
-        var dateTb = MakeText("THU · APRIL 30", 200, 292, helvetica, 11, labelFill,
+        var dateTb = MakeText("THU · APRIL 30 · 2026", 200, 292, helvetica, 11, labelFill,
                               FontWeights.Medium, TextAnchor.Center);
         Dial.Children.Add(dateTb);
         Dial.Children.Add(MakeText("COMTEKGLOBAL · MODEL CT-1971", 200, 312, helvetica, 9, brandFill,
@@ -1222,7 +1222,7 @@ public partial class ClockFaceControl : UserControl
             digitTextBlocks[2].Text = (local.Minute / 10).ToString(CultureInfo.InvariantCulture);
             digitTextBlocks[3].Text = (local.Minute % 10).ToString(CultureInfo.InvariantCulture);
             secondsTb.Text = $": {local.Second:D2} SECONDS";
-            dateTb.Text    = local.ToString("ddd · MMMM d", CultureInfo.InvariantCulture).ToUpperInvariant();
+            dateTb.Text    = local.ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
         };
     }
 
@@ -1308,8 +1308,16 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeText("★ ATOMIC TIME ★ FROM BOULDER ★", 200, 282, bebas, 13, bulbAmber,
                                    FontWeights.Medium, TextAnchor.Center, opacity: 0.85));
 
+        // Date line (parity with the analog faces — day/month/dom/year).
+        var marqueeDateTb = MakeText("WED · APRIL 30 · 2026", 200, 308, bebas, 12, bulbAmber,
+                                     FontWeights.Medium, TextAnchor.Center, opacity: 0.85);
+        Dial.Children.Add(marqueeDateTb);
+
         _digitalUpdater = local =>
+        {
             timeTb.Text = local.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            marqueeDateTb.Text = local.ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
+        };
 
         // TODO Marquee: chase-bulb brightness wave (left-to-right
         // animation) and per-bulb intensity, per design/README.md.
@@ -1419,6 +1427,12 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeText("BINARY CLOCK", 200, 60, mono, 16, headLabel,
                                    FontWeights.Bold, TextAnchor.Center));
 
+        // Date line (parity with the analog faces — day/month/dom/year).
+        // Sits between the title and the LED grid.
+        var binaryDateTb = MakeText("MON · APRIL 30 · 2026", 200, 90, mono, 11, headLabel,
+                                    FontWeights.Normal, TextAnchor.Center, opacity: 0.7);
+        Dial.Children.Add(binaryDateTb);
+
         // Bit-value labels (8/4/2/1, right-aligned to x=42)
         Dial.Children.Add(MakeText("8", 42, 155, mono, 11, bitLabel, FontWeights.Normal, TextAnchor.Right));
         Dial.Children.Add(MakeText("4", 42, 195, mono, 11, bitLabel, FontWeights.Normal, TextAnchor.Right));
@@ -1483,6 +1497,7 @@ public partial class ClockFaceControl : UserControl
                 ellipse.Effect = lit ? glow.Clone() : null;
             }
             decodedTb.Text = local.ToString("HH : mm : ss", CultureInfo.InvariantCulture);
+            binaryDateTb.Text = local.ToString("ddd · MMMM d · yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
         };
     }
 
@@ -1549,21 +1564,25 @@ public partial class ClockFaceControl : UserControl
         var monTb = MakeText("// month: 00 00 00", 40, 276, mono, 12, cyan,
                              FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
         Dial.Children.Add(monTb);
+        // Year as hex ASCII for parity with the rest of the date breakdown.
+        var yearTb = MakeText("// year:  00 00 00 00", 40, 290, mono, 12, cyan,
+                              FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(yearTb);
 
-        var dayTb = MakeText("// day-frac: 0x0000 / 0xFFFF (0.0% elapsed)", 40, 298, mono, 12, cyan,
+        var dayTb = MakeText("// day-frac: 0x0000 / 0xFFFF (0.0% elapsed)", 40, 308, mono, 12, cyan,
                              FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
         Dial.Children.Add(dayTb);
 
         var swatch = new Rectangle { Width = 320, Height = 14, Fill = Brushes.Black, RadiusX = 2, RadiusY = 2, Opacity = 0.85 };
-        Canvas.SetLeft(swatch, 40); Canvas.SetTop(swatch, 314);
+        Canvas.SetLeft(swatch, 40); Canvas.SetTop(swatch, 322);
         Dial.Children.Add(swatch);
 
         var swatchHexTb = MakeText("// the bar above is #0000FF — today, encoded as a color",
-                                   40, 344, mono, 11, cyan,
+                                   40, 350, mono, 11, cyan,
                                    FontWeights.Normal, TextAnchor.Left, opacity: 0.55);
         Dial.Children.Add(swatchHexTb);
 
-        Dial.Children.Add(MakeText("$ _", 40, 372, mono, 14, cyanBright, FontWeights.Normal, TextAnchor.Left));
+        Dial.Children.Add(MakeText("$ _", 40, 378, mono, 14, cyanBright, FontWeights.Normal, TextAnchor.Left));
 
         _digitalUpdater = local =>
         {
@@ -1579,9 +1598,11 @@ public partial class ClockFaceControl : UserControl
             var dow   = local.ToString("ddd",  CultureInfo.InvariantCulture).ToUpperInvariant();
             var dom   = local.Day.ToString(CultureInfo.InvariantCulture);
             var month = local.ToString("MMMM", CultureInfo.InvariantCulture).ToUpperInvariant();
-            dowTb.Text = $"// dow:   {ToHexAscii(dow)}  ({dow})";
-            domTb.Text = $"// dom:   {ToHexAscii(dom)}  ({dom})";
-            monTb.Text = $"// month: {ToHexAscii(month)}  ({month})";
+            var year = local.Year.ToString(CultureInfo.InvariantCulture);
+            dowTb.Text  = $"// dow:   {ToHexAscii(dow)}  ({dow})";
+            domTb.Text  = $"// dom:   {ToHexAscii(dom)}  ({dom})";
+            monTb.Text  = $"// month: {ToHexAscii(month)}  ({month})";
+            yearTb.Text = $"// year:  {ToHexAscii(year)}  ({year})";
 
             // Day fraction: seconds elapsed since midnight, scaled to
             // 0–0xFFFF. The 16-bit value drives a hex string + colour.
@@ -1683,18 +1704,24 @@ public partial class ClockFaceControl : UserControl
         var monTb = MakeText("// mon:   00000000", 40, 286, mono, 11, magenta,
                              FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
         Dial.Children.Add(monTb);
+        // Year as 8-bit binary ASCII codes for parity with the rest
+        // of the date breakdown. 4 chars × 8 bits = 32 binary digits
+        // — long line but fits at font 11.
+        var yearTb = MakeText("// yr:    00000000 00000000 00000000 00000000", 40, 302, mono, 11, magenta,
+                              FontWeights.Normal, TextAnchor.Left, opacity: 0.75);
+        Dial.Children.Add(yearTb);
 
         Dial.Children.Add(MakeText("// widths: 5b hour · 6b min · 6b sec · MSB first",
-                                   40, 308, mono, 10, dimMagenta, FontWeights.Normal, TextAnchor.Left));
+                                   40, 320, mono, 10, dimMagenta, FontWeights.Normal, TextAnchor.Left));
 
         // Decorative noise rows (static — same as the SVG's faux bit
         // grid; doesn't reflect time)
         Dial.Children.Add(MakeText("11010 · 01100 · 11100 · 01000 · 10101 · 10010 · 00111 · 11001",
-                                   40, 332, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
+                                   40, 340, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
         Dial.Children.Add(MakeText("01001 · 11011 · 00100 · 11110 · 01010 · 10000 · 11000 · 00101",
-                                   40, 346, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
+                                   40, 354, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
 
-        Dial.Children.Add(MakeText("$ _", 40, 372, mono, 14, magentaBr,
+        Dial.Children.Add(MakeText("$ _", 40, 380, mono, 14, magentaBr,
                                    FontWeights.Normal, TextAnchor.Left));
 
         _digitalUpdater = local =>
@@ -1713,9 +1740,11 @@ public partial class ClockFaceControl : UserControl
             var dow   = local.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant();
             var dom   = local.Day.ToString(CultureInfo.InvariantCulture);
             var month = local.ToString("MMM", CultureInfo.InvariantCulture).ToUpperInvariant();
-            dowTb.Text = $"// dow: {ToBinAscii(dow)} ({dow})";
-            domTb.Text = $"// dom: {ToBinAscii(dom)} ({dom})";
-            monTb.Text = $"// mon: {ToBinAscii(month)} ({month})";
+            var year = local.Year.ToString(CultureInfo.InvariantCulture);
+            dowTb.Text  = $"// dow: {ToBinAscii(dow)} ({dow})";
+            domTb.Text  = $"// dom: {ToBinAscii(dom)} ({dom})";
+            monTb.Text  = $"// mon: {ToBinAscii(month)} ({month})";
+            yearTb.Text = $"// yr:  {ToBinAscii(year)} ({year})";
         };
     }
 }

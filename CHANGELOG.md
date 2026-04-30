@@ -4,6 +4,20 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.22] - 2026-04-30
+
+### Changed
+
+- **All twelve clock faces now show day-of-week, day-of-month, month, AND year.** Audit triggered by Dan: "Binary clock does not have day of week, date of month, month, year. Go through all faces, make sure that they are consistent on those four elements."
+  - **Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight** (6 analog) — shared `UpdateClock` date format upgraded from `"ddd · MMMM d"` → `"ddd · MMMM d · yyyy"`. One-line change covers all six. (e.g., `WED · APRIL 30 · 2026`.)
+  - **Flip Clock** — same upgrade in its `_digitalUpdater` closure (it has its own `dateTb`, not the shared `_dateReadout`).
+  - **Marquee** — was missing all four. Added a date line below the "★ ATOMIC TIME ★ FROM BOULDER ★" subtitle at y=308 in the same Bebas Neue typeface but smaller (font 12 vs 13 for the subtitle). Format `WED · APRIL 30 · 2026`.
+  - **Slab** — already had all four (`"dddd · d MMMM yyyy"` → `SATURDAY · 30 APRIL 2026`). No change.
+  - **Binary** — was missing all four. Added a date line at y=90 between the "BINARY CLOCK" title and the LED grid, in the same dim-red palette. Format `WED · APRIL 30 · 2026`.
+  - **Hex** — already had dow/dom/month encoded as hex ASCII; was missing year. Added a `// year: 32 30 32 36 (2026)` line between month and the day-fraction section. Other content shifted down 6 px to accommodate.
+  - **Binary Digital** — already had dow/dom/month encoded as 8-bit binary ASCII; was missing year. Added a `// yr: 00110010 00110000 00110010 00110110 (2026)` line between month and the widths annotation. Other content shifted down 8 px to accommodate.
+  - All four elements (day name, day-of-month, month name, year) now appear on every face. Each theme's typography stays in character (full vs abbreviated month names, encoded vs plain text) — only the data set is now consistent.
+
 ## [0.0.21] - 2026-04-30
 
 ### Fixed
