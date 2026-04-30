@@ -79,6 +79,8 @@ public partial class ClockFaceControl : UserControl
         // layout completes — the Canvas children are positioned by
         // explicit Width/Height + Canvas.SetLeft/SetTop, so layout
         // pass is unnecessary for correctness.
+        System.Diagnostics.Trace.WriteLine(
+            $"[ClockFaceControl] OnThemeChanged: {e.OldValue} → {e.NewValue}");
         if (d is ClockFaceControl c)
             c.RenderActiveTheme();
     }
@@ -128,6 +130,26 @@ public partial class ClockFaceControl : UserControl
     /// </summary>
     private Action<DateTime>? _digitalUpdater;
 
+    /// <summary>
+    /// Theme value that was last fully rendered. Used by the
+    /// self-healing tick check in <see cref="UpdateClock"/>: if the
+    /// current <see cref="Theme"/> DP value disagrees with this, the
+    /// painted visuals are stale and we re-render. Initialized to a
+    /// sentinel that no real theme equals so the first tick after
+    /// <see cref="OnLoaded"/> always reconciles.
+    ///
+    /// Exists because the v0.0.9 era reproduced a case where
+    /// <c>tabVm.Theme</c> said "BinaryDigital" but the dial was painted
+    /// with Flip Clock visuals. Root cause was never isolated to one
+    /// of the candidate races (DataContext swap during tab recycling,
+    /// silently-thrown render exception under the pre-v0.0.16 bare
+    /// code path, late-binding update missing OnPropertyChanged).
+    /// Rather than chase the specific race, this self-healing check
+    /// makes the symptom impossible: any frame in which the DP and
+    /// the render disagree triggers a fresh render on the next tick.
+    /// </summary>
+    private SettingsTheme? _lastRenderedTheme;
+
     // ---------------------------------------------------------------
     // Lifecycle
     // ---------------------------------------------------------------
@@ -166,12 +188,26 @@ public partial class ClockFaceControl : UserControl
 
     private void RenderActiveTheme()
     {
+        var requested = Theme;
+        System.Diagnostics.Trace.WriteLine(
+            $"[ClockFaceControl] RenderActiveTheme begin: {requested}");
+
         Dial.Children.Clear();
         _hourRotate = _minuteRotate = _secondRotate = null;
         _digitalReadout = _dateReadout = null;
         _digitalUpdater = null;
 
-        switch (Theme)
+        // Stamp the field BEFORE the build, so a re-entrant call (e.g.,
+        // theme changes again mid-build via a binding ripple) is
+        // detected against the up-to-date value rather than the prior
+        // one. If Build* throws, _lastRenderedTheme still reflects what
+        // we *attempted* to render — preventing the self-heal in
+        // UpdateClock from infinitely retrying a doomed theme. Use the
+        // captured `requested` so the switch and the recorded value
+        // can't disagree if Theme changes again mid-method.
+        _lastRenderedTheme = requested;
+
+        switch (requested)
         {
             case SettingsTheme.AtomicLab:     BuildAtomicLab();     break;
             case SettingsTheme.BoulderSlate:  BuildBoulderSlate();  break;
@@ -274,6 +310,23 @@ public partial class ClockFaceControl : UserControl
     /// </summary>
     private void UpdateClock()
     {
+        // Self-healing theme reconciliation. If the Theme DP value
+        // disagrees with what we last actually rendered (any of the
+        // candidate races could have caused this — DataContext-swap
+        // during container recycling, silently-failed render, or a
+        // late binding update we missed), force a fresh render. This
+        // makes the visible "wrong theme" symptom impossible: at most
+        // one tick after the mismatch occurs, the next tick repaints
+        // with the correct theme.
+        if (_lastRenderedTheme != Theme)
+        {
+            System.Diagnostics.Trace.WriteLine(
+                $"[ClockFaceControl] Self-heal: rendered={_lastRenderedTheme} != Theme={Theme}; re-rendering.");
+            RenderActiveTheme();
+            // Fall through to update positions/text against the
+            // freshly-built elements.
+        }
+
         var nowUtc = DateTime.UtcNow;
         var local  = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, TimeZone);
 

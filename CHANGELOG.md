@@ -4,6 +4,16 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.17] - 2026-04-30
+
+### Fixed
+
+- **Tab 2 theme/render mismatch ("shows Flip Clock with Binary Digital selected") closed via self-healing reconciliation in the tick loop.**
+  - *Background:* Carry-over symptom from v0.0.7-era reproduction. `tabVm.Theme` says `BinaryDigital` (Tab Settings dialog confirms), but the dial is painted with Flip Clock visuals. Three candidate root causes were considered: (1) `OnThemeChanged` not firing during a `DataContext` swap in container recycling — v0.0.9 dropped the `IsLoaded` guard which addressed one such race but couldn't be proven to address all; (2) `RenderActiveTheme` throwing silently — possible under the pre-v0.0.16 unhandled-exception code path; (3) a late-binding update missing `OnPropertyChanged`. Couldn't isolate which one in repro from a code read.
+  - *Solution — defense in depth, not race-hunting:* New `_lastRenderedTheme` field tracks what the dial was last actually painted with. `UpdateClock` (the dispatcher tick — 50 ms / 1 s depending on smooth-vs-stepped) compares the current `Theme` DP value against `_lastRenderedTheme` and, if they differ, re-renders before computing hand positions. Cost is one enum compare per tick; benefit is that **any path that produced the mismatch self-corrects within one tick**. `RenderActiveTheme` stamps `_lastRenderedTheme` *before* the build-switch using a captured `requested` value, so a re-entrant theme change mid-build can't desync the field, and a thrown `Build*` doesn't leave the heal logic looping forever on an unrenderable theme.
+  - *Diagnostic instrumentation:* Added `Trace.WriteLine` (works in Release, unlike `Debug.WriteLine`) at `OnThemeChanged` and at the top of `RenderActiveTheme`. If the symptom recurs, the trace stream shows whether the DP changed and whether render fired — narrows the root cause without re-enabling the visible debug overlay.
+  - *Debug overlay still on for verification.* The `theme: <name>` text at the bottom of every face stays in place this round so Dan can confirm the fix on F5. Comes off in v0.0.18 once verified. (`Controls/ClockFaceControl.xaml.cs`.)
+
 ## [0.0.16] - 2026-04-30
 
 ### Added
