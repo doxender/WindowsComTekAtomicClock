@@ -4,6 +4,23 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.26] - 2026-04-30
+
+### Removed
+
+- **Right-click context menu on tab headers** (the menu with `Tab settings…` / `Close tab`) per Dan's call. The functionality remains fully reachable via:
+  - Double-click tab header → Tab settings
+  - Ctrl+, → Tab settings
+  - Per-tab `✕` button on the tab header → close
+  - `✕` overlay on the clock face → close the tab
+  - The right-click menu was redundant with all of the above.
+  - Implementation: dropped the `<Setter Property="ContextMenu">` block from the `DragablzItem` `ItemContainerStyle` in `MainWindow.xaml`. Removed the orphaned `TabContextSettings_Click` and `TabContextClose_Click` handlers from `MainWindow.xaml.cs`. Kept `TryFindTabFromContextMenuItem` — still used by the `?`-overlay menu (Themes / Help / About).
+
+### Doc audit (per pre-merge rule)
+
+- `README.md` — no change. The right-click menu wasn't called out as a feature.
+- `Dialogs/HelpDialog.xaml` — `Edit a tab` mentioned right-click as one of three ways to reach Tab settings. Updated to drop that (kept double-click + Ctrl+,).
+
 ## [0.0.25] - 2026-04-30
 
 ### Documentation

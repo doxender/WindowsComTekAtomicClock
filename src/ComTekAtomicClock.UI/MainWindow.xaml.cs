@@ -176,35 +176,12 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    /// <summary>
-    /// Right-click context menu -> Tab settings…
-    /// </summary>
-    private void TabContextSettings_Click(object sender, RoutedEventArgs e)
-    {
-        System.Diagnostics.Trace.WriteLine("[MainWindow] TabContextSettings_Click fired");
-        if (!TryFindTabFromContextMenuItem(sender, out var vm) || _vm is null)
-        {
-            System.Diagnostics.Trace.WriteLine("  could not resolve TabViewModel");
-            return;
-        }
-        System.Diagnostics.Trace.WriteLine($"  resolved tab: {vm.Label}");
-        _vm.OpenTabSettingsForCommand.Execute(vm);
-    }
-
-    /// <summary>
-    /// Right-click context menu -> Close tab.
-    /// </summary>
-    private void TabContextClose_Click(object sender, RoutedEventArgs e)
-    {
-        System.Diagnostics.Trace.WriteLine("[MainWindow] TabContextClose_Click fired");
-        if (!TryFindTabFromContextMenuItem(sender, out var vm) || _vm is null)
-        {
-            System.Diagnostics.Trace.WriteLine("  could not resolve TabViewModel");
-            return;
-        }
-        System.Diagnostics.Trace.WriteLine($"  resolved tab: {vm.Label}");
-        _vm.CloseTabCommand.Execute(vm);
-    }
+    // TabContextSettings_Click and TabContextClose_Click handlers
+    // were removed in v0.0.26 along with the right-click tab
+    // ContextMenu that invoked them. The functionality remains
+    // reachable via double-click / Ctrl+, / per-tab ✕ button.
+    // TryFindTabFromContextMenuItem below is still used by the
+    // ?-overlay menu handlers (Themes / Help / About).
 
     /// <summary>
     /// Find the <see cref="TabViewModel"/> behind a context-menu

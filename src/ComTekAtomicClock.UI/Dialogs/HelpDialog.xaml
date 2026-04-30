@@ -53,7 +53,7 @@
 
                     <TextBlock Text="• Edit a tab (timezone, theme)" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
                     <TextBlock TextWrapping="Wrap" LineHeight="18" Foreground="#D8D2BC" FontSize="12" Margin="0,0,0,10"
-                               Text="Double-click the tab header, OR right-click the tab and choose &quot;Tab settings…&quot;, OR press Ctrl+, while the tab is active. The Settings dialog has two sections: &quot;THIS TAB&quot; (time zone, theme) and &quot;ALL CLOCKS ON THIS PC&quot; (sync frequency — applies to every tab and to the system clock itself). Save / Cancel."/>
+                               Text="Double-click the tab header, OR press Ctrl+, while the tab is active. The Settings dialog has two sections: &quot;THIS TAB&quot; (time zone, theme) and &quot;ALL CLOCKS ON THIS PC&quot; (sync frequency — applies to every tab and to the system clock itself). Save / Cancel."/>
 
                     <TextBlock Text="• Pick a different theme" FontWeight="SemiBold" Foreground="#FFB000" FontSize="12"/>
                     <TextBlock TextWrapping="Wrap" LineHeight="18" Foreground="#D8D2BC" FontSize="12" Margin="0,0,0,10"

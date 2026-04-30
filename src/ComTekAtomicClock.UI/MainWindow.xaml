@@ -242,17 +242,16 @@
                     -->
                     <EventSetter Event="PreviewMouseLeftButtonDown"
                                  Handler="TabItem_PreviewMouseLeftButtonDown"/>
-                    <Setter Property="ContextMenu">
-                        <Setter.Value>
-                            <ContextMenu>
-                                <MenuItem Header="Tab settings…"
-                                          Click="TabContextSettings_Click"/>
-                                <Separator/>
-                                <MenuItem Header="Close tab"
-                                          Click="TabContextClose_Click"/>
-                            </ContextMenu>
-                        </Setter.Value>
-                    </Setter>
+                    <!--
+                      Right-click ContextMenu (Tab settings… / Close
+                      tab) removed in v0.0.26 per Dan's call. Its
+                      functionality is fully reachable via:
+                        · Double-click tab header → Tab settings
+                        · Ctrl+,                   → Tab settings
+                        · Tab's per-item ✕ button  → close tab
+                        · ✕ overlay on the clock face → close tab
+                      The right-click menu was redundant.
+                    -->
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background"  Value="#FFFFFF"/>
