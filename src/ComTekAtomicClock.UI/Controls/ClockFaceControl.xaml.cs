@@ -102,6 +102,18 @@ public partial class ClockFaceControl : UserControl
     private TextBlock? _digitalReadout;
     private TextBlock? _dateReadout;
 
+    /// <summary>
+    /// Per-theme update hook for digital renderers (Flip Clock, Marquee,
+    /// Slab, Binary, Hex, Binary Digital) whose visuals don't map onto
+    /// the analog hour/minute/second-hand rotation pattern. Each Build*
+    /// for those themes assigns a closure here that mutates whatever
+    /// elements that theme uses (text blocks, LED ellipses, color
+    /// rectangles, etc.). UpdateClock invokes it once per tick after
+    /// the analog rotates have been updated. Set back to null when
+    /// switching themes (in RenderActiveTheme).
+    /// </summary>
+    private Action<DateTime>? _digitalUpdater;
+
     // ---------------------------------------------------------------
     // Lifecycle
     // ---------------------------------------------------------------
@@ -143,48 +155,39 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Clear();
         _hourRotate = _minuteRotate = _secondRotate = null;
         _digitalReadout = _dateReadout = null;
+        _digitalUpdater = null;
 
         switch (Theme)
         {
-            case SettingsTheme.AtomicLab:    BuildAtomicLab();    break;
-            case SettingsTheme.BoulderSlate: BuildBoulderSlate(); break;
-            case SettingsTheme.AeroGlass:    BuildAeroGlass();    break;
-            case SettingsTheme.Cathode:      BuildCathode();      break;
-            case SettingsTheme.Concourse:    BuildConcourse();    break;
-            case SettingsTheme.Daylight:     BuildDaylight();     break;
-            // Themes not yet implemented in WPF fall back to Atomic Lab.
-            // Their TabViewModel.Theme persistence is unaffected; the
-            // user's selection is remembered for when each theme ships.
-            // The DEBUG theme label (added below) shows the actual
-            // selected theme regardless of fallback, so the user can
-            // see which themes still need their renderer.
-            default:                          BuildAtomicLab();    break;
+            case SettingsTheme.AtomicLab:     BuildAtomicLab();     break;
+            case SettingsTheme.BoulderSlate:  BuildBoulderSlate();  break;
+            case SettingsTheme.AeroGlass:     BuildAeroGlass();     break;
+            case SettingsTheme.Cathode:       BuildCathode();       break;
+            case SettingsTheme.Concourse:     BuildConcourse();     break;
+            case SettingsTheme.Daylight:      BuildDaylight();      break;
+            case SettingsTheme.FlipClock:     BuildFlipClock();     break;
+            case SettingsTheme.Marquee:       BuildMarquee();       break;
+            case SettingsTheme.Slab:          BuildSlab();          break;
+            case SettingsTheme.Binary:        BuildBinary();        break;
+            case SettingsTheme.Hex:           BuildHex();           break;
+            case SettingsTheme.BinaryDigital: BuildBinaryDigital(); break;
+            // No fallback: every Theme enum value has its own renderer
+            // now. If a future theme is added without its case here,
+            // we'd rather fail visibly (blank dial) than silently
+            // render the wrong face.
         }
 
         AddVersionLabel();
 
-        // Test-only theme-name overlay: hidden on the six analog
-        // renderers now that Dan has verified them. Still painted on
-        // the unimplemented digital themes (FlipClock, Marquee, Slab,
-        // Binary, Hex, BinaryDigital), all of which currently fall
-        // back to Atomic Lab visuals — the label shows the user's
-        // actual selection so the mismatch is obvious. Drop the
-        // !IsAnalogTheme check (or this whole call) when those
-        // renderers ship and there's no fallback to flag.
-        if (!IsAnalogTheme(Theme))
-            AddDebugThemeLabel();
+        // The "theme: <name>" debug overlay — kept around through the
+        // analog audit and the digital-theme implementation pass so
+        // theme→render mismatches were obvious — is no longer needed.
+        // All twelve themes have their own renderer now, so the
+        // overlay would just be visual clutter. AddDebugThemeLabel
+        // is preserved below in case we need it again during a
+        // future renderer change; just call it from here under a
+        // build flag if so.
     }
-
-    private static bool IsAnalogTheme(SettingsTheme t) => t switch
-    {
-        SettingsTheme.AtomicLab     => true,
-        SettingsTheme.BoulderSlate  => true,
-        SettingsTheme.AeroGlass     => true,
-        SettingsTheme.Cathode       => true,
-        SettingsTheme.Concourse     => true,
-        SettingsTheme.Daylight      => true,
-        _                           => false,
-    };
 
     /// <summary>
     /// Test-only overlay (TODO remove for public release): paints the
@@ -277,6 +280,11 @@ public partial class ClockFaceControl : UserControl
             _dateReadout.Text = local
                 .ToString("ddd · MMMM d", CultureInfo.InvariantCulture)
                 .ToUpperInvariant();
+
+        // Per-theme digital update for renderers without rotating
+        // hands (Flip Clock through Binary Digital). See
+        // _digitalUpdater field doc for rationale.
+        _digitalUpdater?.Invoke(local);
     }
 
     // ---------------------------------------------------------------
@@ -340,6 +348,51 @@ public partial class ClockFaceControl : UserControl
         tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         Canvas.SetLeft(tb, x - tb.DesiredSize.Width / 2.0);
         Canvas.SetTop(tb, y - tb.DesiredSize.Height / 2.0);
+        return tb;
+    }
+
+    /// <summary>
+    /// Place a text block at (x, y) with the requested anchor.
+    /// SVG-style placement: "y" is treated as the *baseline* of the
+    /// text, so text rendered at the same y as a sibling SVG &lt;text&gt;
+    /// element lines up. Anchor controls which edge of the text x
+    /// refers to (Left = x is the left edge, Center = x is the
+    /// horizontal center, Right = x is the right edge).
+    /// </summary>
+    private enum TextAnchor { Left, Center, Right }
+    private static TextBlock MakeText(
+        string text, double x, double y,
+        FontFamily font, double size, Brush fill,
+        FontWeight? weight = null,
+        TextAnchor anchor = TextAnchor.Left,
+        double opacity = 1.0)
+    {
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontFamily = font,
+            FontSize = size,
+            FontWeight = weight ?? FontWeights.Normal,
+            Foreground = fill,
+            Opacity = opacity,
+        };
+        tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var w = tb.DesiredSize.Width;
+        var h = tb.DesiredSize.Height;
+
+        var left = anchor switch
+        {
+            TextAnchor.Center => x - w / 2.0,
+            TextAnchor.Right  => x - w,
+            _                 => x,
+        };
+        // Approximate baseline-to-top conversion: WPF's Canvas.SetTop
+        // sets the top of the element box, but SVG <text y=…> is the
+        // baseline. Subtract ~80% of the font size (typical
+        // baseline-from-top ratio for sans-serif) so text positions
+        // line up with the SVG mock-ups visually.
+        Canvas.SetLeft(tb, left);
+        Canvas.SetTop (tb, y - size * 0.85);
         return tb;
     }
 
@@ -886,6 +939,606 @@ public partial class ClockFaceControl : UserControl
 
         _digitalReadout = timeTb;
         _dateReadout    = dateTb;
+    }
+
+    // ===============================================================
+    // Theme: Flip Clock (Twemco / Solari nightstand mechanical)
+    // ===============================================================
+
+    private void BuildFlipClock()
+    {
+        // Brushes
+        var nightstandBg = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0), EndPoint = new Point(1, 1),
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0x5A, 0x3D, 0x22), 0),
+                new GradientStop(Color.FromRgb(0x2A, 0x1D, 0x10), 1),
+            },
+        };
+        var caseBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0.5, 0), EndPoint = new Point(0.5, 1),
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0x2A, 0x2A, 0x2A), 0),
+                new GradientStop(Color.FromRgb(0x0A, 0x0A, 0x0A), 0.5),
+                new GradientStop(Color.FromRgb(0x1A, 0x1A, 0x1A), 1),
+            },
+        };
+        var chromeBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0.5, 0), EndPoint = new Point(0.5, 1),
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0xCC, 0xCC, 0xCC), 0),
+                new GradientStop(Color.FromRgb(0x88, 0x88, 0x88), 0.5),
+                new GradientStop(Color.FromRgb(0x44, 0x44, 0x44), 1),
+            },
+        };
+        var cardTopBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0.5, 0), EndPoint = new Point(0.5, 1),
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0xFF, 0xFF, 0xFF), 0),
+                new GradientStop(Color.FromRgb(0xF4, 0xF1, 0xE8), 1),
+            },
+        };
+        var cardBotBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0.5, 0), EndPoint = new Point(0.5, 1),
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0xF0, 0xED, 0xE2), 0),
+                new GradientStop(Color.FromRgb(0xDC, 0xD8, 0xCA), 1),
+            },
+        };
+        var cardEdge   = new SolidColorBrush(Color.FromRgb(0xA8, 0xA3, 0x9A));
+        var hingeDark  = new SolidColorBrush(Color.FromRgb(0x5A, 0x56, 0x4C));
+        var hingeLight = new SolidColorBrush(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF));
+        var amber      = new SolidColorBrush(Color.FromRgb(0xFF, 0xB8, 0x4A));
+        var digitFill  = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A));
+        var labelFill  = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
+        var brandFill  = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88));
+
+        // Backdrop
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = nightstandBg }.At(0, 0));
+
+        // Chrome legs
+        Dial.Children.Add(new Rectangle { Width = 22, Height = 14, Fill = chromeBrush, RadiusX = 2, RadiusY = 2 }.At(78,  316));
+        Dial.Children.Add(new Rectangle { Width = 22, Height = 14, Fill = chromeBrush, RadiusX = 2, RadiusY = 2 }.At(300, 316));
+
+        // Clock case + inner display recess
+        Dial.Children.Add(new Rectangle
+        {
+            Width = 328, Height = 244, Fill = caseBrush,
+            Stroke = new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x3A)), StrokeThickness = 1.5,
+            RadiusX = 14, RadiusY = 14,
+        }.At(36, 78));
+        Dial.Children.Add(new Rectangle
+        {
+            Width = 300, Height = 186, Fill = new SolidColorBrush(Color.FromRgb(0x1C, 0x1A, 0x16)),
+            RadiusX = 6, RadiusY = 6,
+        }.At(50, 98));
+
+        // Four flip tiles. Each tile is 60x138 anchored at (tileLeft, 122);
+        // a TextBlock for the digit overlays the front face.
+        var helvetica = new FontFamily("Segoe UI Variable, Segoe UI, Arial, sans-serif");
+        var tileLefts = new[] { 64.0, 132.0, 208.0, 276.0 };
+        var digitTextBlocks = new TextBlock[4];
+
+        for (var i = 0; i < 4; i++)
+        {
+            var left = tileLefts[i];
+
+            // Top half + bottom half (the seam fold)
+            Dial.Children.Add(new Rectangle
+            {
+                Width = 60, Height = 69, Fill = cardTopBrush,
+                Stroke = cardEdge, StrokeThickness = 0.5,
+                RadiusX = 5, RadiusY = 3,
+            }.At(left, 122));
+            Dial.Children.Add(new Rectangle
+            {
+                Width = 60, Height = 69, Fill = cardBotBrush,
+                Stroke = cardEdge, StrokeThickness = 0.5,
+                RadiusX = 5, RadiusY = 3,
+            }.At(left, 122 + 69));
+
+            // Hinge / fold line
+            Dial.Children.Add(new Line
+            {
+                X1 = left, Y1 = 122 + 69, X2 = left + 60, Y2 = 122 + 69,
+                Stroke = hingeDark, StrokeThickness = 0.7,
+            });
+            Dial.Children.Add(new Line
+            {
+                X1 = left, Y1 = 122 + 70, X2 = left + 60, Y2 = 122 + 70,
+                Stroke = hingeLight, StrokeThickness = 0.5,
+            });
+
+            // Spindle pegs
+            foreach (var px in new[] { left - 3, left + 63 })
+            {
+                Dial.Children.Add(new Ellipse
+                {
+                    Width = 6.4, Height = 6.4, Fill = chromeBrush,
+                    Stroke = new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44)), StrokeThickness = 0.4,
+                }.At(px - 3.2, 122 + 69 - 3.2));
+                Dial.Children.Add(new Ellipse
+                {
+                    Width = 2, Height = 2, Fill = new SolidColorBrush(Color.FromRgb(0x22, 0x22, 0x22)),
+                }.At(px - 1, 122 + 69 - 1));
+            }
+
+            // Digit text — placeholder, updated each tick by _digitalUpdater
+            var digitTb = MakeText("0", left + 30, 122 + 105, helvetica, 78, digitFill,
+                                   FontWeights.Black, TextAnchor.Center);
+            Dial.Children.Add(digitTb);
+            digitTextBlocks[i] = digitTb;
+        }
+
+        // Amber colon dots between hours and minutes
+        Dial.Children.Add(new Ellipse { Width = 7, Height = 7, Fill = amber }.At(196.5, 162.5));
+        Dial.Children.Add(new Ellipse { Width = 7, Height = 7, Fill = amber }.At(196.5, 212.5));
+
+        // ":42 SECONDS" line + COMTEK badge
+        var secondsTb = MakeText(": 42 SECONDS", 200, 276, helvetica, 10, labelFill,
+                                 FontWeights.Medium, TextAnchor.Center);
+        Dial.Children.Add(secondsTb);
+        Dial.Children.Add(MakeText("COMTEK · MODEL CT-1971", 200, 304, helvetica, 9, brandFill,
+                                   FontWeights.Normal, TextAnchor.Center));
+
+        _digitalUpdater = local =>
+        {
+            var hour12 = local.Hour % 12; if (hour12 == 0) hour12 = 12;
+            digitTextBlocks[0].Text = (hour12 / 10).ToString(CultureInfo.InvariantCulture);
+            digitTextBlocks[1].Text = (hour12 % 10).ToString(CultureInfo.InvariantCulture);
+            digitTextBlocks[2].Text = (local.Minute / 10).ToString(CultureInfo.InvariantCulture);
+            digitTextBlocks[3].Text = (local.Minute % 10).ToString(CultureInfo.InvariantCulture);
+            secondsTb.Text = $": {local.Second:D2} SECONDS";
+        };
+    }
+
+    // ===============================================================
+    // Theme: Marquee (theater chase bulbs)
+    // ===============================================================
+
+    private void BuildMarquee()
+    {
+        var theaterRed   = new SolidColorBrush(Color.FromRgb(0x7A, 0x18, 0x18));
+        var darkRedLine  = new SolidColorBrush(Color.FromRgb(0x3A, 0x0A, 0x0A));
+        var stageRedLine = new SolidColorBrush(Color.FromRgb(0x3A, 0x10, 0x10));
+        var bulbAmber    = new SolidColorBrush(Color.FromRgb(0xFF, 0xC9, 0x40));
+        var stageBg = new RadialGradientBrush
+        {
+            Center = new Point(0.5, 0.5), GradientOrigin = new Point(0.5, 0.5),
+            RadiusX = 0.6, RadiusY = 0.6,
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0x1A, 0x0A, 0x0A), 0),
+                new GradientStop(Color.FromRgb(0x08, 0x04, 0x04), 1),
+            },
+        };
+        var bulbBrush = new RadialGradientBrush
+        {
+            Center = new Point(0.38, 0.32), GradientOrigin = new Point(0.38, 0.32),
+            RadiusX = 0.65, RadiusY = 0.65,
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0xFF, 0xF8, 0xD8), 0),
+                new GradientStop(Color.FromRgb(0xFF, 0xC9, 0x40), 0.55),
+                new GradientStop(Color.FromRgb(0xA0, 0x60, 0x10), 1),
+            },
+        };
+        var glow = new BlurEffect { Radius = 4 };
+
+        // Outer red theater frame
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = theaterRed }.At(0, 0));
+        Dial.Children.Add(new Rectangle
+        {
+            Width = 372, Height = 372, Fill = Brushes.Transparent,
+            Stroke = darkRedLine, StrokeThickness = 2,
+        }.At(14, 14));
+        // Inner stage panel
+        Dial.Children.Add(new Rectangle
+        {
+            Width = 332, Height = 332, Fill = stageBg,
+            Stroke = stageRedLine, StrokeThickness = 2,
+            RadiusX = 4, RadiusY = 4,
+        }.At(34, 34));
+
+        // Chase bulbs around the inner border. Pre-laid-out positions
+        // mirroring the SVG (top + bottom rows of 9; left + right
+        // columns of 7, skipping corners).
+        var bulbPositions = new (double x, double y)[]
+        {
+            (58, 58), (92, 58), (126, 58), (160, 58), (194, 58), (228, 58), (262, 58), (296, 58), (330, 58),
+            (58, 342), (92, 342), (126, 342), (160, 342), (194, 342), (228, 342), (262, 342), (296, 342), (330, 342),
+            (58, 92), (58, 126), (58, 160), (58, 194), (58, 228), (58, 262), (58, 296),
+            (330, 92), (330, 126), (330, 160), (330, 194), (330, 228), (330, 262), (330, 296),
+        };
+        foreach (var (bx, by) in bulbPositions)
+        {
+            Dial.Children.Add(new Ellipse
+            {
+                Width = 12, Height = 12, Fill = bulbBrush,
+                Effect = glow.Clone(),
+            }.At(bx - 6, by - 6));
+        }
+
+        // "★ NOW SHOWING ★" header
+        var bebas = new FontFamily("Bebas Neue, DIN Alternate, Impact, Arial Black, sans-serif");
+        Dial.Children.Add(MakeText("★ NOW SHOWING ★", 200, 120, bebas, 20, bulbAmber,
+                                   FontWeights.Bold, TextAnchor.Center));
+
+        // Big time
+        var timeTb = MakeText("00:00:00", 200, 232, bebas, 64, bulbAmber,
+                              FontWeights.Black, TextAnchor.Center);
+        timeTb.Effect = glow.Clone();
+        Dial.Children.Add(timeTb);
+
+        // Subtitle
+        Dial.Children.Add(MakeText("★ ATOMIC TIME ★ FROM BOULDER ★", 200, 282, bebas, 13, bulbAmber,
+                                   FontWeights.Medium, TextAnchor.Center, opacity: 0.85));
+
+        _digitalUpdater = local =>
+            timeTb.Text = local.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+
+        // TODO Marquee: chase-bulb brightness wave (left-to-right
+        // animation) and per-bulb intensity, per design/README.md.
+    }
+
+    // ===============================================================
+    // Theme: Slab (brutalist concrete digital)
+    // ===============================================================
+
+    private void BuildSlab()
+    {
+        var concrete   = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0), EndPoint = new Point(1, 1),
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0xD4, 0xD0, 0xC5), 0),
+                new GradientStop(Color.FromRgb(0xA8, 0xA2, 0x98), 1),
+            },
+        };
+        var inkBlack   = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
+        var slabBlack  = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A));
+        var accentRed  = new SolidColorBrush(Color.FromRgb(0xCC, 0x2A, 0x1A));
+        var dateGray   = new SolidColorBrush(Color.FromRgb(0x3A, 0x36, 0x30));
+
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = concrete }.At(0, 0));
+
+        // Top + bottom accent bars + red diagonal
+        Dial.Children.Add(new Rectangle { Width = 320, Height = 6, Fill = inkBlack }.At(40, 60));
+        Dial.Children.Add(new Rectangle { Width = 320, Height = 6, Fill = inkBlack }.At(40, 338));
+        Dial.Children.Add(new Rectangle { Width = 60,  Height = 3, Fill = accentRed }.At(40, 76));
+
+        var slabFont = new FontFamily("Rockwell, Roboto Slab, Cambria, serif");
+        var contextTb = MakeText("ATOMIC · TIME · LOCAL", 40, 100, slabFont, 11, inkBlack,
+                                 FontWeights.Bold, TextAnchor.Left);
+        Dial.Children.Add(contextTb);
+
+        var bigTimeTb = MakeText("10:08", 200, 240, slabFont, 100, slabBlack,
+                                 FontWeights.Black, TextAnchor.Center);
+        Dial.Children.Add(bigTimeTb);
+
+        var secondsTb = MakeText("42″", 200, 290, slabFont, 36, accentRed,
+                                 FontWeights.Bold, TextAnchor.Center);
+        Dial.Children.Add(secondsTb);
+
+        var dateTb = MakeText("SATURDAY · 1 JANUARY 2026", 200, 328, slabFont, 10, dateGray,
+                              FontWeights.Medium, TextAnchor.Center);
+        Dial.Children.Add(dateTb);
+
+        _digitalUpdater = local =>
+        {
+            bigTimeTb.Text = local.ToString("HH:mm", CultureInfo.InvariantCulture);
+            secondsTb.Text = local.Second.ToString("D2", CultureInfo.InvariantCulture) + "″";
+            dateTb.Text    = local.ToString("dddd · d MMMM yyyy", CultureInfo.InvariantCulture).ToUpperInvariant();
+            // Display the bound TimeZone's standard offset abbreviation
+            // in the upper-left context strip — falls back to a generic
+            // label if no abbreviation is reasonable.
+            var tzAbbrev = local.IsDaylightSavingTime() ? "DST" : "STD";
+            contextTb.Text = $"ATOMIC · TIME · {tzAbbrev}";
+        };
+    }
+
+    // ===============================================================
+    // Theme: Binary (BCD LED stack)
+    // ===============================================================
+
+    private void BuildBinary()
+    {
+        var bg          = new SolidColorBrush(Color.FromRgb(0x08, 0x08, 0x08));
+        var gridLine    = new SolidColorBrush(Color.FromRgb(0x1A, 0x08, 0x08));
+        var bitLabel    = new SolidColorBrush(Color.FromRgb(0x55, 0x30, 0x30));
+        var headLabel   = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x55));
+        var groupLabel  = new SolidColorBrush(Color.FromRgb(0xAA, 0x30, 0x30));
+        var litRed      = new SolidColorBrush(Color.FromRgb(0xFF, 0x30, 0x30));
+        var litBrush = new RadialGradientBrush
+        {
+            Center = new Point(0.38, 0.32), GradientOrigin = new Point(0.38, 0.32),
+            RadiusX = 0.65, RadiusY = 0.65,
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0xFF, 0xC4, 0xC4), 0),
+                new GradientStop(Color.FromRgb(0xFF, 0x30, 0x30), 0.5),
+                new GradientStop(Color.FromRgb(0x7A, 0x08, 0x08), 1),
+            },
+        };
+        var unlitBrush = new RadialGradientBrush
+        {
+            Center = new Point(0.38, 0.32), GradientOrigin = new Point(0.38, 0.32),
+            RadiusX = 0.65, RadiusY = 0.65,
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0x3A, 0x0A, 0x0A), 0),
+                new GradientStop(Color.FromRgb(0x18, 0x04, 0x04), 1),
+            },
+        };
+        var glow = new BlurEffect { Radius = 6 };
+
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = bg }.At(0, 0));
+
+        // Faint horizontal grid lines separating the dot area
+        Dial.Children.Add(new Line { X1 = 40, Y1 = 120, X2 = 380, Y2 = 120, Stroke = gridLine, StrokeThickness = 0.5 });
+        Dial.Children.Add(new Line { X1 = 40, Y1 = 265, X2 = 380, Y2 = 265, Stroke = gridLine, StrokeThickness = 0.5 });
+
+        var mono = new FontFamily("Cascadia Code, Consolas, Lucida Console, monospace");
+
+        // Title
+        Dial.Children.Add(MakeText("BINARY CLOCK", 200, 60, mono, 16, headLabel,
+                                   FontWeights.Bold, TextAnchor.Center));
+
+        // Bit-value labels (8/4/2/1, right-aligned to x=42)
+        Dial.Children.Add(MakeText("8", 42, 155, mono, 11, bitLabel, FontWeights.Normal, TextAnchor.Right));
+        Dial.Children.Add(MakeText("4", 42, 195, mono, 11, bitLabel, FontWeights.Normal, TextAnchor.Right));
+        Dial.Children.Add(MakeText("2", 42, 235, mono, 11, bitLabel, FontWeights.Normal, TextAnchor.Right));
+        Dial.Children.Add(MakeText("1", 42, 275, mono, 11, bitLabel, FontWeights.Normal, TextAnchor.Right));
+
+        // 6 columns of LEDs with per-column bit set.
+        // (x position, bits-to-show array of (bitValue, y))
+        // Hour-tens has only bits 2,1 (max value 2); minute-tens / second-tens have 4,2,1 (max 5);
+        // ones digits have 8,4,2,1.
+        var columns = new (double cx, (int bit, double cy)[] dots)[]
+        {
+            (78,  new (int, double)[] { (2, 230), (1, 270) }),                                 // H tens (0-2)
+            (128, new (int, double)[] { (8, 150), (4, 190), (2, 230), (1, 270) }),             // H ones (0-9)
+            (198, new (int, double)[] { (4, 190), (2, 230), (1, 270) }),                       // M tens (0-5)
+            (248, new (int, double)[] { (8, 150), (4, 190), (2, 230), (1, 270) }),             // M ones (0-9)
+            (318, new (int, double)[] { (4, 190), (2, 230), (1, 270) }),                       // S tens (0-5)
+            (368, new (int, double)[] { (8, 150), (4, 190), (2, 230), (1, 270) }),             // S ones (0-9)
+        };
+
+        // Track every dot together with its column-index and bit-value
+        // so the per-tick updater can flip the right ones lit/unlit.
+        var allDots = new List<(int colIndex, int bit, Ellipse ellipse)>();
+        for (var ci = 0; ci < columns.Length; ci++)
+        {
+            var (cx, dots) = columns[ci];
+            foreach (var (bit, cy) in dots)
+            {
+                var dot = new Ellipse { Width = 22, Height = 22, Fill = unlitBrush };
+                Canvas.SetLeft(dot, cx - 11);
+                Canvas.SetTop (dot, cy - 11);
+                Dial.Children.Add(dot);
+                allDots.Add((ci, bit, dot));
+            }
+        }
+
+        // Group labels HOURS / MINUTES / SECONDS
+        Dial.Children.Add(MakeText("HOURS",   103, 304, mono, 10, groupLabel, FontWeights.Normal, TextAnchor.Center));
+        Dial.Children.Add(MakeText("MINUTES", 223, 304, mono, 10, groupLabel, FontWeights.Normal, TextAnchor.Center));
+        Dial.Children.Add(MakeText("SECONDS", 343, 304, mono, 10, groupLabel, FontWeights.Normal, TextAnchor.Center));
+
+        // Decoded readout (also auto-updates) and footer
+        var decodedTb = MakeText("00 : 00 : 00", 200, 350, mono, 22, litRed,
+                                 FontWeights.Bold, TextAnchor.Center);
+        decodedTb.Effect = glow.Clone();
+        Dial.Children.Add(decodedTb);
+        Dial.Children.Add(MakeText("read top→bottom · 8·4·2·1 BCD per column",
+                                   200, 375, mono, 9, bitLabel, FontWeights.Normal, TextAnchor.Center));
+
+        _digitalUpdater = local =>
+        {
+            var digitsByCol = new[]
+            {
+                local.Hour   / 10, local.Hour   % 10,
+                local.Minute / 10, local.Minute % 10,
+                local.Second / 10, local.Second % 10,
+            };
+            foreach (var (colIndex, bit, ellipse) in allDots)
+            {
+                var lit = (digitsByCol[colIndex] & bit) != 0;
+                ellipse.Fill = lit ? litBrush : unlitBrush;
+                ellipse.Effect = lit ? glow.Clone() : null;
+            }
+            decodedTb.Text = local.ToString("HH : mm : ss", CultureInfo.InvariantCulture);
+        };
+    }
+
+    // ===============================================================
+    // Theme: Hex (programmer hexadecimal terminal)
+    // ===============================================================
+
+    private void BuildHex()
+    {
+        var bg = new RadialGradientBrush
+        {
+            Center = new Point(0.5, 0.4), GradientOrigin = new Point(0.5, 0.4),
+            RadiusX = 0.7, RadiusY = 0.7,
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0x0C, 0x18, 0x28), 0),
+                new GradientStop(Color.FromRgb(0x02, 0x08, 0x12), 1),
+            },
+        };
+        var titleBar  = new SolidColorBrush(Color.FromRgb(0x00, 0x08, 0x14));
+        var cyan      = new SolidColorBrush(Color.FromRgb(0x5F, 0xE2, 0xFF));
+        var cyanBright= new SolidColorBrush(Color.FromRgb(0xA0, 0xEE, 0xFF));
+        var dimCyan   = new SolidColorBrush(Color.FromRgb(0x3A, 0x8A, 0xAA));
+        var trafficR  = new SolidColorBrush(Color.FromRgb(0xFF, 0x50, 0x50));
+        var trafficY  = new SolidColorBrush(Color.FromRgb(0xFF, 0xAA, 0x30));
+        var trafficG  = new SolidColorBrush(Color.FromRgb(0x50, 0xCC, 0x60));
+        var glow = new BlurEffect { Radius = 3 };
+
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = bg }.At(0, 0));
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 32, Fill = titleBar }.At(0, 0));
+        Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficR, Opacity = 0.7 }.At(10, 12));
+        Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficY, Opacity = 0.7 }.At(26, 12));
+        Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficG, Opacity = 0.7 }.At(42, 12));
+
+        var mono = new FontFamily("Cascadia Code, Consolas, Lucida Console, monospace");
+        Dial.Children.Add(MakeText("comtek :: hex_clock.exe", 200, 21, mono, 11, cyan,
+                                   FontWeights.Normal, TextAnchor.Center, opacity: 0.6));
+
+        Dial.Children.Add(MakeText("// time encoded as hexadecimal (per unit)",
+                                   40, 80, mono, 12, cyan, FontWeights.Normal, TextAnchor.Left, opacity: 0.55));
+
+        // Big hex digits HH:MM:SS in two-hex-digits-per-unit
+        var hexTb = MakeText("00:00:00", 200, 190, mono, 56, cyan,
+                             FontWeights.Bold, TextAnchor.Center);
+        hexTb.Effect = glow.Clone();
+        Dial.Children.Add(hexTb);
+
+        // Section labels
+        Dial.Children.Add(MakeText("HOURS",   80,  216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
+        Dial.Children.Add(MakeText("MINUTES", 200, 216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
+        Dial.Children.Add(MakeText("SECONDS", 320, 216, mono, 10, dimCyan, FontWeights.Normal, TextAnchor.Center));
+
+        // Decoded decimal line + day-fraction line + colour swatch + cursor
+        var decTb = MakeText("// dec: 00:00:00", 40, 262, mono, 14, cyan,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
+        Dial.Children.Add(decTb);
+
+        var dayTb = MakeText("// day: 0x0000 / 0xFFFF (0.0% elapsed)", 40, 290, mono, 14, cyan,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
+        Dial.Children.Add(dayTb);
+
+        var swatch = new Rectangle { Width = 320, Height = 14, Fill = Brushes.Black, RadiusX = 2, RadiusY = 2, Opacity = 0.85 };
+        Canvas.SetLeft(swatch, 40); Canvas.SetTop(swatch, 306);
+        Dial.Children.Add(swatch);
+
+        var swatchHexTb = MakeText("// the bar above is #0000FF — today, encoded as a color",
+                                   40, 338, mono, 12, cyan,
+                                   FontWeights.Normal, TextAnchor.Left, opacity: 0.55);
+        Dial.Children.Add(swatchHexTb);
+
+        Dial.Children.Add(MakeText("$ _", 40, 372, mono, 14, cyanBright, FontWeights.Normal, TextAnchor.Left));
+
+        _digitalUpdater = local =>
+        {
+            // Hex display: HH MM SS each rendered as 2-digit hex of
+            // the decimal value. So 10:08:42 -> 0A:08:2A.
+            hexTb.Text = $"{local.Hour:X2}:{local.Minute:X2}:{local.Second:X2}";
+            decTb.Text = $"// dec: {local:HH:mm:ss}";
+
+            // Day fraction: seconds elapsed since midnight, scaled to
+            // 0–0xFFFF. The 16-bit value drives a hex string + colour.
+            var secsSinceMidnight = local.Hour * 3600 + local.Minute * 60 + local.Second;
+            var fraction = secsSinceMidnight / 86400.0;
+            var dayU16 = (ushort)Math.Min(0xFFFF, Math.Round(fraction * 0xFFFF));
+            var pct = fraction * 100.0;
+            dayTb.Text = $"// day: 0x{dayU16:X4} / 0xFFFF ({pct:F1}% elapsed)";
+
+            // Color = (dayU16 >> 8, dayU16 & 0xFF, 0xFF).
+            var r = (byte)(dayU16 >> 8);
+            var g = (byte)(dayU16 & 0xFF);
+            var swatchColor = Color.FromRgb(r, g, 0xFF);
+            swatch.Fill = new SolidColorBrush(swatchColor);
+            swatchHexTb.Text = $"// the bar above is #{r:X2}{g:X2}FF — today, encoded as a color";
+        };
+    }
+
+    // ===============================================================
+    // Theme: Binary Digital (pure binary text terminal)
+    // ===============================================================
+
+    private void BuildBinaryDigital()
+    {
+        var bg = new RadialGradientBrush
+        {
+            Center = new Point(0.5, 0.4), GradientOrigin = new Point(0.5, 0.4),
+            RadiusX = 0.7, RadiusY = 0.7,
+            GradientStops =
+            {
+                new GradientStop(Color.FromRgb(0x1A, 0x08, 0x30), 0),
+                new GradientStop(Color.FromRgb(0x08, 0x04, 0x14), 1),
+            },
+        };
+        var titleBar  = new SolidColorBrush(Color.FromRgb(0x08, 0x00, 0x0A));
+        var magenta   = new SolidColorBrush(Color.FromRgb(0xFF, 0x5C, 0xD0));
+        var magentaBr = new SolidColorBrush(Color.FromRgb(0xFF, 0xAA, 0xE8));
+        var dimMagenta= new SolidColorBrush(Color.FromRgb(0x88, 0x33, 0x66));
+        var trafficR  = new SolidColorBrush(Color.FromRgb(0xFF, 0x50, 0x50));
+        var trafficY  = new SolidColorBrush(Color.FromRgb(0xFF, 0xAA, 0x30));
+        var trafficG  = new SolidColorBrush(Color.FromRgb(0x50, 0xCC, 0x60));
+        var glow = new BlurEffect { Radius = 3 };
+
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = bg }.At(0, 0));
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 32, Fill = titleBar }.At(0, 0));
+        Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficR, Opacity = 0.7 }.At(10, 12));
+        Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficY, Opacity = 0.7 }.At(26, 12));
+        Dial.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = trafficG, Opacity = 0.7 }.At(42, 12));
+
+        var mono = new FontFamily("Cascadia Code, Consolas, Lucida Console, monospace");
+        Dial.Children.Add(MakeText("comtek :: bin_clock.exe", 200, 21, mono, 11, magenta,
+                                   FontWeights.Normal, TextAnchor.Center, opacity: 0.7));
+        Dial.Children.Add(MakeText("// time encoded as binary text (per unit)",
+                                   40, 80, mono, 12, magenta,
+                                   FontWeights.Normal, TextAnchor.Left, opacity: 0.55));
+
+        // Three big lines, each "<H|M|S> bbbbbbbb"
+        var hPrefix = MakeText("H", 80, 138, mono, 30, dimMagenta, FontWeights.Bold, TextAnchor.Left);
+        Dial.Children.Add(hPrefix);
+        var hBitsTb = MakeText("00000", 120, 138, mono, 30, magenta, FontWeights.Bold, TextAnchor.Left);
+        hBitsTb.Effect = glow.Clone();
+        Dial.Children.Add(hBitsTb);
+
+        var mPrefix = MakeText("M", 80, 180, mono, 30, dimMagenta, FontWeights.Bold, TextAnchor.Left);
+        Dial.Children.Add(mPrefix);
+        var mBitsTb = MakeText("000000", 120, 180, mono, 30, magenta, FontWeights.Bold, TextAnchor.Left);
+        mBitsTb.Effect = glow.Clone();
+        Dial.Children.Add(mBitsTb);
+
+        var sPrefix = MakeText("S", 80, 222, mono, 30, dimMagenta, FontWeights.Bold, TextAnchor.Left);
+        Dial.Children.Add(sPrefix);
+        var sBitsTb = MakeText("000000", 120, 222, mono, 30, magenta, FontWeights.Bold, TextAnchor.Left);
+        sBitsTb.Effect = glow.Clone();
+        Dial.Children.Add(sBitsTb);
+
+        var decTb = MakeText("// dec: 00:00:00", 40, 270, mono, 14, magenta,
+                             FontWeights.Normal, TextAnchor.Left, opacity: 0.7);
+        Dial.Children.Add(decTb);
+
+        Dial.Children.Add(MakeText("// widths: 5b hour · 6b min · 6b sec · MSB first",
+                                   40, 295, mono, 11, dimMagenta, FontWeights.Normal, TextAnchor.Left));
+
+        // Decorative noise rows (static — same as the SVG's faux bit
+        // grid; doesn't reflect time)
+        Dial.Children.Add(MakeText("11010 · 01100 · 11100 · 01000 · 10101 · 10010 · 00111 · 11001",
+                                   40, 328, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
+        Dial.Children.Add(MakeText("01001 · 11011 · 00100 · 11110 · 01010 · 10000 · 11000 · 00101",
+                                   40, 342, mono, 9, magenta, FontWeights.Normal, TextAnchor.Left, opacity: 0.18));
+
+        Dial.Children.Add(MakeText("$ _", 40, 372, mono, 14, magentaBr,
+                                   FontWeights.Normal, TextAnchor.Left));
+
+        _digitalUpdater = local =>
+        {
+            // Hours fit in 5 bits (max 23 = 0b10111). Minutes / seconds
+            // fit in 6 bits (max 59 = 0b111011). Convert with leading
+            // zeros so the width is fixed.
+            hBitsTb.Text = Convert.ToString(local.Hour,   2).PadLeft(5, '0');
+            mBitsTb.Text = Convert.ToString(local.Minute, 2).PadLeft(6, '0');
+            sBitsTb.Text = Convert.ToString(local.Second, 2).PadLeft(6, '0');
+            decTb.Text = $"// dec: {local:HH:mm:ss}";
+        };
     }
 }
 

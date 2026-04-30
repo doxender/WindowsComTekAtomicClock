@@ -4,6 +4,28 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.7] - 2026-04-29
+
+### Added
+
+- **Six digital theme renderers** — every `Theme` enum value now has its own `Build*` method; the `default:` fallback in `RenderActiveTheme` is gone. Selecting any of these now shows the right face instead of Atomic Lab visuals (which is what they all rendered as up through v0.0.6).
+  - **Flip Clock** (`BuildFlipClock`) — brown nightstand backdrop, chrome legs, dark plastic case with inner well, four flip-tile cards each with two halves + hinge line + chrome spindle pegs, big black sans-serif digits for HH and MM, amber colon dots, ":SS SECONDS" line, "COMTEK · MODEL CT-1971" badge. Static today; the design's flip-card animation hook is a TODO follow-up.
+  - **Marquee** (`BuildMarquee`) — outer red theater frame, inner black panel, 32 yellow incandescent chase bulbs around the perimeter (top + bottom rows of 9, left + right columns of 7, corner gaps), "★ NOW SHOWING ★" header, big glowing yellow HH:MM:SS, "★ ATOMIC TIME ★ FROM BOULDER ★" subtitle. Static today; the chase-bulb brightness wave is a TODO follow-up.
+  - **Slab** (`BuildSlab`) — concrete-gradient backdrop, top + bottom black accent bars with a small red diagonal highlight, "ATOMIC · TIME · STD/DST" context strip, big slab-serif HH:MM, red 36-pt SS″ seconds, full date footer line.
+  - **Binary** (`BuildBinary`) — pure-black backdrop, 6 columns of LED dots (BCD per column: 2 dots H-tens, 4 dots H-ones, 3 dots M-tens, 4 dots M-ones, 3 dots S-tens, 4 dots S-ones), bit-value labels (8/4/2/1) on the left, glow effect on lit LEDs, group labels HOURS/MINUTES/SECONDS, decoded "HH : MM : SS" readout, footer "read top→bottom · 8·4·2·1 BCD per column".
+  - **Hex** (`BuildHex`) — terminal-style top bar with three traffic-light circles + window title, "// time encoded as hexadecimal (per unit)" comment, big cyan glowing 2-hex-digit-per-unit HH:MM:SS, decoded decimal line, day-fraction line ("// day: 0xNNNN / 0xFFFF (NN.N% elapsed)"), color swatch where the 16-bit day fraction maps to RGB `(R, G, 0xFF)`, descriptive caption, terminal cursor.
+  - **Binary Digital** (`BuildBinaryDigital`) — magenta-on-purple terminal, three big lines for H (5b) / M (6b) / S (6b) MSB-first binary, decoded decimal, width annotation, two static decorative noise rows, terminal cursor.
+
+### Changed
+
+- **`RenderActiveTheme` switch is now exhaustive.** Every `Theme` value maps to a dedicated `Build*` method; if a future theme value is added without its case, the dial renders blank rather than silently falling back to Atomic Lab — visible failure beats invisible mis-attribution.
+- **Per-tick update plumbing** generalized: new `Action<DateTime>? _digitalUpdater` field that each digital `Build*` populates with a closure mutating its own elements (digit text blocks, LED ellipses, color swatches). `UpdateClock` invokes it after the analog rotates. Reset in `RenderActiveTheme` when switching faces. Lets renderers without rotating hands hook into the same tick loop without bloating the shared field set.
+- **`MakeText` helper** added — SVG-style baseline placement with Left / Center / Right anchor, used by every digital renderer for text positioning. Existing `MakeNumeral` (centers on x AND y) preserved for the analog renderers that already use it.
+
+### Removed
+
+- **Test-only `theme: <name>` debug overlay** is no longer painted on any face. All twelve renderers are now real, so the visibility aid that flagged unimplemented-theme fallbacks isn't needed. The `AddDebugThemeLabel` method is left in place (commented out at the call site) as a future debugging hook.
+
 ## [0.0.6] - 2026-04-29
 
 ### Removed
