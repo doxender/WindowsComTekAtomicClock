@@ -2,11 +2,12 @@
 
 | | |
 |---|---|
-| **Document version** | 1.3 |
+| **Document version** | 1.4 |
 | **Date** | 2026-05-01 |
-| **Code baseline** | v0.0.35 |
+| **Code baseline** | v0.0.36 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
+| **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
 | **v1.1 → v1.2 changes** | First-run polish on v0.0.33: toolbar `+ New tab` / `+ New window` switched to `ui:Button` for contrast; tab right-click ContextMenu removed (right-click now directly opens Tab Settings dialog); "Open in new window" migration moved to the "?" overlay menu on the clock face. See §7 / §8 and CHANGELOG.md `[0.0.34]`. |
 | **v1.1 changes** | Dragablz removed (replaced with native WPF `TabControl`); tear-away gesture removed; explicit "+ New window" / "Open in new window" / "Bring back into tabs" commands added; magnetic snap added as Phase-2 Planned. See §22 / §17 / §21; CHANGELOG.md `[0.0.33]`. |
@@ -177,13 +178,17 @@ windows/ComTekAtomicClock.slnx
 | **Start mode** | `demand` (manually started by UI on launch, stopped on exit). NOT `auto` — see §21. |
 | **Event Log source** | `ComTekAtomicClock` (configurable via `ServiceConfig.EventLogSource`) |
 
-### NIST stratum-1 pool
+### Multi-source stratum-1 pool registry (v0.0.36+)
 
-The hardcoded pool refreshed from <https://tf.nist.gov/tf-cgi/servers.cgi> per release. Defined in `Service/Sync/NistPool.cs`.
+The pool is selected per-machine via `ServiceConfig.TimeSource` (Boulder / Brazil). Defined in `Service/Sync/TimeSourcePool.cs`. Refresh from each operator's published list per release.
+
+#### Boulder — NIST stratum-1 (default)
+
+Refreshed from <https://tf.nist.gov/tf-cgi/servers.cgi>.
 
 | Endpoint | Role |
 |---|---|
-| `time.nist.gov` | Anycast — load-balances across the whole NIST pool. **Default primary.** Tried first on every sync attempt. |
+| `time.nist.gov` | Anycast — load-balances across the whole NIST pool. Default primary for Boulder source. |
 | `time-a-g.nist.gov` | Stratum-1, Gaithersburg, MD |
 | `time-b-g.nist.gov` | Stratum-1, Gaithersburg, MD |
 | `time-c-g.nist.gov` | Stratum-1, Gaithersburg, MD |
@@ -195,15 +200,29 @@ The hardcoded pool refreshed from <https://tf.nist.gov/tf-cgi/servers.cgi> per r
 | `time-d-wwv.nist.gov` | Stratum-1, Fort Collins, CO |
 | `time-e-wwv.nist.gov` | Stratum-1, Fort Collins, CO |
 
-> Note: NIST's primary atomic clocks (NIST-F1, NIST-F2) live in **Boulder, CO**. The public NTP servers serve their time over IP from Gaithersburg and Fort Collins.
+> Note: NIST's primary atomic clocks (NIST-F1, NIST-F2) live in **Boulder, CO**. The public NTP servers serve their time over IP from Gaithersburg and Fort Collins. The "Boulder" source name comes from the brand identity.
 
-### Pool-walk algorithm (`NistPool.GetWalkOrder(primary)`)
+#### Brazil — NIC.br / NTP.br stratum-1
 
-1. Yield `primary` (default `time.nist.gov`).
-2. Yield every other server in `StratumOnePool` not equal to `primary`, in **randomized order** (Fisher–Yates shuffle, `Random.Shared`).
+Refreshed from <https://ntp.br/guia-mais-rapida.php>.
+
+| Endpoint | Role |
+|---|---|
+| `a.ntp.br` | Default primary for Brazil source. NIC.br, São Paulo, BR. |
+| `b.ntp.br` | Stratum-1, GPS-disciplined, São Paulo |
+| `c.ntp.br` | Stratum-1, GPS-disciplined, São Paulo |
+| `d.ntp.br` | Stratum-1, GPS-disciplined, São Paulo |
+| `gps.ntp.br` | Stratum-1, explicit GPS-disciplined endpoint |
+
+### Pool-walk algorithm (`TimeSourcePool.GetWalkOrder(source, primary)`)
+
+1. Yield `primary` for the configured `source`.
+2. Yield every other server in that source's pool not equal to `primary`, in **randomized order** (Fisher–Yates shuffle, `Random.Shared`).
 3. The first server that returns a signature-validated SNTP response wins; the rest are not contacted on that attempt.
 
-There is **no fallback to non-NIST hosts.** If the entire pool is unreachable, the worker logs a Warning and returns; the next sync attempt is the next scheduled interval.
+There is **no fallback to a different source's pool.** If the entire active pool is unreachable, the worker logs a Warning and returns; the next sync attempt is the next scheduled interval (and the user can switch source via Settings).
+
+The `MinPerServerPoll` of 4 s satisfies both NIST AUP (≥ 4 s) and NTP.br AUP (≥ 1 s).
 
 ### SNTP wire protocol (RFC 4330 / NTPv4)
 
@@ -301,7 +320,8 @@ Top-level shape `AppSettings`:
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `SyncServer` | string | `"time.nist.gov"` | Must be a NIST pool member; validation Planned |
+| `SyncServer` | string | `"time.nist.gov"` | Must be a member of the active TimeSource's pool; validation Planned |
+| `TimeSource` | enum `TimeSource` | `Boulder` | v0.0.36+. `Boulder` (NIST) or `Brazil` (NTP.br). Mirrors `ServiceConfig.TimeSource`. Drives the on-face source label and Atomic Lab badge text. |
 | `SyncInterval` | TimeSpan | `1:00:00` (1 hour) | Range `[15 min, 24 h]`. Note: `ServiceConfig.SyncInterval` defaults to **12 hours** — see §21 |
 | `ConfirmLargeSyncCorrections` | bool | `false` | Enables toast confirmation flow (Planned) |
 | `LargeOffsetThresholdSeconds` | int | `5` | Above this magnitude, "large" offset behavior triggers |
@@ -357,7 +377,8 @@ Top-level shape `ServiceConfig`:
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `SchemaVersion` | int | `1` | |
-| `SyncServer` | string | `"time.nist.gov"` | Anycast or any NIST pool member |
+| `TimeSource` | enum `TimeSource` | `Boulder` | v0.0.36+. Drives which pool `SyncWorker` walks. Mirror of `GlobalSettings.TimeSource`. |
+| `SyncServer` | string | `"time.nist.gov"` | Anycast or any active-source pool member |
 | `SyncInterval` | TimeSpan | `12:00:00` (12 h) | Clamped to `[15 min, 24 h]` by `SyncWorker` |
 | `ConfirmLargeSyncCorrections` | bool | `false` | (Planned consumer) |
 | `LargeOffsetThresholdSeconds` | int | `5` | |
@@ -792,6 +813,8 @@ Categories per the `Theme` enum and `ThemeCatalog.All` (in this order):
 
 **Date strip uniformity (per v0.0.22).** Every theme renders a date with day-of-week, date-of-month, month, AND year. Most analog/digital themes use the format string `"ddd · MMMM d · yyyy"` upper-cased (e.g. `MON · APRIL 26 · 2026`). The two encoder themes (Hex, Binary) render the same four parts in their respective encodings. Boulder Slate and Daylight center the date below the clock face (per v0.0.24).
 
+**Universal source label (per v0.0.36).** Every theme also surfaces the active time source via `AddSourceLabel()`, called from `RenderActiveTheme()` after the per-theme `Build*`. Single word — `BOULDER` or `BRASIL` — painted at top-center of the canvas (Cx=200, y=10), Cascadia Code 11pt SemiBold, color `#FFCC00` at ~70% opacity. Uniform across all 12 themes; reads on every backdrop (warm-amber works on dark phosphor green, light cream, charcoal, theater red, etc.).
+
 **Per-theme luminance class** (drives `OverlayGlyphBrush`):
 
 | Theme | Class | Glyph color |
@@ -816,7 +839,7 @@ The default. Black-and-amber lab-bench instrument aesthetic with a NIST badge.
 | **Second hand** | line, overhang 22 / length 142, red `#FF3030`, thickness 1.6 |
 | **Center pin** | 14×14 amber ellipse + 5×5 inner faceBrush ellipse |
 | **Digital panel** | Border 146×60, fill `#040B04`, BorderBrush amber, BorderThickness 0.6, CornerRadius 4. Position `(Cx-73, Cy+34)` |
-| **Digital panel content (StackPanel)** | • Date: Consolas 9pt, amber, opacity 0.85, format `"ddd · MMMM d · yyyy"` upper • Time: Consolas 20pt, Bold, amber, format `"h:mm:ss tt"` (always 12-h, today) • Subtitle: Consolas 7pt, amber, opacity 0.7, literal text `"NIST · BOULDER · CO"` |
+| **Digital panel content (StackPanel)** | • Date: Consolas 9pt, amber, opacity 0.85, format `"ddd · MMMM d · yyyy"` upper • Time: Consolas 20pt, Bold, amber, format `"h:mm:ss tt"` (always 12-h, today) • Subtitle: Consolas 7pt, amber, opacity 0.7, **`TimeSourceBadge` DP value** (`"NIST · BOULDER · CO"` for Boulder source, `"NTP.BR · SÃO PAULO · BR"` for Brazil source — v0.0.36+; rebuilt on TimeSource change) |
 | **Smooth-second default** | `true` |
 | **Luminance class** | dark (white glyphs) |
 
@@ -1130,7 +1153,8 @@ Modal dialog opened by:
 |---|---|---|---|
 | THIS TAB | Time zone | ComboBox of `TimeZoneCatalog.All` (~140 entries) | `TabViewModel.TimeZoneId` |
 | THIS TAB | Theme | ComboBox of `ThemeCatalog.All` (12 themes) | `TabViewModel.Theme` |
-| ALL CLOCKS ON THIS PC | Sync frequency | ComboBox: 6 / 12 / 24 hours | (in-memory; **NOT persisted** to `service.json` today — Planned wire-up) |
+| ALL CLOCKS ON THIS PC | Sync frequency | ComboBox: 6 / 12 / 24 hours | `ServiceConfig.SyncInterval` (persisted to `service.json` on Save — v0.0.36+) |
+| ALL CLOCKS ON THIS PC | Time source (v0.0.36+) | RadioButton group: **Boulder** (NIST) / **Brazil** (NTP.br) | `ServiceConfig.TimeSource` and (mirrored) `GlobalSettings.TimeSource` |
 
 ### Fields Planned (model exists, no UI)
 
@@ -1417,7 +1441,9 @@ This is the bridging table from "what `requirements.txt` aspires to" to "what co
 | Windows | "Open in new window" right-click on tab | v0.0.33+ |
 | Windows | "Bring back into tabs" on floating window's "?" menu | v0.0.33+ |
 | Service | Worker Service hosted via `AddWindowsService` | `ComTekAtomicClockSvc` |
-| Service | NIST stratum-1 pool walk (anycast + 10 servers) | §4 — `NistPool.GetWalkOrder` |
+| Service | Multi-source stratum-1 pool walk: Boulder (NIST, 10 servers + anycast) and Brazil (NTP.br, 5 servers + anycast). Source selectable from Settings dialog. | v0.0.36+ — `TimeSourcePool.GetWalkOrder(source, primary)` |
+| UI | Atomic Lab face's NIST-panel subtitle dynamic per TimeSource (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`) | v0.0.36+ |
+| UI | Per-face source label (`BOULDER` / `BRASIL`) at top-center on every theme | v0.0.36+ — `AddSourceLabel()` helper |
 | Service | SNTP/RFC 4330 packet build + validation | §4 — `NtpPacket.cs` |
 | Service | Pool walk: primary first, then randomized rest | Fisher–Yates |
 | Service | Per-server timeout 5 s, per-server poll ≥ 4 s | `SyncWorker.cs` |
@@ -1622,8 +1648,8 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 
 ## End of document
 
-**Document version:** 1.3  
-**Code baseline:** v0.0.35  
+**Document version:** 1.4  
+**Code baseline:** v0.0.36  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.

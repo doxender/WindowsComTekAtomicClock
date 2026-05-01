@@ -376,15 +376,63 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var result = dlg.ShowDialog();
         if (result == true)
         {
+            // v0.0.36: mirror the dialog's TimeSource pick into
+            // GlobalSettings.TimeSource so the on-face badge / source
+            // label re-renders. The dialog already wrote service.json;
+            // here we update the in-memory AppSettings + persist
+            // settings.json + notify so all open clock faces refresh.
+            if (_settings.Global.TimeSource != dlg.ChosenTimeSource)
+            {
+                _settings.Global.TimeSource = dlg.ChosenTimeSource;
+                OnPropertyChanged(nameof(TimeSource));
+                OnPropertyChanged(nameof(TimeSourceLabel));
+                OnPropertyChanged(nameof(TimeSourceBadge));
+            }
+
             // v0.0.33: just persist. Native WPF TabControl honors
             // PropertyChanged on the {Binding Label} ItemTemplate
             // binding automatically when TabViewModel.TimeZoneId
-            // setter raises PropertyChanged(nameof(Label)). The
-            // v0.0.32 imperative SetTabHeaderInAllDisplays walk is
-            // gone along with Dragablz.
+            // setter raises PropertyChanged(nameof(Label)).
             PersistAfterDialog();
         }
     }
+
+    // --------------------------------------------------------------
+    // v0.0.36: Time Source — surfaces machine-wide TimeSource for
+    // ClockFaceControl bindings on the main window's clock-face
+    // DataTemplate. Floating windows route through here too via the
+    // Application.Current.MainWindow as MainWindow getter.
+    // --------------------------------------------------------------
+
+    /// <summary>
+    /// Currently configured time source (Boulder / Brazil). Reads from
+    /// AppSettings.Global.TimeSource — kept in lockstep with
+    /// ServiceConfig.TimeSource by the Settings dialog Save.
+    /// </summary>
+    public TimeSource TimeSource => _settings.Global.TimeSource;
+
+    /// <summary>
+    /// Single-word source label for the per-face header strip
+    /// (rendered identically on every theme — "BOULDER" or "BRASIL").
+    /// </summary>
+    public string TimeSourceLabel => _settings.Global.TimeSource switch
+    {
+        TimeSource.Boulder => "BOULDER",
+        TimeSource.Brazil  => "BRASIL",
+        _                  => "BOULDER",
+    };
+
+    /// <summary>
+    /// Full source badge for the Atomic Lab face's NIST-panel subtitle
+    /// (replaces the v0.0.35-and-earlier hardcoded
+    /// <c>"NIST · BOULDER · CO"</c> when TimeSource = Brazil).
+    /// </summary>
+    public string TimeSourceBadge => _settings.Global.TimeSource switch
+    {
+        TimeSource.Boulder => "NIST · BOULDER · CO",
+        TimeSource.Brazil  => "NTP.BR · SÃO PAULO · BR",
+        _                  => "NIST · BOULDER · CO",
+    };
 
     private void OpenThemesPickerFor(object? param)
     {

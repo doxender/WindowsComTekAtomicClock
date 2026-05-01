@@ -256,7 +256,11 @@
                                 Width="400" Height="400"
                                 TimeZone="{Binding TimeZone}"
                                 Theme="{Binding Theme}"
-                                SmoothSecondHand="{Binding SmoothSecondHand}"/>
+                                SmoothSecondHand="{Binding SmoothSecondHand}"
+                                TimeSourceLabel="{Binding DataContext.TimeSourceLabel,
+                                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                                TimeSourceBadge="{Binding DataContext.TimeSourceBadge,
+                                                  RelativeSource={RelativeSource AncestorType=Window}}"/>
 
                             <!--
                               ✕ close tab and ? help/about overlay

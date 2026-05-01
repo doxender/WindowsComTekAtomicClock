@@ -19,6 +19,7 @@
 // Window-position persistence (X / Y / Width / Height across restarts)
 // is on the Phase-2 magnetic-snap todo list.
 
+using System.ComponentModel;
 using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
@@ -33,6 +34,7 @@ namespace ComTekAtomicClock.UI;
 public partial class FloatingClockWindow : FluentWindow
 {
     private readonly TabViewModel _tab;
+    private MainWindowViewModel? _subscribedMainVm;
 
     /// <summary>
     /// Constructs a floating clock window bound to <paramref name="tab"/>.
@@ -42,6 +44,44 @@ public partial class FloatingClockWindow : FluentWindow
         _tab = tab ?? throw new ArgumentNullException(nameof(tab));
         InitializeComponent();
         DataContext = _tab;
+
+        // v0.0.36: pull the TimeSourceLabel / TimeSourceBadge from the
+        // main window's view-model and subscribe to its PropertyChanged
+        // so the floating window's clock face refreshes when the user
+        // changes time source via the Settings dialog. The DataContext
+        // here is the TabViewModel (per-clock state), so a normal
+        // {Binding} can't reach the app-global TimeSource — wire it
+        // through code-behind instead.
+        var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
+        if (mainVm is not null)
+        {
+            _subscribedMainVm = mainVm;
+            mainVm.PropertyChanged += OnMainVmPropertyChanged;
+            ApplyTimeSourceFromVm(mainVm);
+        }
+        Closed += (_, _) =>
+        {
+            if (_subscribedMainVm is not null)
+                _subscribedMainVm.PropertyChanged -= OnMainVmPropertyChanged;
+            _subscribedMainVm = null;
+        };
+    }
+
+    private void OnMainVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not MainWindowViewModel vm) return;
+        if (e.PropertyName is nameof(MainWindowViewModel.TimeSource) or
+                              nameof(MainWindowViewModel.TimeSourceLabel) or
+                              nameof(MainWindowViewModel.TimeSourceBadge))
+        {
+            ApplyTimeSourceFromVm(vm);
+        }
+    }
+
+    private void ApplyTimeSourceFromVm(MainWindowViewModel vm)
+    {
+        ClockFace.TimeSourceLabel = vm.TimeSourceLabel;
+        ClockFace.TimeSourceBadge = vm.TimeSourceBadge;
     }
 
     /// <summary>

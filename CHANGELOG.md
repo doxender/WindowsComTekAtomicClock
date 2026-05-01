@@ -4,6 +4,55 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.36] - 2026-05-01 — Time source picker (Boulder + Brazil); per-face source label; dynamic NIST badge
+
+**Problem:** Until v0.0.35 the app was hardcoded to the NIST stratum-1 pool out of Boulder, CO. Dan testing from / building for South-American users would see ~150-300 ms of trans-equatorial RTT on every sync against NIST. NTP.br (operated by NIC.br in São Paulo) is the regional equivalent and a much better fit.
+
+**Solution:** Added a Time Source picker to the Settings dialog with two choices:
+
+| Source | Operator | Anycast | Pool |
+|---|---|---|---|
+| **Boulder** (default) | NIST | `time.nist.gov` | 10 stratum-1 servers across Gaithersburg MD + Fort Collins CO |
+| **Brazil** | NIC.br / NTP.br | `a.ntp.br` | 5 GPS-disciplined stratum-1 servers in São Paulo BR |
+
+**Per-face source label.** Every clock face now shows a single-word `BOULDER` or `BRASIL` header at the top-center (Cascadia Code 11pt SemiBold, warm-amber `#FFCC00` at ~70% opacity — instrument-label vibes that play on dark + light theme backgrounds). Painted by a uniform `AddSourceLabel` helper called from `RenderActiveTheme` so it's automatically present on all 12 themes without per-theme placement work.
+
+**Atomic Lab dynamic badge.** The face's NIST-panel subtitle was hardcoded `"NIST · BOULDER · CO"`. v0.0.36 makes it a `TimeSourceBadge` DependencyProperty that returns:
+
+- `"NIST · BOULDER · CO"` when source = Boulder
+- `"NTP.BR · SÃO PAULO · BR"` when source = Brazil
+
+Same parallel city·state·country structure on both. Atomic Lab face rebuilds when the badge changes.
+
+### Persistence + Service catch-up
+
+- `GlobalSettings.TimeSource` (UI's view) — written to `settings.json` so the on-face label / Atomic Lab badge persist.
+- `ServiceConfig.TimeSource` (Service's view) — written to `service.json` by the dialog Save handler so the Service picks the correct pool.
+- The TabSettings dialog Save now writes both files in one go and exposes a `ChosenTimeSource` to `MainWindowViewModel` so it can mirror the choice into the in-memory `AppSettings.Global` and raise `PropertyChanged(TimeSource/Label/Badge)` to refresh all open clock faces (including floating windows).
+- **Service catch-up:** the Service re-reads `service.json` on each sync iteration. Switching source takes effect on the next sync (within the configured frequency, default 12 h). A force-resync IPC trigger is on the Phase-2 Planned list.
+
+### Files changed
+
+- `windows/src/ComTekAtomicClock.Shared/Settings/SettingsModel.cs` — added `TimeSource` enum (Boulder / Brazil); added `GlobalSettings.TimeSource` and `ServiceConfig.TimeSource` properties (default Boulder, backward-compat with v0.0.35-and-earlier on-disk settings)
+- `windows/src/ComTekAtomicClock.Service/Sync/NistPool.cs` — **DELETED**
+- `windows/src/ComTekAtomicClock.Service/Sync/TimeSourcePool.cs` — **NEW**: multi-source pool registry with `BoulderAnycast`/`BoulderStratumOne` (10 NIST servers, unchanged) and `BrazilAnycast`/`BrazilStratumOne` (5 NTP.br servers); `GetWalkOrder(source, primary)`, `IsKnownHost(source, hostname)`, `IsKnownHostAcrossSources(hostname)` accessors
+- `windows/src/ComTekAtomicClock.Service/Sync/SyncWorker.cs` — switched from `NistPool.GetWalkOrder` to `TimeSourcePool.GetWalkOrder(config.TimeSource, primary)`; primary fallback uses `TimeSourcePool.GetAnycast(source)`; log messages parameterized on `{Source}`
+- `windows/src/ComTekAtomicClock.UI/Dialogs/TabSettingsDialog.xaml` — added Time Source radio group below Sync frequency in the "ALL CLOCKS ON THIS PC" section; two-line item layout with primary label + small subtitle showing operator/anycast hostname
+- `windows/src/ComTekAtomicClock.UI/Dialogs/TabSettingsDialog.xaml.cs` — load TimeSource from `_serviceConfig` on dialog open; on Save, capture choice → write `service.json` once (sync-frequency + time-source bundled); expose `ChosenTimeSource` to caller
+- `windows/src/ComTekAtomicClock.UI/ViewModels/MainWindowViewModel.cs` — added `TimeSource`, `TimeSourceLabel`, `TimeSourceBadge` properties (read from `_settings.Global.TimeSource`); `OpenTabSettingsCore` now mirrors `dlg.ChosenTimeSource` into `_settings.Global.TimeSource` and raises PropertyChanged for the three properties
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — added `TimeSourceLabelProperty` + `TimeSourceBadgeProperty` DependencyProperties; both trigger full theme rebuild on change; new `AddSourceLabel()` helper called from `RenderActiveTheme()` paints `TimeSourceLabel` at top-center on every theme; Atomic Lab's hardcoded `"NIST · BOULDER · CO"` text replaced with `TimeSourceBadge` property read
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` — `<controls:ClockFaceControl>` in the tab DataTemplate gets two new bindings: `TimeSourceLabel` and `TimeSourceBadge` via `RelativeSource AncestorType=Window` to the MainWindowViewModel
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` — named the `ClockFaceControl` `x:Name="ClockFace"` for code-behind access
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` — code-behind subscribes to `MainWindowViewModel.PropertyChanged` for TimeSource/Label/Badge; pushes values to `ClockFace.TimeSourceLabel`/`TimeSourceBadge` on construction and on change; unsubscribes on `Closed`
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 0.0.35 → 0.0.36
+- `windows/SPEC.md` v1.3 → v1.4 (front matter, §4 Service NIST pool → multi-source pool, §5 Settings model TimeSource fields, §10 themes — Atomic Lab badge note + universal source label, §13 Settings dialog new field, §21 status — Brazil source moves to Implemented)
+- `windows/CONTEXT.md` (session log entry, repo state line)
+- `windows/CHANGELOG.md` (this entry)
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj -c Debug` → 0 `error CS####` or `error MC####` (compilation clean). 4 MSB3021/MSB3027 file-copy errors expected because Dan's running v0.0.34 instance has `Shared.dll` locked — close + rebuild + F5 to deploy v0.0.36.
+
 ## [0.0.35] - 2026-05-01 — FloatingClockWindow: single ⋯ overlay button replaces ✕ + ? pair
 
 **Problem:** Dan's first-run testing of v0.0.34's floating windows surfaced two issues:

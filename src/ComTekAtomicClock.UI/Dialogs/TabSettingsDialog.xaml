@@ -49,6 +49,10 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <!-- v0.0.36: Time Source picker -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
 
                 <!-- Spacer + buttons -->
                 <RowDefinition Height="*"/>
@@ -148,8 +152,47 @@
                 <ComboBoxItem Content="Every 24 hours" Tag="24"/>
             </ComboBox>
 
+            <!-- v0.0.36: Time Source picker -->
+            <TextBlock Grid.Row="11"
+                       Text="Time source"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="11"
+                       Foreground="#A8A39A"
+                       Margin="0,0,0,4"/>
+            <StackPanel Grid.Row="12" Orientation="Vertical" Margin="0,0,0,4">
+                <RadioButton x:Name="TimeSourceBoulder"
+                             GroupName="TimeSourceGroup"
+                             Margin="0,2,0,2">
+                    <TextBlock>
+                        <Run Text="United States — NIST · Boulder, CO" FontWeight="SemiBold"/>
+                        <LineBreak/>
+                        <Run Text="anycast " FontSize="10" Foreground="#888"/>
+                        <Run Text="time.nist.gov" FontSize="10" Foreground="#A0E0FF"/>
+                        <Run Text=" · stratum-1 · NIST-F1 / NIST-F2 fountain clocks" FontSize="10" Foreground="#888"/>
+                    </TextBlock>
+                </RadioButton>
+                <RadioButton x:Name="TimeSourceBrazil"
+                             GroupName="TimeSourceGroup"
+                             Margin="0,2,0,2">
+                    <TextBlock>
+                        <Run Text="Brazil — NIC.br / NTP.br · São Paulo" FontWeight="SemiBold"/>
+                        <LineBreak/>
+                        <Run Text="anycast " FontSize="10" Foreground="#888"/>
+                        <Run Text="a.ntp.br" FontSize="10" Foreground="#A0E0FF"/>
+                        <Run Text=" · stratum-1 · GPS-disciplined" FontSize="10" Foreground="#888"/>
+                    </TextBlock>
+                </RadioButton>
+            </StackPanel>
+            <TextBlock Grid.Row="13"
+                       FontFamily="Segoe UI Variable, Segoe UI, sans-serif"
+                       FontSize="10"
+                       Foreground="#888"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,12"
+                       Text="Switching the source takes effect on the next sync (within the configured frequency above)."/>
+
             <!-- Buttons -->
-            <StackPanel Grid.Row="12"
+            <StackPanel Grid.Row="15"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Margin="0,18,0,0">

@@ -8,9 +8,9 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | v0.0.35 |
-| **Code-as-ground-truth baseline** | `SPEC.md` v1.3 (2026-05-01) |
-| **Repo state** | branch `tab-header-refresh-reliability` @ fbbadc1 (v0.0.34) + uncommitted v0.0.35 working-tree changes — **local only**, 4 commits ahead of master |
+| **Current version** | v0.0.36 |
+| **Code-as-ground-truth baseline** | `SPEC.md` v1.4 (2026-05-01) |
+| **Repo state** | branch `tab-header-refresh-reliability` @ 38cc47c (v0.0.35) + uncommitted v0.0.36 working-tree changes — **local only**, 5 commits ahead of master |
 
 ## Quick navigation
 
@@ -205,6 +205,22 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-05-01 — v0.0.36: Time-source picker (Boulder + Brazil); per-face source label; dynamic NIST badge
+
+Dan asked: *"is there any way to add south american time sync options? ... I just want to add to the settings, Which Time Source. We'll allow Boulder or NTP.br — operated by NIC.br (Brazilian Network Information Center). Also make the changes to the atomic clock face to reflect which clock we are using. Also, add Brazil or Boulder to the header on all clock faces just to be cool."*
+
+Three things shipped together:
+
+1. **Backend.** New `TimeSource { Boulder, Brazil }` enum in `Shared/Settings/SettingsModel.cs`. Added to both `GlobalSettings` (UI's view) and `ServiceConfig` (Service's view). Refactored `Service/Sync/NistPool.cs` → `TimeSourcePool.cs` with two pools: Boulder = 10 NIST stratum-1 servers + `time.nist.gov` anycast (unchanged); Brazil = 5 NTP.br servers (`a/b/c/d/gps.ntp.br`) + `a.ntp.br` anycast. `SyncWorker` now walks the active source's pool. `MinPerServerPoll` of 4 s satisfies both NIST AUP (≥ 4 s) and NTP.br AUP (≥ 1 s).
+2. **Settings dialog.** Added a Time Source RadioButton group below Sync frequency in the "ALL CLOCKS ON THIS PC" section. Two-line item layout: primary label + small subtitle showing operator + anycast hostname. On Save, writes `service.json` once with both sync-frequency and time-source changes; exposes `ChosenTimeSource` to `MainWindowViewModel.OpenTabSettingsCore` so it can mirror the value into `_settings.Global.TimeSource` and trigger the on-face refresh.
+3. **Per-face rendering.** Added `TimeSourceLabelProperty` and `TimeSourceBadgeProperty` DependencyProperties on `ClockFaceControl`. New `AddSourceLabel()` helper paints `TimeSourceLabel` (`BOULDER` or `BRASIL`) at top-center of every theme (Cascadia 11pt SemiBold, warm-amber `#FFCC00` at 70% opacity). Atomic Lab's NIST-panel subtitle text changed from a hardcoded `"NIST · BOULDER · CO"` to `TimeSourceBadge` (returns the parallel `"NTP.BR · SÃO PAULO · BR"` for Brazil). Theme rebuild on TimeSource change is the refresh mechanism. Floating windows wire the values via code-behind (DataContext is TabViewModel, not MainWindowViewModel) by subscribing to `MainWindowViewModel.PropertyChanged`.
+
+**Service catch-up:** Service re-reads `service.json` on each sync iteration. Switching source takes effect on the next sync (within configured frequency, default 12 h). Force-resync IPC trigger remains Phase-2 Planned.
+
+**Files changed:** `Shared/Settings/SettingsModel.cs` (TimeSource enum + props), `Service/Sync/NistPool.cs` DELETED → `TimeSourcePool.cs` NEW, `Service/Sync/SyncWorker.cs`, `UI/Dialogs/TabSettingsDialog.xaml` + `.xaml.cs`, `UI/ViewModels/MainWindowViewModel.cs`, `UI/Controls/ClockFaceControl.xaml.cs` (DPs + AddSourceLabel + Atomic Lab badge), `UI/MainWindow.xaml` (DataTemplate bindings), `UI/FloatingClockWindow.xaml` + `.xaml.cs` (named ClockFace + PropertyChanged subscription), `UI/ComTekAtomicClock.UI.csproj` (0.0.35 → 0.0.36), `SPEC.md` v1.3 → v1.4 (front matter, §4 multi-source pool, §5 TimeSource fields, §10 universal source label, §13 dialog field, §21 status), `CHANGELOG.md` (v0.0.36 entry), `CONTEXT.md` (this entry + repo state).
+
+**Build:** compilation clean (no `error CS####` or `error MC####`); 4 file-copy errors expected because Dan's running v0.0.34 has Shared.dll locked. Close + rebuild + F5 to deploy.
 
 ### 2026-05-01 — v0.0.35: FloatingClockWindow single ⋯ overlay button
 

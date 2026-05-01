@@ -109,6 +109,64 @@ public partial class ClockFaceControl : UserControl
     }
 
     // ---------------------------------------------------------------
+    // v0.0.36: Time-source badge / source-label (Boulder vs Brazil)
+    //
+    // TimeSourceLabel — single word ("BOULDER" or "BRASIL") rendered
+    //   on every theme as a small "header" — see "AddSourceLabel"
+    //   helper called at the end of each Build* method.
+    //
+    // TimeSourceBadge — full multi-segment text (e.g.
+    //   "NIST · BOULDER · CO" / "NTP.BR · SÃO PAULO · BR") used by
+    //   the Atomic Lab face's NIST-panel subtitle.
+    //
+    // Bound from the DataTemplate via RelativeSource ancestor walk to
+    // the hosting Window's MainWindowViewModel (the labels live at the
+    // app-global scope, not per-tab — switching them mid-render is
+    // intended and triggers a full theme rebuild via the
+    // OnTimeSource*Changed callbacks below.
+    // ---------------------------------------------------------------
+
+    public static readonly DependencyProperty TimeSourceLabelProperty =
+        DependencyProperty.Register(
+            nameof(TimeSourceLabel),
+            typeof(string),
+            typeof(ClockFaceControl),
+            new PropertyMetadata("BOULDER", OnTimeSourceLabelChanged));
+
+    public string TimeSourceLabel
+    {
+        get => (string)GetValue(TimeSourceLabelProperty);
+        set => SetValue(TimeSourceLabelProperty, value);
+    }
+
+    private static void OnTimeSourceLabelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        // Every theme bakes the source label into its rendered visuals
+        // at Build* time (small text on each face). Easiest correct
+        // refresh is a full theme rebuild. Acceptable cost — TimeSource
+        // changes are user-driven and infrequent.
+        if (d is ClockFaceControl c) c.RenderActiveTheme();
+    }
+
+    public static readonly DependencyProperty TimeSourceBadgeProperty =
+        DependencyProperty.Register(
+            nameof(TimeSourceBadge),
+            typeof(string),
+            typeof(ClockFaceControl),
+            new PropertyMetadata("NIST · BOULDER · CO", OnTimeSourceBadgeChanged));
+
+    public string TimeSourceBadge
+    {
+        get => (string)GetValue(TimeSourceBadgeProperty);
+        set => SetValue(TimeSourceBadgeProperty, value);
+    }
+
+    private static void OnTimeSourceBadgeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ClockFaceControl c) c.RenderActiveTheme();
+    }
+
+    // ---------------------------------------------------------------
     // Per-theme rendering state
     // ---------------------------------------------------------------
 
@@ -297,6 +355,11 @@ public partial class ClockFaceControl : UserControl
 
         AddVersionLabel();
 
+        // v0.0.36: BOULDER / BRASIL header label, painted on every
+        // theme so the user sees at a glance which time source is
+        // currently feeding the clock.
+        AddSourceLabel();
+
         // The "theme: <name>" debug overlay — TEMPORARILY re-enabled
         // for v0.0.9 to diagnose our "Tab 2 shows Flip Clock but
         // Binary Digital selected" report. With the overlay on, we
@@ -351,6 +414,37 @@ public partial class ClockFaceControl : UserControl
         };
         Canvas.SetLeft(label, 6);
         Canvas.SetTop(label, 4);
+        Dial.Children.Add(label);
+    }
+
+    /// <summary>
+    /// v0.0.36: paints the <see cref="TimeSourceLabel"/> ("BOULDER" or
+    /// "BRASIL") at the top-center of the dial canvas. Every theme's
+    /// Build* method calls this just before <see cref="AddVersionLabel"/>
+    /// so the label sits in the upper "header" area of the face,
+    /// balancing the version label in the upper-left.
+    ///
+    /// Uses a single warm-amber color (<c>#FFCC00</c>) at ~70% opacity
+    /// across every theme — reads on dark phosphor green, light cream,
+    /// charcoal Concourse, and theater red equally. Cascadia Code
+    /// 11pt SemiBold gives an instrument-label feel that matches the
+    /// brand.
+    /// </summary>
+    private void AddSourceLabel()
+    {
+        if (string.IsNullOrWhiteSpace(TimeSourceLabel)) return;
+
+        var label = new TextBlock
+        {
+            Text = TimeSourceLabel,
+            FontFamily = new FontFamily("Cascadia Code, Consolas, Lucida Console, monospace"),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xCC, 0x00)),
+        };
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Canvas.SetLeft(label, Cx - label.DesiredSize.Width / 2.0);
+        Canvas.SetTop(label, 10);
         Dial.Children.Add(label);
     }
 
@@ -680,7 +774,11 @@ public partial class ClockFaceControl : UserControl
         var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 3, 0, 3) };
         var dateTb = new TextBlock { FontFamily = consolas, FontSize = 9, Foreground = amber, Opacity = 0.85, HorizontalAlignment = HorizontalAlignment.Center };
         var timeTb = new TextBlock { FontFamily = consolas, FontSize = 20, FontWeight = FontWeights.Bold, Foreground = amber, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 1, 0, 1) };
-        var nistTb = new TextBlock { Text = "NIST · BOULDER · CO", FontFamily = consolas, FontSize = 7, Foreground = amber, Opacity = 0.7, HorizontalAlignment = HorizontalAlignment.Center };
+        // v0.0.36: badge text is now dynamic — the TimeSourceBadge DP
+        // returns "NIST · BOULDER · CO" for Boulder source / "NTP.BR ·
+        // SÃO PAULO · BR" for Brazil source. The face is rebuilt when
+        // TimeSource changes via OnTimeSourceBadgeChanged.
+        var nistTb = new TextBlock { Text = TimeSourceBadge, FontFamily = consolas, FontSize = 7, Foreground = amber, Opacity = 0.7, HorizontalAlignment = HorizontalAlignment.Center };
         stack.Children.Add(dateTb);
         stack.Children.Add(timeTb);
         stack.Children.Add(nistTb);

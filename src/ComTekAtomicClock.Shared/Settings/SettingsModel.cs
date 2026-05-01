@@ -68,6 +68,39 @@ public enum SecondHandMotion
     Stepped,
 }
 
+/// <summary>
+/// Which national time-laboratory pool the service queries for the
+/// canonical time. Machine-wide setting (persisted in
+/// %ProgramData%\ComTekAtomicClock\service.json AND duplicated in
+/// %APPDATA% so the UI doesn't have to read service.json to render
+/// the per-face badge / header label).
+///
+/// Added in v0.0.36. Default <see cref="Boulder"/> for backward
+/// compatibility with v0.0.35-and-earlier installs.
+/// </summary>
+public enum TimeSource
+{
+    /// <summary>
+    /// US — NIST stratum-1 pool. Anycast endpoint <c>time.nist.gov</c>
+    /// plus 10 named servers across Gaithersburg, MD and Fort Collins,
+    /// CO. Brand-default; the Atomic Lab face's badge reads
+    /// <c>"NIST · BOULDER · CO"</c> and every face surfaces
+    /// <c>"BOULDER"</c> in its source label.
+    /// </summary>
+    Boulder,
+
+    /// <summary>
+    /// Brazil — NIC.br / NTP.br stratum-1 pool. Operated by the
+    /// Brazilian Network Information Center (Núcleo de Informação e
+    /// Coordenação do Ponto BR), GPS-disciplined, hosted in São Paulo.
+    /// Useful for users in South America who'd otherwise eat
+    /// ~150-300ms of trans-equatorial RTT against NIST. The Atomic
+    /// Lab face's badge reads <c>"NTP.BR · SÃO PAULO · BR"</c> and
+    /// every face surfaces <c>"BRASIL"</c> in its source label.
+    /// </summary>
+    Brazil,
+}
+
 // ---------------------------------------------------------------------
 // User-overridable color slots (per requirements.txt § 1.1, § 1.2)
 // ---------------------------------------------------------------------
@@ -166,6 +199,16 @@ public sealed class GlobalSettings
 {
     public string SyncServer { get; set; } = "time.nist.gov";
 
+    /// <summary>
+    /// v0.0.36: which national time-laboratory pool to query. The UI
+    /// reads this to render the per-face source label / Atomic Lab
+    /// badge; the Service reads the same value from
+    /// <see cref="ServiceConfig.TimeSource"/> in service.json. Both
+    /// stay in lockstep — the TabSettings dialog's Save handler
+    /// writes both files.
+    /// </summary>
+    public TimeSource TimeSource { get; set; } = TimeSource.Boulder;
+
     /// <summary>Sync interval; default 1 hour, range 15 min – 24 h (validated at write).</summary>
     public TimeSpan SyncInterval { get; set; } = TimeSpan.FromHours(1);
 
@@ -235,6 +278,14 @@ public sealed class AppSettings
 public sealed class ServiceConfig
 {
     public int SchemaVersion { get; set; } = 1;
+
+    /// <summary>
+    /// v0.0.36: which national time-laboratory pool the Service walks
+    /// on each sync attempt. Mirror of
+    /// <see cref="GlobalSettings.TimeSource"/>; the UI is responsible
+    /// for keeping them in sync (TabSettings dialog Save writes both).
+    /// </summary>
+    public TimeSource TimeSource { get; set; } = TimeSource.Boulder;
 
     public string SyncServer { get; set; } = "time.nist.gov";
     /// <summary>

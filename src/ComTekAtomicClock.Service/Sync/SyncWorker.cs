@@ -1,17 +1,21 @@
 // ComTekAtomicClock.Service.Sync.SyncWorker
 //
-// Periodically queries the NIST stratum-1 pool for the canonical
-// time, applies the resulting correction to the Windows system clock
-// via SetSystemTime, and updates SyncStateProvider so the UI can read
+// Periodically queries the configured stratum-1 pool (NIST or NTP.br
+// per ServiceConfig.TimeSource, v0.0.36+) for the canonical time,
+// applies the resulting correction to the Windows system clock via
+// SetSystemTime, and updates SyncStateProvider so the UI can read
 // the most recent result over IPC.
 //
 // Per requirements.txt § 1.5, § 1.6, § 2.5:
-//   - SNTP/v4 over UDP/123 to a NIST host.
-//   - Walk: primary anycast, then the rest of the pool randomized.
+//   - SNTP/v4 over UDP/123 to a stratum-1 host.
+//   - Walk: primary anycast for the configured source, then the
+//     rest of that source's pool randomized.
 //   - Default 1-hour interval, configurable 15 min - 24 hr in service.json.
-//   - Honor the >= 4 s/server NIST poll-interval rule.
+//   - Honor the >= 4 s/server poll-interval rule (NIST AUP; NTP.br
+//     AUP also asks for ≥ 1 s, so 4 s satisfies both).
 //   - On total failure (every server tried), log Warning, sleep one
-//     full interval, retry. Never falls back to non-NIST.
+//     full interval, retry. Never falls back to a server outside
+//     the configured source's pool.
 //
 // Confirmation flow for large offsets (§ 2.5) is NOT implemented in
 // this commit; corrections above the threshold are applied
@@ -40,7 +44,10 @@ public sealed class SyncWorker : BackgroundService
     /// <summary>Per-server query timeout. Conservative for slow links.</summary>
     private static readonly TimeSpan PerServerTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>NIST minimum poll interval per server, per § 1.5.</summary>
+    /// <summary>
+    /// Minimum poll interval per server, per § 1.5. NIST AUP requires
+    /// ≥ 4 s; NTP.br AUP requires ≥ 1 s. 4 s satisfies both.
+    /// </summary>
     private static readonly TimeSpan MinPerServerPoll = TimeSpan.FromSeconds(4);
 
     public SyncWorker(ILogger<SyncWorker> logger, SyncStateProvider state)
@@ -79,16 +86,22 @@ public sealed class SyncWorker : BackgroundService
     private async Task PerformSyncAttemptAsync(CancellationToken ct)
     {
         var config = SettingsStore.LoadServiceConfig();
-        var primary = NistPool.IsKnownNistHost(config.SyncServer)
+        var source = config.TimeSource;
+
+        // v0.0.36: pick primary based on the configured TimeSource.
+        // If the user has a hand-edited SyncServer that's a member of
+        // the active source's pool, honor it; otherwise fall back to
+        // that source's anycast.
+        var primary = TimeSourcePool.IsKnownHost(source, config.SyncServer)
             ? config.SyncServer
-            : NistPool.Anycast;
+            : TimeSourcePool.GetAnycast(source);
 
         var thresholdSeconds = Math.Max(0, config.LargeOffsetThresholdSeconds);
 
         Exception? lastError = null;
         string? lastTried = null;
 
-        foreach (var host in NistPool.GetWalkOrder(primary))
+        foreach (var host in TimeSourcePool.GetWalkOrder(source, primary))
         {
             if (ct.IsCancellationRequested) return;
             lastTried = host;
@@ -148,14 +161,14 @@ public sealed class SyncWorker : BackgroundService
 
         // Walked the whole pool, nothing answered.
         _logger.LogWarning(
-            "Sync failed against the entire NIST pool (last tried {Host}): {Error}",
-            lastTried, lastError?.Message ?? "(no exception)");
+            "Sync failed against the entire {Source} pool (last tried {Host}): {Error}",
+            source, lastTried, lastError?.Message ?? "(no exception)");
         _state.Update(new SyncStatus(
             AttemptedAtUtc: DateTimeOffset.UtcNow,
             Success:       false,
             ServerHost:    lastTried,
             OffsetSeconds: null,
-            ErrorMessage:  $"All NIST servers in the pool failed. Last error: {lastError?.Message ?? "(unknown)"}"));
+            ErrorMessage:  $"All {source} servers in the pool failed. Last error: {lastError?.Message ?? "(unknown)"}"));
     }
 
     /// <summary>

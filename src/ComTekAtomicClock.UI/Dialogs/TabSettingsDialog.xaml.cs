@@ -65,6 +65,16 @@ public partial class TabSettingsDialog : FluentWindow
         }
 
         SelectClosestSyncIntervalItem(_serviceConfig.SyncInterval);
+
+        // v0.0.36: Time Source radio group. Source of truth is
+        // service.json (read above into _serviceConfig); the
+        // GlobalSettings.TimeSource on the UI side is kept in lockstep
+        // by the Save handler. The radio reflects whatever's in
+        // service.json on dialog open.
+        if (_serviceConfig.TimeSource == TimeSource.Brazil)
+            TimeSourceBrazil.IsChecked = true;
+        else
+            TimeSourceBoulder.IsChecked = true;
     }
 
     /// <summary>
@@ -115,8 +125,11 @@ public partial class TabSettingsDialog : FluentWindow
         }
 
         // ---- Machine-wide fields ----
-        // Persist sync frequency to service.json. The Service re-reads
-        // it on its next loop iteration (no restart needed).
+        // Capture intent first; persist once at the end so a single
+        // service.json write covers both sync-frequency and time-source
+        // changes.
+        var serviceConfigDirty = false;
+
         if (SyncIntervalCombo.SelectedItem is ComboBoxItem item &&
             int.TryParse(item.Tag?.ToString(),
                          NumberStyles.Integer,
@@ -127,37 +140,70 @@ public partial class TabSettingsDialog : FluentWindow
             if (newInterval != _serviceConfig.SyncInterval)
             {
                 _serviceConfig.SyncInterval = newInterval;
-                try
-                {
-                    SettingsStore.SaveServiceConfig(_serviceConfig);
-                }
-                catch (Exception ex)
-                {
-                    // Likely cause: %ProgramData%\ComTekAtomicClock\
-                    // doesn't exist yet (Service was never installed),
-                    // or its ACL doesn't grant write to this user. Per-
-                    // tab fields still committed via TabViewModel above
-                    // — only the machine-wide save is in trouble.
-                    var reason = ex is UnauthorizedAccessException
-                        ? "permission denied"
-                        : ex is DirectoryNotFoundException
-                            ? "the time-sync service isn't installed yet"
-                            : ex.Message;
-                    System.Windows.MessageBox.Show(
-                        this,
-                        $"The per-tab settings were saved, but the sync-frequency change " +
-                        $"could not be written to %ProgramData%\\ComTekAtomicClock\\service.json " +
-                        $"({reason}).\n\nIt will be retried the next time you open Settings.",
-                        "Could not save sync frequency",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Warning);
-                }
+                serviceConfigDirty = true;
             }
         }
+
+        // v0.0.36: Time Source radio group → ServiceConfig.TimeSource.
+        // The Atomic Lab badge + per-face source label re-render off
+        // GlobalSettings.TimeSource (mirrored by MainWindowViewModel
+        // when this dialog returns true), but the actual SNTP pool
+        // walk is driven by ServiceConfig.TimeSource (read by Service
+        // on its next loop iteration).
+        var newSource = (TimeSourceBrazil.IsChecked == true)
+            ? TimeSource.Brazil
+            : TimeSource.Boulder;
+        if (newSource != _serviceConfig.TimeSource)
+        {
+            _serviceConfig.TimeSource = newSource;
+            serviceConfigDirty = true;
+        }
+
+        if (serviceConfigDirty)
+        {
+            try
+            {
+                SettingsStore.SaveServiceConfig(_serviceConfig);
+            }
+            catch (Exception ex)
+            {
+                // Likely cause: %ProgramData%\ComTekAtomicClock\
+                // doesn't exist yet (Service was never installed),
+                // or its ACL doesn't grant write to this user. Per-
+                // tab fields still committed via TabViewModel above
+                // — only the machine-wide save is in trouble.
+                var reason = ex is UnauthorizedAccessException
+                    ? "permission denied"
+                    : ex is DirectoryNotFoundException
+                        ? "the time-sync service isn't installed yet"
+                        : ex.Message;
+                System.Windows.MessageBox.Show(
+                    this,
+                    $"The per-tab settings were saved, but the sync-frequency / time-source change " +
+                    $"could not be written to %ProgramData%\\ComTekAtomicClock\\service.json " +
+                    $"({reason}).\n\nIt will be retried the next time you open Settings.",
+                    "Could not save machine-wide settings",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+            }
+        }
+
+        // Expose the chosen TimeSource for MainWindowViewModel's Save
+        // path so it can mirror the value into AppSettings.Global and
+        // trigger the on-face badge / label refresh.
+        ChosenTimeSource = newSource;
 
         DialogResult = true;
         Close();
     }
+
+    /// <summary>
+    /// v0.0.36: the TimeSource the user selected on this dialog.
+    /// Read by <see cref="ViewModels.MainWindowViewModel.OpenTabSettingsCore"/>
+    /// after a successful Save so the in-memory AppSettings.Global
+    /// can be mirrored to match service.json.
+    /// </summary>
+    internal TimeSource ChosenTimeSource { get; private set; } = TimeSource.Boulder;
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {

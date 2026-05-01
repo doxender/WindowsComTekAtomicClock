@@ -50,7 +50,7 @@
         -->
         <Viewbox Stretch="Uniform" Margin="20">
             <Grid Width="400" Height="400">
-                <controls:ClockFaceControl
+                <controls:ClockFaceControl x:Name="ClockFace"
                     Width="400" Height="400"
                     TimeZone="{Binding TimeZone}"
                     Theme="{Binding Theme}"
