@@ -1,0 +1,238 @@
+# ComTekAtomicClock — Context
+
+A running log of decisions, constraints, and gotchas for this project. **Update on every material change.** Append-only — reversed decisions get a new entry that references the old one. Standing rule: `C:\ComputerSource\Claude\Context\memory\feedback_per_project_context_doc.md`.
+
+For the formal point-in-time spec see `SPEC.md`. For the per-version changelog see `CHANGELOG.md`. For cross-project history see `C:\ComputerSource\Claude\Context\HISTORY.md`.
+
+| | |
+|---|---|
+| **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
+| **Solution** | `ComTekAtomicClock.slnx` |
+| **Current version** | v0.0.33 |
+| **Code-as-ground-truth baseline** | `SPEC.md` v1.1 (2026-05-01) |
+| **Repo state** | branch `tab-header-refresh-reliability` @ 52f4fc8 + uncommitted v0.0.33 working-tree changes — **local only**, 2 commits ahead of master |
+
+## Quick navigation
+
+| Doc | Purpose |
+|---|---|
+| `SPEC.md` | Authoritative regeneration baseline (23 sections, ~92 KB). Code-as-ground-truth. |
+| `CONTEXT.md` | This file. Living decisions/constraints/gotchas. |
+| `CHANGELOG.md` | Per-version problem/solution log. |
+| `README.md` | User-facing overview. |
+| `requirements.txt` | Legacy spec (591 lines, 2026-04-25). **Superseded by SPEC.md.** Kept for history. |
+| `docs/code-vs-spec-audit.md` | 706-line drift audit between requirements.txt and current code. Bridge to SPEC.md. |
+| `design/themes/*.svg` | Canonical theme preview art (12 SVGs). Linked into UI assembly. |
+
+---
+
+## Current architecture (one-line summary)
+
+Three-process Windows desktop app: **WPF UI** (standard user, asInvoker) + **Worker Service** (LocalSystem, demand start) + **UAC installer helper** (one-shot). UI ↔ Service via named pipe `ComTekAtomicClock.UiToService` with length-prefixed JSON. Settings split: `%APPDATA%\…\settings.json` (per-user) + `%ProgramData%\…\service.json` (per-machine).
+
+---
+
+## Standing decisions (the why behind current code)
+
+### Why we dropped Dragablz (v0.0.33) — **DO NOT RE-INTRODUCE**
+
+Dragablz `0.0.3.234` was the source of nearly every tab-related bug fought across v0.0.14..v0.0.32. **The library was removed in v0.0.33** in favor of the BCL `System.Windows.Controls.TabControl`. Specific failure modes (all live in the v0.0.32 codebase, all gone now):
+
+1. `Dragablz.TabablzControl.OnItemsChanged` threw `NotImplementedException` for `CollectionChanged.Replace` actions (caused the v0.0.14 silent crash).
+2. Click/drag classifier swallowed single clicks (required v0.0.20 `PreviewMouseLeftButtonDown` rescue).
+3. `ItemTemplate` bindings did not honor `PropertyChanged` reliably for tab headers (eight iterations to land on the v0.0.32 imperative walker).
+4. Headers rendered in a separate visual subtree from item content (forced the imperative walker to enumerate all Application windows by Tag).
+5. Library has had no meaningful release in ~3-4 years; unmaintained.
+
+**Tear-away gesture** was the headline feature Dragablz provided. It was **also dropped** in v0.0.33, deliberately. Replaced with three explicit commands:
+
+- `+ New tab` toolbar button → `AddTabCommand` (in-place tab)
+- `+ New window` toolbar button → `NewClockWindowCommand` (new floating window with fresh clock)
+- Right-click on tab → `OpenInNewWindowCommand` (migrate existing tab to new window)
+- `?` overlay menu on a floating window → `BringWindowIntoTabsCommand` (reverse migration)
+
+If a future session sees an open issue about tab UX and is tempted to add Dragablz (or any tear-away tab library) back: **STOP. Read this entry first.** The existing native-TabControl + explicit-commands design is the resolution, not a regression. Magnetic snap (Phase 2 — see Pending below) is the path forward for desktop-arrangement use cases, NOT tear-away.
+
+**Files DELETED in v0.0.33:**
+- `Services/AppInterTabClient.cs` (Dragablz `IInterTabClient`)
+- `MainWindow.SetTabHeaderInAllDisplays` + `EnumerateVisualDescendants` (the v0.0.32 imperative walker)
+- The `Tag="TabHeaderText"` markup convention
+- The Dragablz `Style.Resources` Thumb-stripping block
+- The `TabItem_PreviewMouseLeftButtonDown` click-rescue handler
+
+**Files RESTORED in v0.0.33:**
+- `OnPropertyChanged(nameof(Label))` in `TabViewModel.TimeZoneId` setter — native TabControl honors PropertyChanged on ItemTemplate bindings, so the binding cascade works again.
+
+### Service runs only while UI is open (alpha simplification)
+
+- `sc.exe create … start= demand` — NOT `auto`.
+- `App.xaml.cs:62 TryStartService()` on `OnStartup`; `:67 TryStopService()` on `OnExit`.
+- **Why:** avoids the "uninstalled-but-still-running service" failure mode in alpha. Migrating to `auto` for v1.0 is Planned (SPEC.md §22 / D-1).
+
+### Tab-name refresh is bound, not imperative (per v0.0.33 — supersedes v0.0.32 rule)
+
+- Native WPF `TabControl` honors `PropertyChanged` on `ItemTemplate` bindings reliably.
+- `TabViewModel.TimeZoneId` setter raises `PropertyChanged(nameof(Label))`; the `{Binding Label}` re-renders the header automatically.
+- The v0.0.32 "two-event imperative refresh" rule is **superseded** — that was a Dragablz workaround. With native TabControl, the binding cascade is the correct, reliable pattern.
+- See "Why we dropped Dragablz (v0.0.33)" entry above for the historical context.
+
+### Tab single-click reliability is native (per v0.0.33 — supersedes v0.0.20 rule)
+
+- Native WPF `TabControl` selects on click reliably.
+- The v0.0.20 `PreviewMouseLeftButtonDown` rescue handler is **gone** — that was a Dragablz workaround.
+
+### Right-click → Tab Settings dialog, no context menu (per v0.0.23..v0.0.26)
+
+- ContextMenu was deliberately removed in v0.0.26 (`MainWindow.xaml:267-275` comment).
+- Right-click is wired to open `TabSettingsDialog` (per v0.0.23).
+
+### Active 19pt Bold / Inactive 9pt tab fonts (per v0.0.28..v0.0.30)
+
+- Dan iterated through several sizes; landed on +10pt active delta with active Bold for clarity at the strip's small height.
+
+### Date strip on every theme (per v0.0.22)
+
+- All 12 themes show day-of-week + date-of-month + month + year.
+- Most use format `"ddd · MMMM d · yyyy"` upper.
+- Hex and BinaryDigital encode the same four parts in their respective encodings.
+
+### Daylight + Boulder Slate centered date (per v0.0.24)
+
+- `_recenterDateReadoutOnUpdate = true` re-centers the date `TextBlock` per tick as string width changes.
+
+### Encoder themes always 24-h (per v0.0.27)
+
+- Binary, Hex, BinaryDigital ignore any 12-h override. The bit/digit-width rationale is the point of those themes.
+- Other 9 themes default to 12-h on `Auto`.
+
+### Three exception handlers in App constructor (per v0.0.16)
+
+- `DispatcherUnhandledException`, `AppDomain.CurrentDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`.
+- Subscribed in **constructor**, not `OnStartup` (`base.OnStartup` constructs `MainWindow`; subscribing in `OnStartup` is too late).
+
+### Two settings stores, atomic write, JsonExtensionData forward-compat
+
+- `settings.json` (per-user) and `service.json` (per-machine).
+- Atomic write: `tmp` + `Flush(true)` + `File.Move(overwrite: true)`.
+- Corrupt-on-read renames to `path + ".broken-{unix-ts}"` and falls back to defaults.
+- `[JsonExtensionData] UnknownFields` on every record so future schema versions round-trip without data loss.
+
+### Authenticated Users on service ACL (not Interactive)
+
+- `WellKnownSidType.AuthenticatedUserSid` for the service object's start/stop ACL.
+- **Why:** lets unprivileged UI start/stop the service across logon sessions on managed corporate machines.
+- Pipe ACL still uses `InteractiveSid` (correct narrower scope for IPC).
+
+---
+
+## Known constraints / gotchas
+
+### Dragablz
+
+- **`CollectionChanged.Replace` is unimplemented.** Mutating `ObservableCollection<TabViewModel>` in a way that produces `Replace` will silently crash. Use `Add`/`Remove`/`Move`, never `[index] = newItem`.
+- Headers render in a separate visual subtree from item content.
+- ItemTemplate bindings don't reliably honor PropertyChanged.
+
+### Tooling
+
+- **PowerShell mangles UTF-8 em-dashes.** Default encoding on PS 5.1 is UTF-16 LE. Use `Write` / `Edit` tool calls for docs. If PS is unavoidable: `[System.IO.File]::WriteAllText($p, $t, [System.Text.UTF8Encoding]::new($false))`.
+- **Don't F5 from elevated VS** — silently fails to launch standard-user UI; service starts but no clock window.
+
+### Privilege
+
+- `SetSystemTime` returns Win32 1314 (`ERROR_PRIVILEGE_NOT_HELD`) when service runs as a non-LocalSystem account in dev. **Expected in dev**; verify via Event Log; do not "fix" by elevating dev account.
+- UI must be `asInvoker` (no `requireAdministrator`) — only `ServiceInstaller.exe` carries `requireAdministrator`.
+
+### Service
+
+- `start= demand` lifecycle means the service does NOT run when UI is closed. Document this for users; it's an alpha simplification.
+
+---
+
+## Pending / open
+
+### Awaiting Dan's go-ahead (per `feedback_no_merge_push_without_consent.md`)
+
+- **Branch `tab-header-refresh-reliability`** is `local only, 2 commits ahead of master`. Carries v0.0.31 (two-phase dispatch) + v0.0.32 (imperative refresh). Awaiting "merge" / "push" instruction.
+
+### Doc-only follow-ups (no version bump needed)
+
+- `windows/SPEC.md` created 2026-05-01 (this session) — the regeneration baseline Dan asked for.
+- `windows/CONTEXT.md` created 2026-05-01 (this session) — per the new standing rule.
+
+### Code follow-ups discovered during the SPEC-writing pass
+
+- `ThemeCatalog.cs:32-34` comment misclassifies the 12-theme grouping as "3 digital, 2 specialty, 1 binary digital." Correct grouping: 6 analog + 4 digital-only + 2 encoder. Fix on next touch.
+- `MainWindow.xaml:238-244` comment claims base `FontSize=13` but actual setter is 9. Active = 19, inactive = 9, delta = 10pt. Fix on next touch.
+- `HelpDialog.xaml:72` mentions right-click → Close tab; the context menu was removed in v0.0.26. Refresh help corpus.
+
+### Planned work (large items from SPEC.md §21)
+
+**Phase 2 (next major UX) — magnetic snap on FloatingClockWindow**
+- `Behaviors/WindowSnap.cs` — `HwndSource.AddHook` on `WM_MOVING` / `WM_WINDOWPOSCHANGING`, mutate proposed RECT before Windows applies. Threshold ~12 px. Multi-monitor DPI / virtual desktop / snap-while-maximized are the known edge cases.
+- `Services/SnapGroupRegistry.cs` — process-wide tracker of which windows are snapped to which.
+- Visual feedback during drag — edge highlight or ghost outline.
+- `WindowSettings.SnapGroupId : Guid?` + `SnapEdge : enum` model fields, persistence so groups reconstitute on app restart.
+- Settings dialog: "Enable snap" toggle (default OFF until proven stable in production).
+- Estimated 280-390 LOC, 1-2 days.
+
+**Other planned items**
+- Tray icon + last-window-minimizes-to-tray
+- Confirm-large-offset toast flow `[Apply][Skip]` with 30 s timeout
+- UI persistence of sync-frequency to `service.json` (`SettingsStore.SaveServiceConfig` exists; no caller)
+- Five-slot color overrides (Ring/Face/Hands/Numbers/Digital) + HSV wheel UI
+- Time-format selector (Auto / 12h / 24h) UI + renderer wiring
+- Show-digital-readout toggle for analog themes + renderer consumer
+- Second-hand motion override UI
+- Tab rename input
+- Sync-server selector with `IsKnownNistHost` validation
+- Floating-window position persistence (X/Y/Width/Height across restart)
+- Telemetry opt-in + endpoint + `PRIVACY.md`
+- Card-flip animation on Flip Clock; chase-bulb wave on Marquee
+- MSIX packaging + `.appinstaller` + GitHub Pages publishing pipeline
+- ARM64 build target
+
+---
+
+## Version-bump rule reminder
+
+Every code change Dan will see (commit / push / build he tests) must bump the **patch** in `ComTekAtomicClock.UI.csproj` (`<Version>`, `<AssemblyVersion>`, `<FileVersion>`) AND add a problem/solution entry to `CHANGELOG.md`. Both in the same commit. Trivial fixes exempt. Doc-only changes (like creating SPEC.md / CONTEXT.md) — no version bump.
+
+## Doc-update-on-change rule reminder
+
+Any code change must update every project doc that describes the area touched: `README.md`, `CHANGELOG.md`, `SPEC.md`, **`CONTEXT.md`**, in-code module headers. Same branch. Name the docs touched in the response.
+
+---
+
+## Session log (newest first)
+
+### 2026-05-01 — v0.0.33: Dropped Dragablz; native WPF TabControl; tear-away gone
+
+Dan identified Dragablz as the root cause of nearly every tab-related bug fought across v0.0.14..v0.0.32 (header refresh PropertyChanged unreliability, click/drag classifier swallowing single clicks, NotImplementedException on CollectionChanged.Replace, headers in a separate visual subtree). Picked Option C from the three-paths discussion: replace Dragablz with native `System.Windows.Controls.TabControl`, drop tear-away gesture entirely, add magnetic snap as Phase-2 todo.
+
+**Files changed (all in `windows/src/ComTekAtomicClock.UI/`):**
+- `ComTekAtomicClock.UI.csproj` — removed `Dragablz 0.0.3.234` package reference; bumped `<Version>` to 0.0.33.
+- `MainWindow.xaml` — replaced `dragablz:TabablzControl` with native `TabControl`; added flat-rectangular `ControlTemplate`-replaced `TabItem`; added "+ New tab" / "+ New window" toolbar above the strip; added per-tab right-click ContextMenu (Tab settings… / Open in new window).
+- `MainWindow.xaml.cs` — deleted `SetTabHeaderInAllDisplays`, `EnumerateVisualDescendants`, `TabItem_PreviewMouseLeftButtonDown` rescue handler, multi-strategy `TryFindTabFromContextMenuItem`. Added `TabContextSettings_Click`, `TabContextOpenInNewWindow_Click` handlers.
+- `FloatingClockWindow.xaml` — refactored to a single-clock window (no internal tab strip). Title bar shows `{Binding Label}`. "?" overlay menu adds "Tab settings…" / "Themes…" / "Bring back into tabs" / "Help…" / "About…".
+- `FloatingClockWindow.xaml.cs` — rewritten. Constructor takes a `TabViewModel`; exposes it via `Tab` property. New `BringIntoTabsMenuItem_Click` handler.
+- `Services/AppInterTabClient.cs` — **DELETED** (Dragablz `IInterTabClient`).
+- `ViewModels/TabViewModel.cs` — restored `OnPropertyChanged(nameof(Label))` in `TimeZoneId` setter (the v0.0.32 "two-event rule" comment is gone, replaced with v0.0.33 commentary about native TabControl honoring the cascade).
+- `ViewModels/MainWindowViewModel.cs` — removed call to `MainWindow.SetTabHeaderInAllDisplays`. Added three commands: `OpenInNewWindowCommand`, `NewClockWindowCommand`, `BringWindowIntoTabsCommand`. Added `_openFloatingWindows` registry. Added `SpawnFloatingWindow` helper that wires `Closed` → purge persistence if the user X'd out (rather than bringing back into tabs).
+
+**Build verified:** `dotnet build src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj -c Debug` → 0 warnings, 0 errors.
+
+**Docs updated in same commit:** `SPEC.md` v1.1 (front matter, §3 tech stack, §6 UI shell, §7 tab behavior, §8 tab strip styling, §17 quirks, §21 implemented/planned, §22 resolved contradictions, end-of-doc), `CONTEXT.md` (this file — new "Why we dropped Dragablz" entry, superseded the v0.0.32 imperative-refresh standing decision, added Phase-2 snap to Planned, added this session-log entry), `CHANGELOG.md` (v0.0.33 entry).
+
+**Phase 2 (deferred):** magnetic snap on `FloatingClockWindow` — implementation sketch in this CONTEXT and SPEC.md §21.
+
+### 2026-05-01 — Created SPEC.md regeneration baseline + CONTEXT.md
+
+- Dan asked for a fresh, exhaustive requirements + design doc to enable from-scratch regeneration without losing features. Two prior subagent attempts stalled (large-Write watchdog kill + filesystem-scope denial).
+- Wrote `SPEC.md` (23 sections, 92 KB, 1546 lines) directly from this session, incrementally via Edit calls. Covers all 12 themes at fine granularity (fonts, hex codes, layout coords), the three-process architecture, IPC contract, settings schemas, build/install/run, exception handling, known quirks, full Implemented/Planned status table, and resolved contradictions.
+- Created `CONTEXT.md` (this file) per the new standing rule established earlier this session.
+- No code changed; no version bump.
+
+### 2026-04-30..05-01 — v0.0.14 → v0.0.32 iteration cycle
+
+Tab-header refresh + tab-click reliability + visual styling pass. Eight iterations to land the v0.0.32 imperative `SetTabHeaderInAllDisplays` design. See CHANGELOG.md for per-version detail.

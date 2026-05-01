@@ -89,15 +89,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _lastSyncTimer.Tick += OnLastSyncTick;
         _lastSyncTimer.Start();
 
-        OpenAboutCommand           = new RelayCommand(OpenAbout);
-        InstallServiceCommand      = new RelayCommand(LaunchInstallerAndPoll);
-        UninstallServiceCommand    = new RelayCommand(LaunchUninstallerAndPoll);
-        OpenTabSettingsCommand     = new RelayCommand(OpenTabSettings, _ => SelectedTab is not null);
-        OpenTabSettingsForCommand  = new RelayCommand(OpenTabSettingsFor);
-        OpenThemesPickerForCommand = new RelayCommand(OpenThemesPickerFor);
-        AddTabCommand              = new RelayCommand(AddTab);
-        RemoveTabCommand           = new RelayCommand(RemoveTab, _ => Tabs.Count > 1);
-        CloseTabCommand            = new RelayCommand(CloseTab);
+        OpenAboutCommand            = new RelayCommand(OpenAbout);
+        InstallServiceCommand       = new RelayCommand(LaunchInstallerAndPoll);
+        UninstallServiceCommand     = new RelayCommand(LaunchUninstallerAndPoll);
+        OpenTabSettingsCommand      = new RelayCommand(OpenTabSettings, _ => SelectedTab is not null);
+        OpenTabSettingsForCommand   = new RelayCommand(OpenTabSettingsFor);
+        OpenThemesPickerForCommand  = new RelayCommand(OpenThemesPickerFor);
+        AddTabCommand               = new RelayCommand(AddTab);
+        RemoveTabCommand            = new RelayCommand(RemoveTab, _ => Tabs.Count > 1);
+        CloseTabCommand             = new RelayCommand(CloseTab);
+        // v0.0.33 — explicit tabs↔windows commands replacing
+        // Dragablz tear-away gesture.
+        OpenInNewWindowCommand      = new RelayCommand(OpenInNewWindow);
+        NewClockWindowCommand       = new RelayCommand(NewClockWindow);
+        BringWindowIntoTabsCommand  = new RelayCommand(BringWindowIntoTabs);
 
         RefreshServiceState();
     }
@@ -319,6 +324,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// the per-tab ✕ overlay button on the clock face).</summary>
     public RelayCommand CloseTabCommand          { get; }
 
+    /// <summary>
+    /// v0.0.33: migrate the tab passed as command parameter from the
+    /// main strip to a new free-floating clock window. Bound to the
+    /// per-tab right-click → "Open in new window" menu item.
+    /// </summary>
+    public RelayCommand OpenInNewWindowCommand   { get; }
+
+    /// <summary>
+    /// v0.0.33: spawn a brand-new free-floating clock window with a
+    /// fresh tab. Bound to the "+ New window" toolbar button. Distinct
+    /// from <see cref="AddTabCommand"/>, which adds a tab to the main
+    /// strip in-place.
+    /// </summary>
+    public RelayCommand NewClockWindowCommand    { get; }
+
+    /// <summary>
+    /// v0.0.33: migrate a clock back from a floating window to the
+    /// main strip. Command parameter is the TabViewModel hosted by
+    /// the floating window. Closes the floating window after re-adding
+    /// the tab to the strip.
+    /// </summary>
+    public RelayCommand BringWindowIntoTabsCommand { get; }
+
     private void OpenAbout(object? _)
     {
         var dlg = new AboutDialog
@@ -348,22 +376,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var result = dlg.ShowDialog();
         if (result == true)
         {
-            // SaveAppSettings persists the in-memory changes the dialog
-            // already wrote back into TabSettings via the TabViewModel.
+            // v0.0.33: just persist. Native WPF TabControl honors
+            // PropertyChanged on the {Binding Label} ItemTemplate
+            // binding automatically when TabViewModel.TimeZoneId
+            // setter raises PropertyChanged(nameof(Label)). The
+            // v0.0.32 imperative SetTabHeaderInAllDisplays walk is
+            // gone along with Dragablz.
             PersistAfterDialog();
-
-            // v0.0.32 imperative tab-name set, per Dan's two-event
-            // rule: tab name is set on Load (ItemTemplate binding
-            // reads source freshly when the container is created)
-            // and HERE — when the Settings dialog closes. The earlier
-            // approaches (v0.0.21..v0.0.31) all relied on
-            // PropertyChanged + binding refresh to propagate the new
-            // Label, and Dragablz's tab strip didn't honor those
-            // reliably. Now we walk every Application window and
-            // imperatively set TextBlock.Text on every header tagged
-            // "TabHeaderText" whose DataContext is this tab. No
-            // binding cascade, no timing dispatch.
-            MainWindow.SetTabHeaderInAllDisplays(tab);
         }
     }
 
@@ -436,13 +455,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SelectedTab = Tabs[Math.Min(index, Tabs.Count - 1)];
     }
 
-    /// <summary>
-    /// Factory passed to Dragablz's TabablzControl.NewItemFactory so the
-    /// "+" button in the tab strip creates a fresh tab with the same
-    /// defaults as the menu's "Add new tab" command.
-    /// </summary>
-    public Func<object> NewTabFactory => () => CreateNewTab();
-
     private TabViewModel CreateNewTab()
     {
         var newTab = new TabSettings
@@ -452,6 +464,116 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             TimeFormat = TimeFormatMode.Auto,
         };
         return WrapTab(newTab);
+    }
+
+    // --------------------------------------------------------------
+    // v0.0.33: tabs ↔ floating-windows transitions
+    //
+    // Replaces Dragablz's drag-tear-away gesture with explicit,
+    // user-initiated commands. Open floating windows are tracked in
+    // _openFloatingWindows so the "Bring back into tabs" reverse
+    // operation can find the right window to close. Tab data is
+    // SHARED across modes — the same TabViewModel instance is the
+    // floating window's DataContext while it's "out," then re-attached
+    // to the Tabs collection when brought back.
+    // --------------------------------------------------------------
+
+    private readonly List<FloatingClockWindow> _openFloatingWindows = new();
+
+    /// <summary>
+    /// Right-click → "Open in new window": pop the tab out of the main
+    /// strip and into a new FloatingClockWindow. Settings.json is
+    /// updated via OnTabsCollectionChanged (since we Remove from Tabs).
+    /// </summary>
+    private void OpenInNewWindow(object? param)
+    {
+        if (param is not TabViewModel vm) return;
+
+        // Don't allow opening the LAST tab in a new window — that would
+        // leave the main window with an empty tab strip. Same guard as
+        // CloseTab.
+        if (Tabs.Count <= 1)
+        {
+            MessageBox.Show(
+                Application.Current?.MainWindow!,
+                "This is the last tab. Add another tab first, or use “+ New window” to spawn a fresh clock without removing this one.",
+                "Can't move the last tab",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        Tabs.Remove(vm);   // OnTabsCollectionChanged mirrors + persists
+        SpawnFloatingWindow(vm);
+    }
+
+    /// <summary>
+    /// "+ New window" toolbar button: create a fresh tab and immediately
+    /// host it in a new FloatingClockWindow. Does NOT add the tab to
+    /// the main strip (a dual presence would be confusing).
+    /// </summary>
+    private void NewClockWindow(object? _)
+    {
+        var vm = CreateNewTab();
+        // Persist the underlying TabSettings so the clock survives
+        // restart even if the user never brings it back into tabs.
+        // (Window-position persistence across restart is a Phase-2
+        // todo — see CONTEXT.md.)
+        if (!_settings.Tabs.Contains(vm.Settings))
+            _settings.Tabs.Add(vm.Settings);
+        TryPersist();
+        SpawnFloatingWindow(vm);
+    }
+
+    /// <summary>
+    /// "Bring back into tabs" menu item on a floating window: re-attach
+    /// the floating window's TabViewModel to the main strip and close
+    /// the window.
+    /// </summary>
+    private void BringWindowIntoTabs(object? param)
+    {
+        if (param is not TabViewModel vm) return;
+
+        // Already in the main strip? (Defensive — shouldn't happen.)
+        if (!Tabs.Contains(vm))
+        {
+            Tabs.Add(vm);   // OnTabsCollectionChanged mirrors + persists
+            SelectedTab = vm;
+        }
+
+        // Find and close the floating window hosting this tab.
+        var window = _openFloatingWindows.FirstOrDefault(w => ReferenceEquals(w.Tab, vm));
+        if (window is not null)
+        {
+            _openFloatingWindows.Remove(window);
+            window.Close();
+        }
+    }
+
+    /// <summary>
+    /// Construct, register, and show a FloatingClockWindow for the
+    /// given TabViewModel. Tracks Closed so the registry stays clean
+    /// and persistence reflects the actual open set.
+    /// </summary>
+    private void SpawnFloatingWindow(TabViewModel vm)
+    {
+        var window = new FloatingClockWindow(vm);
+        window.Closed += (_, _) =>
+        {
+            _openFloatingWindows.Remove(window);
+            // If the user closed the window via the title-bar X (NOT
+            // via "Bring back into tabs"), the tab is gone — purge
+            // its underlying TabSettings from settings.json so the
+            // clock doesn't reappear on restart. The tab is "in tabs"
+            // iff the Tabs collection contains it.
+            if (!Tabs.Contains(vm))
+            {
+                _settings.Tabs.Remove(vm.Settings);
+                TryPersist();
+            }
+        };
+        _openFloatingWindows.Add(window);
+        window.Show();
     }
 
     private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

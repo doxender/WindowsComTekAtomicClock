@@ -36,15 +36,17 @@ public sealed class TabViewModel : INotifyPropertyChanged
             _resolvedTimeZone = ResolveTimeZone(value);
             OnPropertyChanged();
             OnPropertyChanged(nameof(TimeZone));
-            // Note: NO OnPropertyChanged(nameof(Label)) here.
-            // Per Dan's two-event rule (v0.0.32) the tab name is
-            // set imperatively by MainWindow.SetTabHeaderInAllDisplays
-            // when the Settings dialog closes — NOT via a
-            // PropertyChanged cascade off TimeZoneId, which Dragablz
-            // proved unreliable about honoring (v0.0.21..v0.0.31).
-            // Label's getter still computes the right value when
-            // read, so the {Binding Label} on freshly-created
-            // ItemTemplate TextBlocks (Load case) reads correctly.
+            // Restored in v0.0.33 after dropping Dragablz: native WPF
+            // TabControl honors PropertyChanged on ItemTemplate
+            // bindings, so {Binding Label} re-renders the tab header
+            // automatically when Label is invalidated. The v0.0.32
+            // imperative SetTabHeaderInAllDisplays walk and the
+            // associated "two-event rule" are no longer needed —
+            // they were workarounds for Dragablz's tab strip not
+            // honoring source-property changes. With native
+            // TabControl, simply raising PropertyChanged for Label
+            // is sufficient and reliable.
+            OnPropertyChanged(nameof(Label));
         }
     }
 

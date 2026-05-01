@@ -4,6 +4,62 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.33] - 2026-05-01 — Dropped Dragablz; native WPF TabControl; tear-away removed
+
+**Problem:** Dragablz `0.0.3.234` was the root cause of nearly every tab-related bug fought across v0.0.14..v0.0.32 (eight iterations of tab-header refresh code, the `NotImplementedException` crash on `CollectionChanged.Replace` at v0.0.14, the click/drag classifier swallowing single clicks at v0.0.20, the imperative `SetTabHeaderInAllDisplays` walker at v0.0.32, headers rendered in a separate visual subtree forcing whole-window enumeration). Library has had no meaningful release in ~3-4 years; carrying an unmaintained dependency that bleeds maintenance time. Combined with Dan's stated direction toward magnetic-snap floating windows (which makes tear-away a less central feature anyway), the right move was a clean swap.
+
+**Solution:** Replaced `Dragablz.TabablzControl` with the BCL `System.Windows.Controls.TabControl` + a flat-rectangular `ControlTemplate`-replaced `TabItem` `ItemContainerStyle` that reproduces the v0.0.32 visuals (19pt Bold active / 9pt inactive / `#FFFFFF` selected / `#E8E8E8` inactive / `#F5F5F5` hover / `#808080` selected border). Tear-away gesture removed entirely; explicit "+ New tab" / "+ New window" toolbar buttons above the strip + "Open in new window" / "Bring back into tabs" right-click commands replace it. `FloatingClockWindow` simplified to a single-clock window (no internal tab strip). Magnetic snap on floating windows added to Phase-2 Planned (SPEC.md §21).
+
+### Removed (Dragablz workaround lineage)
+
+- `Dragablz 0.0.3.234` package reference in `ComTekAtomicClock.UI.csproj`.
+- `Services/AppInterTabClient.cs` — Dragablz `IInterTabClient` (tear-off mechanism).
+- `MainWindow.SetTabHeaderInAllDisplays` + `EnumerateVisualDescendants` walker (the v0.0.32 imperative tab-name refresh).
+- `Tag="TabHeaderText"` markup convention on `ItemTemplate` `TextBlock`s.
+- The Dragablz-specific Thumb-stripping `Style.Resources` block in `MainWindow.xaml` and `FloatingClockWindow.xaml`.
+- `TabItem_PreviewMouseLeftButtonDown` click-rescue handler (the v0.0.20 single-click reliability fix).
+- The multi-strategy `TryFindTabFromContextMenuItem` helper (3 strategies, only needed because Dragablz's PlacementTarget walk was sometimes unreliable).
+
+### Restored
+
+- `OnPropertyChanged(nameof(Label))` in `TabViewModel.TimeZoneId` setter. Native WPF `TabControl` honors `PropertyChanged` on `ItemTemplate` bindings reliably, so `{Binding Label}` re-renders the tab header automatically. The v0.0.32 "two-event rule" is **superseded** — that was specifically a Dragablz workaround.
+
+### Added (explicit tabs ↔ windows commands replacing tear-away)
+
+- `MainWindowViewModel.OpenInNewWindowCommand` — right-click on a tab → "Open in new window" → migrates the tab to a new `FloatingClockWindow`.
+- `MainWindowViewModel.NewClockWindowCommand` — "+ New window" toolbar button → spawns a `FloatingClockWindow` with a fresh clock (no migration, no main-strip presence).
+- `MainWindowViewModel.BringWindowIntoTabsCommand` — "?" overlay menu on a floating window → "Bring back into tabs" → re-attaches the `TabViewModel` to `Tabs` and closes the window.
+- `_openFloatingWindows : List<FloatingClockWindow>` registry tracking open floating windows so `BringWindowIntoTabsCommand` can find the right window.
+- `SpawnFloatingWindow(TabViewModel)` helper that wires `Closed` → purge persistence if the user X'd out (rather than bringing the clock back into tabs).
+- New toolbar `Border` above the tab strip in `MainWindow.xaml` hosting the two "+" buttons (background `#F5F5F5`, bottom border `#C0C0C0`, padding `8,4`).
+- Per-tab `ContextMenu` (two items: Tab settings… / Open in new window) — note: distinct from the v0.0.23..v0.0.26 multi-item ContextMenu that was deliberately removed.
+- `FloatingClockWindow` constructor now takes a `TabViewModel` and sets it as `DataContext`. Exposes `Tab` property for `BringWindowIntoTabsCommand`.
+- `BringIntoTabsMenuItem_Click` handler on `FloatingClockWindow`.
+
+### Notes
+
+- Floating-window position persistence (X/Y/Width/Height across restart) is **NOT** in v0.0.33 — moved to Phase-2 alongside snap.
+- The closing-the-floating-window-X behavior is a "delete this clock" action, NOT a "minimize to tabs" action. To keep the clock, use "Bring back into tabs" first, or close it via the per-tab close path while it's in the strip. This is documented in `FloatingClockWindow.xaml.cs:CloseWindowButton_Click`.
+- The "+ New window" button creates a tab in `_settings.Tabs` (so the clock survives restart even if the user never brings it into tabs) but does NOT add a `TabViewModel` to the main window's `Tabs` collection (avoiding dual presence).
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` (Dragablz removed, version 0.0.32 → 0.0.33)
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` (full tab-strip rewrite + new toolbar)
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml.cs` (~150 LOC removed, 2 handlers added)
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` (single-clock layout)
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` (rewritten)
+- `windows/src/ComTekAtomicClock.UI/Services/AppInterTabClient.cs` (DELETED)
+- `windows/src/ComTekAtomicClock.UI/ViewModels/TabViewModel.cs` (Label PropertyChanged restored)
+- `windows/src/ComTekAtomicClock.UI/ViewModels/MainWindowViewModel.cs` (3 new commands, registry, spawn helper)
+- `windows/SPEC.md` (v1.0 → v1.1; sections 3, 6, 7, 8, 17, 21, 22 updated)
+- `windows/CONTEXT.md` (new "Why we dropped Dragablz" decision entry; superseded standing decisions; Phase-2 snap added; session log entry)
+- `windows/CHANGELOG.md` (this entry)
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj -c Debug` → 0 warnings, 0 errors.
+
 ## [0.0.32] - 2026-04-30
 
 ### Changed (architecture refactor — tab name is now set imperatively, two events only)

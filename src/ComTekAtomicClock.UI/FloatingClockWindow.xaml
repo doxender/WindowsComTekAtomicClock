@@ -2,9 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
         xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
-        xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
         Title="ComTek Atomic Clock"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
         Height="500" Width="500"
@@ -14,16 +12,26 @@
         WindowCornerPreference="Round"
         WindowStartupLocation="Manual">
 
-    <ui:FluentWindow.Resources>
-        <services:AppInterTabClient x:Key="FloatingInterTabClient"/>
-    </ui:FluentWindow.Resources>
+    <!--
+      v0.0.33 simplification: a FloatingClockWindow is now a single-
+      clock window. Previously it hosted a Dragablz TabablzControl so
+      torn-off tabs could land in it (and be re-torn elsewhere). With
+      tear-away removed, the window's role is purely "this clock lives
+      on my desktop, not in the main window's tab strip."
+
+      DataContext is set to the single TabViewModel for this clock by
+      the caller (MainWindowViewModel.OpenInNewWindow / NewClockWindow).
+
+      To migrate this clock back into the main window's tab strip, use
+      the "?" overlay menu → "Bring back into tabs" item.
+    -->
 
     <DockPanel>
         <!--
-          A small title bar so the window can be dragged and closed.
+          Title bar so the window can be dragged and closed.
         -->
         <ui:TitleBar DockPanel.Dock="Top"
-                     Title="ComTek Atomic Clock"
+                     Title="{Binding Label}"
                      ShowMaximize="True"
                      ShowMinimize="True">
             <ui:TitleBar.Icon>
@@ -32,152 +40,74 @@
         </ui:TitleBar>
 
         <!--
-          A TabablzControl on every host window is required for tab
-          transfers to work. ConsolidateOrphanedItems=True so closing
-          this window with a tab still inside reattaches the tab to
-          the main strip. Same partition (default) as MainWindow so
-          drag-back works.
+          Same Viewbox-scaled 400×400 logical canvas as MainWindow's
+          tab content. Identical clock-face + overlay-button stack.
+          Differences from MainWindow:
+            · ✕ button closes the WINDOW, not "this tab in the strip."
+            · "?" menu adds a "Bring back into tabs" item (instead of
+              the per-tab close path; this window already has an OS
+              close button).
         -->
-        <dragablz:TabablzControl x:Name="FloatingTabs"
-                                 ShowDefaultCloseButton="True"
-                                 ShowDefaultAddButton="False"
-                                 ConsolidateOrphanedItems="True"
-                                 Background="White"
-                                 BorderBrush="#C0C0C0"
-                                 Padding="0">
-            <dragablz:TabablzControl.InterTabController>
-                <dragablz:InterTabController InterTabClient="{StaticResource FloatingInterTabClient}"/>
-            </dragablz:TabablzControl.InterTabController>
-            <!-- See MainWindow.xaml for ItemTemplate rationale.
-                 Tag="TabHeaderText" identifies the header for the
-                 imperative Text-set in MainWindow.SetTabHeaderInAllDisplays. -->
-            <dragablz:TabablzControl.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Tag="TabHeaderText"
-                               Text="{Binding Label}"
+        <Viewbox Stretch="Uniform" Margin="20">
+            <Grid Width="400" Height="400">
+                <controls:ClockFaceControl
+                    Width="400" Height="400"
+                    TimeZone="{Binding TimeZone}"
+                    Theme="{Binding Theme}"
+                    SmoothSecondHand="{Binding SmoothSecondHand}"/>
+
+                <Button HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,14,16,0"
+                        Width="22" Height="22"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Close this window"
+                        Click="CloseWindowButton_Click">
+                    <TextBlock Text="&#x2715;"
+                               FontWeight="Bold"
+                               FontSize="12"
+                               Foreground="{Binding OverlayGlyphBrush}"
+                               HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
-                </DataTemplate>
-            </dragablz:TabablzControl.ItemTemplate>
+                </Button>
 
-            <dragablz:TabablzControl.ItemContainerStyle>
-                <Style TargetType="dragablz:DragablzItem">
-                    <!-- See MainWindow.xaml for rationale. -->
-                    <Style.Resources>
-                        <Style TargetType="Thumb">
-                            <Setter Property="OverridesDefaultStyle" Value="True"/>
-                            <Setter Property="Background"  Value="Transparent"/>
-                            <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="Width"       Value="0"/>
-                            <Setter Property="MinWidth"    Value="0"/>
-                            <Setter Property="Margin"      Value="0"/>
-                            <Setter Property="Padding"     Value="0"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Thumb">
-                                        <Border Background="Transparent"/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Style.Resources>
-                    <Setter Property="Background"  Value="White"/>
-                    <Setter Property="Foreground"  Value="Black"/>
-                    <Setter Property="BorderBrush" Value="#C0C0C0"/>
-                    <Setter Property="BorderThickness" Value="1,1,1,0"/>
-                    <Setter Property="Padding" Value="10,4"/>
-                    <!-- See MainWindow.xaml: inactive 9 pt, active 19 pt. -->
-                    <Setter Property="FontSize" Value="9"/>
-                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                    <!-- See MainWindow.xaml for PreviewMouseLeftButtonDown rationale. -->
-                    <EventSetter Event="PreviewMouseLeftButtonDown"
-                                 Handler="TabItem_PreviewMouseLeftButtonDown"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background"  Value="#FFFFFF"/>
-                            <Setter Property="BorderBrush" Value="#808080"/>
-                            <!-- See MainWindow.xaml: Bold + 6 pt larger active. -->
-                            <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="FontSize"   Value="19"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="False">
-                            <Setter Property="Background"  Value="#E8E8E8"/>
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F5F5F5"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </dragablz:TabablzControl.ItemContainerStyle>
-
-            <dragablz:TabablzControl.ContentTemplate>
-                <DataTemplate>
-                    <!--
-                      Mirrors MainWindow.xaml's clock-face template so
-                      torn-away tabs get the same scaling and the same
-                      overlay buttons. Earlier the floating window
-                      template was just the ClockFaceControl with no
-                      ✕ / ? buttons — we flagged that as a regression.
-                      See MainWindow.xaml for full rationale.
-                    -->
-                    <Viewbox Stretch="Uniform" Margin="20">
-                        <Grid Width="400" Height="400">
-                            <controls:ClockFaceControl
-                                Width="400" Height="400"
-                                TimeZone="{Binding TimeZone}"
-                                Theme="{Binding Theme}"
-                                SmoothSecondHand="{Binding SmoothSecondHand}"/>
-
-                            <Button HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Margin="0,14,16,0"
-                                    Width="22" Height="22"
-                                    Padding="0"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Cursor="Hand"
-                                    ToolTip="Close this tab"
-                                    Click="CloseTabButton_Click"
-                                    CommandParameter="{Binding}">
-                                <TextBlock Text="&#x2715;"
-                                           FontWeight="Bold"
-                                           FontSize="12"
-                                           Foreground="{Binding OverlayGlyphBrush}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Button>
-
-                            <Button HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Margin="0,42,16,0"
-                                    Width="22" Height="22"
-                                    Padding="0"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Cursor="Hand"
-                                    ToolTip="Help / About"
-                                    Click="HelpButton_Click">
-                                <TextBlock Text="?"
-                                           FontWeight="Bold"
-                                           FontSize="14"
-                                           Foreground="{Binding OverlayGlyphBrush}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                                <Button.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Themes…"
-                                                  Click="ThemesMenuItem_Click"/>
-                                        <Separator/>
-                                        <MenuItem Header="Help…"
-                                                  Click="HelpMenuItem_Click"/>
-                                        <MenuItem Header="About…"
-                                                  Click="AboutMenuItem_Click"/>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
-                            </Button>
-                        </Grid>
-                    </Viewbox>
-                </DataTemplate>
-            </dragablz:TabablzControl.ContentTemplate>
-        </dragablz:TabablzControl>
+                <Button HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,42,16,0"
+                        Width="22" Height="22"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Help / About"
+                        Click="HelpButton_Click">
+                    <TextBlock Text="?"
+                               FontWeight="Bold"
+                               FontSize="14"
+                               Foreground="{Binding OverlayGlyphBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Tab settings…"
+                                      Click="TabSettingsMenuItem_Click"/>
+                            <MenuItem Header="Themes…"
+                                      Click="ThemesMenuItem_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Bring back into tabs"
+                                      Click="BringIntoTabsMenuItem_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Help…"
+                                      Click="HelpMenuItem_Click"/>
+                            <MenuItem Header="About…"
+                                      Click="AboutMenuItem_Click"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+            </Grid>
+        </Viewbox>
     </DockPanel>
 </ui:FluentWindow>

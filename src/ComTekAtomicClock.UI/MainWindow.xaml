@@ -4,10 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
         xmlns:local="clr-namespace:ComTekAtomicClock.UI"
         xmlns:controls="clr-namespace:ComTekAtomicClock.UI.Controls"
-        xmlns:services="clr-namespace:ComTekAtomicClock.UI.Services"
         mc:Ignorable="d"
         Title="ComTek Atomic Clock"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
@@ -20,7 +18,6 @@
 
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        <services:AppInterTabClient x:Key="MainInterTabClient"/>
     </ui:FluentWindow.Resources>
 
     <DockPanel>
@@ -37,16 +34,6 @@
                 <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
             </ui:TitleBar.Icon>
         </ui:TitleBar>
-
-        <!--
-          Menu bar removed per our UX direction: the only thing above the
-          banner is now the Wpf.Ui title bar (drag / minimize / maximize
-          / close). Tab settings reachable via Ctrl+,. Add Tab via the
-          Dragablz "+" button. Remove Tab via each tab's "x" button.
-          Help/About reachable via the "?" overlay in the bottom-left
-          of the tab content. Uninstall the service via a link on the
-          About dialog.
-        -->
 
         <!-- ============================== §1.9 Banner =========================== -->
         <Border DockPanel.Dock="Top"
@@ -101,225 +88,154 @@
             </StatusBarItem>
         </StatusBar>
 
+        <!-- ============================== Tab Toolbar =========================== -->
+        <!--
+          Compact toolbar above the tab strip with the "+ New tab" and
+          "+ New window" buttons. Replaces Dragablz's intrinsic "+"
+          add-button (which only created tabs in-place — there was no
+          equivalent affordance for "open a new free-floating clock
+          window"). Per v0.0.33 the user explicitly chooses tabbed vs.
+          windowed at creation time; tear-away is gone, so this
+          toolbar is the only path to a new floating clock.
+        -->
+        <Border DockPanel.Dock="Top"
+                Background="#F5F5F5"
+                BorderBrush="#C0C0C0"
+                BorderThickness="0,0,0,1"
+                Padding="8,4">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="+ New tab"
+                        Command="{Binding AddTabCommand}"
+                        Padding="8,2"
+                        Margin="0,0,4,0"
+                        ToolTip="Add a new tab to this window"/>
+                <Button Content="+ New window"
+                        Command="{Binding NewClockWindowCommand}"
+                        Padding="8,2"
+                        ToolTip="Open a new free-floating clock window"/>
+            </StackPanel>
+        </Border>
+
         <!-- ============================== Tab Strip ============================= -->
         <!--
-          Dragablz TabablzControl gives the Chrome / Edge-style tab UX:
-            · per-tab close button (✕)
-            · "+" button to add a new tab
-            · drag-to-reorder within the strip
-          Tear-off (drag a tab into its own window) requires an
-          IInterTabClient implementation and a multi-window settings
-          model — coming in the next commit.
-        -->
-        <dragablz:TabablzControl x:Name="MainTabs"
-                                 ItemsSource="{Binding Tabs}"
-                                 SelectedItem="{Binding SelectedTab}"
-                                 ShowDefaultCloseButton="True"
-                                 ShowDefaultAddButton="True"
-                                 NewItemFactory="{Binding NewTabFactory}"
-                                 ConsolidateOrphanedItems="True"
-                                 Background="White"
-                                 BorderBrush="#C0C0C0"
-                                 Padding="0">
-            <dragablz:TabablzControl.InterTabController>
-                <dragablz:InterTabController InterTabClient="{StaticResource MainInterTabClient}"/>
-            </dragablz:TabablzControl.InterTabController>
-            <!--
-              Tab header rendering: explicit ItemTemplate with a
-              reactive {Binding Label} binding. Earlier we used
-              DisplayMemberPath="Label" + a ToString() override on
-              TabViewModel, but in this Dragablz version
-              DisplayMemberPath captures the value once at item-add
-              time and doesn't refresh on PropertyChanged — so when
-              the user changed a tab's timezone via the settings
-              dialog, the underlying model updated but the tab header
-              kept showing the old label. Tearing the tab off forced
-              the new floating window to re-add the item, which
-              re-evaluated ToString() and showed the correct label,
-              which is the "tear-away fixes it" symptom we observed.
-              An explicit ItemTemplate with {Binding Label}
-              subscribes to PropertyChanged and refreshes live.
+          Native WPF System.Windows.Controls.TabControl, replacing
+          Dragablz's TabablzControl in v0.0.33. The native control
+          honors PropertyChanged on ItemTemplate bindings reliably,
+          so {Binding Label} re-renders the tab header on TZ change
+          without any imperative refresh code. Tear-away is gone;
+          tabs↔windows transitions go through explicit commands.
 
-              For changing the timezone / theme of a tab, the user has
-              two affordances:
-                · Double-click the tab → opens TabSettings for it.
-                · Right-click the tab → context menu with "Tab
-                  settings…" and "Close tab" entries.
-            -->
-            <dragablz:TabablzControl.ItemTemplate>
+          Per-tab interactions:
+            · Single-click → select (native, reliable, no Preview hook needed)
+            · Double-click → open Tab Settings dialog (handler in code-behind)
+            · Right-click  → ContextMenu with "Tab settings…" + "Open in new window"
+            · ✕ overlay on the clock face → close this tab
+            · "+ New tab" button in toolbar above → AddTabCommand
+            · "+ New window" button in toolbar above → NewClockWindowCommand
+        -->
+        <TabControl x:Name="MainTabs"
+                    ItemsSource="{Binding Tabs}"
+                    SelectedItem="{Binding SelectedTab}"
+                    Background="White"
+                    BorderBrush="#C0C0C0"
+                    Padding="0">
+
+            <TabControl.ItemTemplate>
                 <DataTemplate>
                     <!--
-                      Tag="TabHeaderText" identifies this TextBlock for
-                      MainWindow.SetTabHeaderInAllDisplays(tab), which
-                      walks every Application window's visual tree and
-                      sets Text imperatively after the Settings dialog
-                      closes. The {Binding Label} stays for the Load
-                      case — initial container creation reads the
-                      value freshly via the binding. Subsequent changes
-                      go through the imperative path (per Dan's rule:
-                      tab name set only twice — on Load, and on dialog
-                      close — to avoid the Dragablz PropertyChanged
-                      cascade that proved unreliable in v0.0.21..0.0.31).
+                      Native TabControl honors {Binding Label}
+                      PropertyChanged automatically; no Tag attribute or
+                      imperative refresh walker needed (the v0.0.14..0.0.32
+                      Dragablz workaround lineage is gone).
                     -->
-                    <TextBlock Tag="TabHeaderText"
-                               Text="{Binding Label}"
+                    <TextBlock Text="{Binding Label}"
                                VerticalAlignment="Center"/>
                 </DataTemplate>
-            </dragablz:TabablzControl.ItemTemplate>
-            <dragablz:TabablzControl.ItemContainerStyle>
-                <Style TargetType="dragablz:DragablzItem">
-                    <!--
-                      Style overrides ON TOP of Dragablz's default
-                      ControlTemplate. We tried fully replacing the
-                      template last commit and broke click-to-select
-                      and tear-away because Dragablz's selection
-                      logic depends on the original template's
-                      mouse-event routing through the Thumb. Going
-                      back to letting Dragablz own the template and
-                      only tuning brushes + a few attached properties
-                      from out here.
+            </TabControl.ItemTemplate>
 
-                      For the yellow accent blocks: the Style.Resources
-                      block strips Thumb + FocusVisual + accent
-                      candidates that Wpf.Ui's accent brush could be
-                      painting. If yellow persists after this, it's
-                      coming from an element outside DragablzItem's
-                      template (a TabPanel decoration, an inherited
-                      style on a sibling) and the next move is to
-                      run with VS Live Visual Tree open and identify
-                      the offending element by name.
-                    -->
+            <TabControl.ItemContainerStyle>
+                <Style TargetType="TabItem">
                     <!--
-                      Yellow-block / dark-active-box fix:
-                      Setting Width=0 / Background=Transparent on the
-                      Thumb (very early attempt) didn't kill the paint —
-                      the Dragablz default Thumb TEMPLATE was rendering
-                      with its own brushes (yellow inactive, dark gray
-                      selected). v0.0.2 added OverridesDefaultStyle=True
-                      + Template-override-with-empty-Border, which
-                      killed the paint but left the Thumb naturally
-                      sized (it stretched to fill its grid cell in the
-                      DragablzItem template), intercepting clicks
-                      across the entire tab and making selection take
-                      multiple click attempts (caught in v0.0.3 testing).
-
-                      v0.0.4: keep the empty template (kills paint)
-                      AND force Width=0 / MinWidth=0 (zero hit-test
-                      area, so the Thumb no longer steals clicks
-                      meant for selection). Drag-to-tear still works
-                      because Dragablz's tear-away hooks the
-                      DragablzItem's MouseMove gesture, not the
-                      Thumb's drag events directly.
+                      Full ControlTemplate replacement gives us a flat
+                      rectangular tab matching the v0.0.32 visual without
+                      the native TabItem's curved-corner Aero look.
+                      The Border carries the per-state brushes; the
+                      ContentPresenter renders the ItemTemplate.
                     -->
-                    <Style.Resources>
-                        <Style TargetType="Thumb">
-                            <Setter Property="OverridesDefaultStyle" Value="True"/>
-                            <Setter Property="Background"  Value="Transparent"/>
-                            <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="Width"       Value="0"/>
-                            <Setter Property="MinWidth"    Value="0"/>
-                            <Setter Property="Margin"      Value="0"/>
-                            <Setter Property="Padding"     Value="0"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Thumb">
-                                        <Border Background="Transparent"/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Style.Resources>
-                    <Setter Property="Background"  Value="White"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                                <Border x:Name="TabBorder"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        Padding="{TemplateBinding Padding}"
+                                        Margin="0,0,0,0">
+                                    <ContentPresenter x:Name="TabContent"
+                                                      ContentSource="Header"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Center"
+                                                      TextBlock.FontSize="{TemplateBinding FontSize}"
+                                                      TextBlock.FontWeight="{TemplateBinding FontWeight}"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <!-- Lift the active tab z-order so its border overlaps neighbors. -->
+                                        <Setter TargetName="TabBorder" Property="Panel.ZIndex" Value="1"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Background"  Value="#E8E8E8"/>
                     <Setter Property="Foreground"  Value="Black"/>
                     <Setter Property="BorderBrush" Value="#C0C0C0"/>
                     <Setter Property="BorderThickness" Value="1,1,1,0"/>
                     <Setter Property="Padding" Value="10,4"/>
                     <!--
-                      Inactive-tab base FontSize. Was 13; dropped to
-                      9 (-4 pt) per Dan to widen the contrast with
-                      the active tab (which the IsSelected=True
-                      trigger raises to 19, Bold). Active tab is
-                      now ~2× the inactive size.
+                      Inactive-tab base FontSize=9; active-tab FontSize=19
+                      via the IsSelected=True trigger below. Delta is +10 pt,
+                      reflecting Dan's v0.0.28..v0.0.30 size pass — the
+                      large active tab + Bold weight makes selection
+                      unambiguous on a full strip.
                     -->
                     <Setter Property="FontSize" Value="9"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>
-                    <!--
-                      Preview-tunnel mouse-down handler that explicitly
-                      sets SelectedTab on the clicked item. Dan's
-                      observation: single clicks were missing while
-                      double-clicks always worked, indicating the
-                      single-click selection went through Dragablz's
-                      click/drag classifier (which sometimes
-                      misclassifies short clicks as drag-starts) while
-                      double-clicks went through WPF's MouseDoubleClick
-                      event (different code path). PreviewMouseLeft-
-                      ButtonDown tunnels DOWN through the tree before
-                      Dragablz's classifier sees the event, so we can
-                      set SelectedTab unconditionally. We don't set
-                      e.Handled=true so Dragablz still sees the event
-                      and can run its drag-tear gesture detection.
-                    -->
-                    <EventSetter Event="PreviewMouseLeftButtonDown"
-                                 Handler="TabItem_PreviewMouseLeftButtonDown"/>
-                    <!--
-                      Right-click ContextMenu (Tab settings… / Close
-                      tab) removed in v0.0.26 per Dan's call. Its
-                      functionality is fully reachable via:
-                        · Double-click tab header → Tab settings
-                        · Ctrl+,                   → Tab settings
-                        · Tab's per-item ✕ button  → close tab
-                        · ✕ overlay on the clock face → close tab
-                      The right-click menu was redundant.
-                    -->
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Tab settings…"
+                                          Click="TabContextSettings_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Open in new window"
+                                          Click="TabContextOpenInNewWindow_Click"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background"  Value="#FFFFFF"/>
                             <Setter Property="BorderBrush" Value="#808080"/>
-                            <!--
-                              Active-tab emphasis per Dan: Bold + 6 pt
-                              larger than inactive (base FontSize=13 →
-                              19 active; bumped +2 from the v0.0.28
-                              setting of 17 after Dan asked for two
-                              more points). Combined with the white
-                              background + darker border, the selected
-                              tab reads unambiguously even on a full
-                              strip.
-                            -->
                             <Setter Property="FontWeight" Value="Bold"/>
                             <Setter Property="FontSize"   Value="19"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="False">
-                            <Setter Property="Background"  Value="#E8E8E8"/>
-                            <Setter Property="BorderBrush" Value="#C0C0C0"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="#F5F5F5"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
-            </dragablz:TabablzControl.ItemContainerStyle>
+            </TabControl.ItemContainerStyle>
 
-            <dragablz:TabablzControl.ContentTemplate>
+            <TabControl.ContentTemplate>
                 <DataTemplate>
                     <!--
                       Layout: outer Viewbox uniformly scales a fixed
-                      400x400 logical canvas to fit the available tab
-                      content area. The 400x400 frame matches the
+                      400×400 logical canvas to fit the available tab
+                      content area. The 400×400 frame matches the
                       design SVGs and ClockFaceControl's own internal
-                      400x400 Canvas. Both the clock face AND the
-                      overlay buttons live inside this frame, so:
-                        · Buttons stay anchored to the dial's
-                          upper-right corner regardless of window
-                          size — earlier they sat in the wider tab-
-                          content Grid and floated way out to the
-                          window edge on landscape windows.
-                        · Buttons scale with the clock face — bigger
-                          window, proportionally bigger buttons.
-                      Margin="20" on the Viewbox is the breathing
-                      room between the dial and the surrounding
-                      panel chrome.
+                      400×400 Canvas.
                     -->
                     <Viewbox Stretch="Uniform" Margin="20">
                         <Grid Width="400" Height="400">
@@ -333,11 +249,9 @@
                               ✕ close tab and ? help/about overlay
                               buttons. Foreground bound to
                               TabViewModel.OverlayGlyphBrush so dark
-                              themes (Cathode, Atomic Lab, Aero Glass,
-                              etc.) get white glyphs and light themes
-                              (Boulder Slate, Daylight) get
-                              near-black. Position is in the 400x400
-                              logical canvas — the Viewbox scales it.
+                              themes get white glyphs and light themes
+                              get near-black. Position is in the 400×400
+                              logical canvas; the Viewbox scales it.
                             -->
                             <Button HorizontalAlignment="Right"
                                     VerticalAlignment="Top"
@@ -390,8 +304,8 @@
                         </Grid>
                     </Viewbox>
                 </DataTemplate>
-            </dragablz:TabablzControl.ContentTemplate>
-        </dragablz:TabablzControl>
+            </TabControl.ContentTemplate>
+        </TabControl>
 
     </DockPanel>
 </ui:FluentWindow>

@@ -1,27 +1,28 @@
 // ComTekAtomicClock.UI.FloatingClockWindow
 //
-// Host for tabs torn off the main strip. Created by AppInterTabClient
-// when Dragablz fires GetNewHost. The window's TabablzControl is
-// exposed publicly as FloatingTabs so the IInterTabClient can return
-// a reference to it via NewTabHost<Window>.
+// v0.0.33: a free-floating clock window hosting ONE clock face. The
+// previous (v0.0.14..v0.0.32) version hosted a Dragablz TabablzControl
+// to receive torn-off tabs and re-tear them; with tear-away removed,
+// this window's role is purely "this clock lives on my desktop, not
+// in the main window's tab strip." The DataContext is the single
+// TabViewModel for this clock, set by the caller via the constructor.
 //
-// The ✕ / ? overlay buttons (Themes / Help / About) are duplicated
-// here from MainWindow.xaml so torn-away tabs keep the same
-// affordances. Each handler dispatches via the MainWindow's view
-// model to reuse persistence and dialog ownership.
+// Migration is bidirectional but explicit:
+//   · Main window → floating: right-click tab → "Open in new window"
+//     (handled in MainWindow.TabContextOpenInNewWindow_Click).
+//   · Floating → main window: this window's "?" overlay menu →
+//     "Bring back into tabs" (handler below).
 //
-// Per-tab settings (timezone, theme) are reachable on a torn-off tab
-// the same way as the main window: right-click the tab header or
-// double-click it. Wiring those gestures into the floating window's
-// tab strip is still deferred — drag the tab back to the main strip
-// to edit timezone today, or use the ? button -> Themes… for a quick
-// theme switch.
+// The window does NOT register itself for settings persistence; the
+// owning MainWindowViewModel tracks open floating windows in memory
+// and re-attaches them to the Tabs collection on close + persists.
+// Window-position persistence (X / Y / Width / Height across restarts)
+// is on the Phase-2 magnetic-snap todo list.
 
 using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using ComTekAtomicClock.UI.Dialogs;
 using ComTekAtomicClock.UI.ViewModels;
 using Wpf.Ui.Controls;
@@ -31,56 +32,44 @@ namespace ComTekAtomicClock.UI;
 [SupportedOSPlatform("windows")]
 public partial class FloatingClockWindow : FluentWindow
 {
-    public FloatingClockWindow()
+    private readonly TabViewModel _tab;
+
+    /// <summary>
+    /// Constructs a floating clock window bound to <paramref name="tab"/>.
+    /// </summary>
+    public FloatingClockWindow(TabViewModel tab)
     {
+        _tab = tab ?? throw new ArgumentNullException(nameof(tab));
         InitializeComponent();
+        DataContext = _tab;
     }
+
+    /// <summary>
+    /// The TabViewModel hosted by this window. Exposed so MainWindowViewModel
+    /// can re-attach the tab to the main strip when the user picks
+    /// "Bring back into tabs".
+    /// </summary>
+    internal TabViewModel Tab => _tab;
 
     // ----------------------------------------------------------------
-    // Overlay buttons (✕ / ?). All operations target the TabViewModel
-    // bound to the originating Button (DataContext walks via the
-    // DataTemplate that wraps each tab's content).
+    // Overlay buttons
     // ----------------------------------------------------------------
 
     /// <summary>
-    /// Preview-tunnel single-click selection on the tab header — same
-    /// rationale as MainWindow.TabItem_PreviewMouseLeftButtonDown.
-    /// Floating windows don't bind SelectedItem to a VM SelectedTab
-    /// (Dragablz manages selection on its own internal items), so we
-    /// just set it on the tab strip directly.
+    /// ✕ overlay → close the window. Returning the tab to the main
+    /// strip is a separate action ("Bring back into tabs"); closing
+    /// dismisses the floating window AND removes the tab from the
+    /// app's persisted tab list (the MainWindowViewModel observes
+    /// Closed and updates settings.json accordingly).
     /// </summary>
-    private void TabItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is TabViewModel vm)
-        {
-            FloatingTabs.SelectedItem = vm;
-        }
+        Close();
     }
 
     /// <summary>
-    /// ✕ overlay -> close this tab. Closing the last tab in a
-    /// floating window dismisses the window via Dragablz's
-    /// ConsolidateOrphanedItems behavior; closing it when other tabs
-    /// remain just removes this one from the strip.
-    /// </summary>
-    private void CloseTabButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.Button btn) return;
-        if (btn.DataContext is not TabViewModel vm) return;
-
-        // Floating windows host their tabs in a non-bound
-        // TabablzControl (Dragablz manages items directly via
-        // tear-away). Removing from FloatingTabs.Items is the safe
-        // path — closing the last one fires Dragablz's empty-handler.
-        FloatingTabs.Items.Remove(vm);
-        if (FloatingTabs.Items.Count == 0)
-            Close();
-    }
-
-    /// <summary>
-    /// ? overlay -> open the attached ContextMenu (Themes / Help / About).
-    /// Identical pattern to MainWindow.HelpButton_Click — kept duplicated
-    /// rather than reaching across windows for a private helper.
+    /// ? overlay → open the attached ContextMenu (Themes / Bring back
+    /// into tabs / Help / About).
     /// </summary>
     private void HelpButton_Click(object sender, RoutedEventArgs e)
     {
@@ -89,6 +78,33 @@ public partial class FloatingClockWindow : FluentWindow
         btn.ContextMenu.PlacementTarget = btn;
         btn.ContextMenu.Placement       = PlacementMode.Bottom;
         btn.ContextMenu.IsOpen          = true;
+    }
+
+    private void TabSettingsMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
+        mainVm?.OpenTabSettingsForCommand.Execute(_tab);
+    }
+
+    private void ThemesMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
+        mainVm?.OpenThemesPickerForCommand.Execute(_tab);
+    }
+
+    /// <summary>
+    /// "Bring back into tabs" → migrate this clock from a floating
+    /// window back to the main window's tab strip. Dispatches to the
+    /// main view-model so the tab list mutation + persistence happen
+    /// in a single source of truth.
+    /// </summary>
+    private void BringIntoTabsMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
+        mainVm?.BringWindowIntoTabsCommand.Execute(_tab);
+        // The main VM closes our window after re-adding the tab; if
+        // it didn't (defensive), fall through and the user can close
+        // the window manually.
     }
 
     private void HelpMenuItem_Click(object sender, RoutedEventArgs e)
@@ -101,45 +117,5 @@ public partial class FloatingClockWindow : FluentWindow
     {
         var dlg = new AboutDialog { Owner = this };
         dlg.ShowDialog();
-    }
-
-    /// <summary>
-    /// Themes… opens the gallery for the tab the menu was raised from.
-    /// We re-dispatch through the MainWindow's view model so the
-    /// SettingsStore.SaveAppSettings path stays single-sourced (the
-    /// floating window doesn't own the AppSettings instance).
-    /// </summary>
-    private void ThemesMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (!TryGetTabFromContextMenuClick(sender, out var vm)) return;
-        var mainVm = (Application.Current?.MainWindow as MainWindow)
-            ?.GetViewModel();
-        mainVm?.OpenThemesPickerForCommand.Execute(vm);
-    }
-
-    /// <summary>
-    /// Walks MenuItem -> ContextMenu -> PlacementTarget (the help
-    /// button on the tab content) -> DataContext (the bound
-    /// TabViewModel). Mirrors MainWindow.TryGetTabFromContextMenuClick
-    /// — kept private and duplicated rather than promoted to a
-    /// shared static helper, since both copies are tiny.
-    /// </summary>
-    private static bool TryGetTabFromContextMenuClick(object sender, out TabViewModel vm)
-    {
-        vm = null!;
-        if (sender is not System.Windows.Controls.MenuItem mi) return false;
-
-        DependencyObject? cursor = mi;
-        while (cursor is not null and not System.Windows.Controls.ContextMenu)
-            cursor = LogicalTreeHelper.GetParent(cursor);
-        if (cursor is not System.Windows.Controls.ContextMenu ctx) return false;
-
-        if (ctx.PlacementTarget is FrameworkElement target &&
-            target.DataContext is TabViewModel tabVm)
-        {
-            vm = tabVm;
-            return true;
-        }
-        return false;
     }
 }
