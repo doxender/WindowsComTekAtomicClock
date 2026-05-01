@@ -8,9 +8,9 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | v0.0.33 |
-| **Code-as-ground-truth baseline** | `SPEC.md` v1.1 (2026-05-01) |
-| **Repo state** | branch `tab-header-refresh-reliability` @ 52f4fc8 + uncommitted v0.0.33 working-tree changes — **local only**, 2 commits ahead of master |
+| **Current version** | v0.0.34 |
+| **Code-as-ground-truth baseline** | `SPEC.md` v1.2 (2026-05-01) |
+| **Repo state** | branch `tab-header-refresh-reliability` @ 19fd2c1 (v0.0.33) + uncommitted v0.0.34 working-tree changes — **local only**, 3 commits ahead of master |
 
 ## Quick navigation
 
@@ -205,6 +205,18 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-05-01 — v0.0.34: First-run polish — toolbar contrast + remove tab right-click menu
+
+Two small UX fixes from Dan's first-run testing of v0.0.33:
+
+1. **Toolbar button contrast.** Plain `<Button>` controls in the new tab toolbar inherited the WPF-UI Dark theme's brushes and rendered as near-invisible low-contrast on the `#F5F5F5` toolbar background. Switched to `<ui:Button Appearance="Secondary">` with explicit `Foreground="#0A0A0A"`. Same Fluent idiom used by the §1.9 banner.
+
+2. **Tab right-click ContextMenu removed.** Dan: *"right click on tab still brings up two menu options. Remove that."* The v0.0.33 two-item menu reintroduced the v0.0.23-era pattern Dan had previously rejected — he wants right-click to directly open Tab Settings, no menu. Removed the `ContextMenu` Setter; added `PreviewMouseRightButtonDown` handler that opens `OpenTabSettingsForCommand` directly. The "Open in new window" migration affordance moved to the "?" overlay menu on the clock face (alongside Themes / Help / About) so it stays reachable without cluttering the tab strip.
+
+**Files changed:** `MainWindow.xaml` (toolbar buttons → ui:Button, tab ContextMenu removed, PreviewMouseRightButtonDown EventSetter added, "Open in new window" added to ? overlay menu), `MainWindow.xaml.cs` (handlers swapped: removed `TabContextSettings_Click` + `TabContextOpenInNewWindow_Click`; added `TabItem_PreviewRightButtonDown` + `OpenInNewWindowMenuItem_Click`), `ComTekAtomicClock.UI.csproj` (0.0.33 → 0.0.34), `SPEC.md` v1.1 → v1.2 (§7 per-tab interactions table; §8 TabItem defaults + toolbar example), `CHANGELOG.md` (v0.0.34 entry).
+
+**Build:** 0 warnings, 0 errors.
 
 ### 2026-05-01 — v0.0.33: Dropped Dragablz; native WPF TabControl; tear-away gone
 

@@ -2,12 +2,13 @@
 
 | | |
 |---|---|
-| **Document version** | 1.1 |
+| **Document version** | 1.2 |
 | **Date** | 2026-05-01 |
-| **Code baseline** | v0.0.33 |
+| **Code baseline** | v0.0.34 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
-| **v1.1 changes** | Dragablz removed (replaced with native WPF `TabControl`); tear-away gesture removed; explicit "+ New window" / "Open in new window" / "Bring back into tabs" commands added; magnetic snap added as Phase-2 Planned. See §22 / §17 / §21 for details; CHANGELOG.md `[0.0.33]` for the per-version problem/solution. |
+| **v1.1 → v1.2 changes** | First-run polish on v0.0.33: toolbar `+ New tab` / `+ New window` switched to `ui:Button` for contrast; tab right-click ContextMenu removed (right-click now directly opens Tab Settings dialog); "Open in new window" migration moved to the "?" overlay menu on the clock face. See §7 / §8 and CHANGELOG.md `[0.0.34]`. |
+| **v1.1 changes** | Dragablz removed (replaced with native WPF `TabControl`); tear-away gesture removed; explicit "+ New window" / "Open in new window" / "Bring back into tabs" commands added; magnetic snap added as Phase-2 Planned. See §22 / §17 / §21; CHANGELOG.md `[0.0.33]`. |
 
 ## How to use this document
 
@@ -531,18 +532,20 @@ public string TimeZoneId
 
 Native `TabControl` handles single-click selection through standard WPF input routing. **No `PreviewMouseLeftButtonDown` workaround is needed** — that was a v0.0.20 patch around Dragablz's click/drag classifier swallowing short clicks. Removed in v0.0.33.
 
-### Per-tab interactions (v0.0.33)
+### Per-tab interactions (v0.0.34)
 
 | Gesture | Effect | Handler |
 |---|---|---|
 | Single-click on tab header | Select tab | Native (no code) |
 | Double-click on tab header | Open Tab Settings dialog | `MainWindow.TabItem_DoubleClick` |
-| Right-click on tab header | Open ContextMenu (Tab settings… / Open in new window) | `TabContextSettings_Click` / `TabContextOpenInNewWindow_Click` |
+| Right-click on tab header | **Directly open Tab Settings dialog** (no intermediate menu) | `MainWindow.TabItem_PreviewRightButtonDown` |
 | `✕` overlay on clock face | Close this tab | `MainWindowViewModel.CloseTabCommand` |
-| `?` overlay on clock face | Open menu (Themes… / Help… / About…) | `MainWindow.HelpButton_Click` |
+| `?` overlay on clock face | Open menu (Themes… / Open in new window / Help… / About…) | `MainWindow.HelpButton_Click` |
 | `+ New tab` toolbar button | Add a fresh tab to this window | `MainWindowViewModel.AddTabCommand` |
 | `+ New window` toolbar button | Spawn a new floating clock window | `MainWindowViewModel.NewClockWindowCommand` |
 | Ctrl+, | Open Tab Settings for SelectedTab | `OpenTabSettingsCommand` |
+
+> **No tab ContextMenu (v0.0.34+).** The brief v0.0.33 two-item right-click menu (Tab settings… / Open in new window) was removed. Right-click now opens the Tab Settings dialog directly (matches the v0.0.23 spec). The "Open in new window" migration affordance moved to the "?" overlay menu on the clock face.
 
 ### Per-tab GUID identity
 
@@ -644,7 +647,8 @@ The `Panel.ZIndex=1` trigger lifts the active tab so its border overlaps neighbo
 | `FontSize` | `9` (inactive base) |
 | `FocusVisualStyle` | `{x:Null}` |
 | `MouseDoubleClick` event | open `TabSettingsDialog` (handler in code-behind) |
-| `ContextMenu` | two-item menu: Tab settings… / Open in new window |
+| `PreviewMouseRightButtonDown` event (v0.0.34+) | open `TabSettingsDialog` directly (no menu) |
+| `ContextMenu` | **not set** (the v0.0.33 two-item menu was removed in v0.0.34) |
 
 ### Active vs. inactive state triggers
 
@@ -658,18 +662,22 @@ Reproduces the v0.0.28..v0.0.30 visuals exactly:
 
 ### Tab toolbar (above the strip)
 
-A thin `Border` (background `#F5F5F5`, bottom border `#C0C0C0`, padding `8,4`) docked above the TabControl, hosting two buttons:
+A thin `Border` (background `#F5F5F5`, bottom border `#C0C0C0`, padding `8,4`) docked above the TabControl, hosting two `ui:Button` controls (v0.0.34 — switched from plain `<Button>` for contrast against the WPF-UI Dark theme dictionary merged in `App.xaml`):
 
 ```xml
-<Button Content="+ New tab"
-        Command="{Binding AddTabCommand}"
-        Padding="8,2" Margin="0,0,4,0"/>
-<Button Content="+ New window"
-        Command="{Binding NewClockWindowCommand}"
-        Padding="8,2"/>
+<ui:Button Content="+ New tab"
+           Command="{Binding AddTabCommand}"
+           Appearance="Secondary"
+           Foreground="#0A0A0A"
+           Padding="10,3" Margin="0,0,4,0"/>
+<ui:Button Content="+ New window"
+           Command="{Binding NewClockWindowCommand}"
+           Appearance="Secondary"
+           Foreground="#0A0A0A"
+           Padding="10,3"/>
 ```
 
-This replaces Dragablz's intrinsic `ShowDefaultAddButton` (which only created tabs in-place — there was no equivalent for "spawn a free-floating clock window").
+The explicit `Foreground="#0A0A0A"` guarantees dark-on-light contrast against the toolbar's `#F5F5F5` background regardless of theme inheritance. Replaces Dragablz's intrinsic `ShowDefaultAddButton` (which only created tabs in-place — there was no equivalent for "spawn a free-floating clock window").
 
 ### `OverlayGlyphBrush` (✕ and ? glyphs)
 
@@ -1603,8 +1611,8 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 
 ## End of document
 
-**Document version:** 1.1  
-**Code baseline:** v0.0.33  
+**Document version:** 1.2  
+**Code baseline:** v0.0.34  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.

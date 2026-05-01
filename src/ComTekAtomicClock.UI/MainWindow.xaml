@@ -104,15 +104,28 @@
                 BorderThickness="0,0,0,1"
                 Padding="8,4">
             <StackPanel Orientation="Horizontal">
-                <Button Content="+ New tab"
-                        Command="{Binding AddTabCommand}"
-                        Padding="8,2"
-                        Margin="0,0,4,0"
-                        ToolTip="Add a new tab to this window"/>
-                <Button Content="+ New window"
-                        Command="{Binding NewClockWindowCommand}"
-                        Padding="8,2"
-                        ToolTip="Open a new free-floating clock window"/>
+                <!--
+                  v0.0.34: switched from plain <Button> to <ui:Button>
+                  with explicit dark Foreground. The plain Button picked
+                  up the merged WPF-UI Dark theme dictionary (App.xaml)
+                  and rendered as a near-invisible low-contrast control
+                  on the light #F5F5F5 toolbar background. The Fluent
+                  Secondary-appearance button + explicit Foreground
+                  gives unambiguous dark-on-light contrast.
+                -->
+                <ui:Button Content="+ New tab"
+                           Command="{Binding AddTabCommand}"
+                           Appearance="Secondary"
+                           Foreground="#0A0A0A"
+                           Padding="10,3"
+                           Margin="0,0,4,0"
+                           ToolTip="Add a new tab to this window"/>
+                <ui:Button Content="+ New window"
+                           Command="{Binding NewClockWindowCommand}"
+                           Appearance="Secondary"
+                           Foreground="#0A0A0A"
+                           Padding="10,3"
+                           ToolTip="Open a new free-floating clock window"/>
             </StackPanel>
         </Border>
 
@@ -203,17 +216,17 @@
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="TabItem_DoubleClick"/>
-                    <Setter Property="ContextMenu">
-                        <Setter.Value>
-                            <ContextMenu>
-                                <MenuItem Header="Tab settings…"
-                                          Click="TabContextSettings_Click"/>
-                                <Separator/>
-                                <MenuItem Header="Open in new window"
-                                          Click="TabContextOpenInNewWindow_Click"/>
-                            </ContextMenu>
-                        </Setter.Value>
-                    </Setter>
+                    <!--
+                      v0.0.34: removed the two-item right-click ContextMenu
+                      ("Tab settings…" / "Open in new window") per Dan's
+                      first-run feedback. Right-click now directly opens
+                      Tab Settings dialog (matches the v0.0.23 spec he
+                      established before v0.0.33's brief context-menu
+                      reintroduction). "Open in new window" migration
+                      moved to the "?" overlay menu on the clock face.
+                    -->
+                    <EventSetter Event="PreviewMouseRightButtonDown"
+                                 Handler="TabItem_PreviewRightButtonDown"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background"  Value="#FFFFFF"/>
@@ -293,6 +306,18 @@
                                     <ContextMenu>
                                         <MenuItem Header="Themes…"
                                                   Click="ThemesMenuItem_Click"/>
+                                        <!--
+                                          v0.0.34: added "Open in new window"
+                                          here after removing it from the
+                                          tab right-click menu. This is now
+                                          the only on-clock-face affordance
+                                          for migrating an existing tab to
+                                          a free-floating window. Net-new
+                                          windows go through the
+                                          "+ New window" toolbar button.
+                                        -->
+                                        <MenuItem Header="Open in new window"
+                                                  Click="OpenInNewWindowMenuItem_Click"/>
                                         <Separator/>
                                         <MenuItem Header="Help…"
                                                   Click="HelpMenuItem_Click"/>

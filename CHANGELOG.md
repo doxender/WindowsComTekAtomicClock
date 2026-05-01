@@ -4,6 +4,31 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.34] - 2026-05-01 — First-run polish: toolbar contrast + remove tab right-click menu
+
+Two fixes from Dan's first-run feedback on v0.0.33.
+
+### Fix 1: Toolbar button contrast
+
+**Problem:** The "+ New tab" and "+ New window" buttons in the new tab toolbar were nearly invisible. The plain `<Button>` controls picked up the WPF-UI Dark theme dictionary merged in `App.xaml` and rendered as low-contrast (near-white text on near-white toolbar background, depending on the inherited brushes). Functional but unusable.
+
+**Solution:** Switched both toolbar buttons from plain `<Button>` to `<ui:Button Appearance="Secondary">` with an explicit `Foreground="#0A0A0A"` to guarantee dark-on-light contrast against the `#F5F5F5` toolbar background. Same Fluent idiom used elsewhere in the app (the §1.9 banner uses `ui:Button`). Padding bumped from `8,2` to `10,3` for a slightly more substantial click target.
+
+### Fix 2: Remove right-click context menu on tabs
+
+**Problem:** Dan: *"right click on tab still brings up two menu options. Remove that."* The v0.0.33 two-item ContextMenu (Tab settings… / Open in new window) reintroduced the v0.0.23-era behavior Dan had previously rejected: he wants right-click on a tab header to directly open the Tab Settings dialog, no intermediate menu.
+
+**Solution:** Removed the `ContextMenu` Setter from the `TabItem` `ItemContainerStyle`. Added a `PreviewMouseRightButtonDown` handler `TabItem_PreviewRightButtonDown` that opens `OpenTabSettingsForCommand` directly and marks the event handled. The "Open in new window" migration affordance (which lived on that menu in v0.0.33) moved to the "?" overlay menu on the clock face — alongside Themes…/Help…/About… — so the affordance is preserved without cluttering the tab strip.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` — toolbar buttons converted to `ui:Button`; tab `ContextMenu` Setter removed; `PreviewMouseRightButtonDown` EventSetter added; "Open in new window" item added to the "?" overlay menu
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml.cs` — removed `TabContextSettings_Click` and `TabContextOpenInNewWindow_Click`; added `TabItem_PreviewRightButtonDown` and `OpenInNewWindowMenuItem_Click`
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 0.0.33 → 0.0.34
+- `windows/CHANGELOG.md` (this entry)
+- `windows/CONTEXT.md` (session log)
+- `windows/SPEC.md` (§7 per-tab interactions table; §8 TabItem defaults)
+
 ## [0.0.33] - 2026-05-01 — Dropped Dragablz; native WPF TabControl; tear-away removed
 
 **Problem:** Dragablz `0.0.3.234` was the root cause of nearly every tab-related bug fought across v0.0.14..v0.0.32 (eight iterations of tab-header refresh code, the `NotImplementedException` crash on `CollectionChanged.Replace` at v0.0.14, the click/drag classifier swallowing single clicks at v0.0.20, the imperative `SetTabHeaderInAllDisplays` walker at v0.0.32, headers rendered in a separate visual subtree forcing whole-window enumeration). Library has had no meaningful release in ~3-4 years; carrying an unmaintained dependency that bleeds maintenance time. Combined with Dan's stated direction toward magnetic-snap floating windows (which makes tear-away a less central feature anyway), the right move was a clean swap.

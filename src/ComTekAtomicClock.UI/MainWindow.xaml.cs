@@ -82,24 +82,33 @@ public partial class MainWindow : FluentWindow
     }
 
     /// <summary>
-    /// Right-click → "Tab settings…" menu item. Opens the Settings
-    /// dialog for the tab the menu was raised from.
+    /// Right-click on a tab header → directly open the Tab Settings
+    /// dialog (matches v0.0.23 spec; replaces the brief v0.0.33
+    /// two-item ContextMenu that Dan removed in v0.0.34 first-run
+    /// feedback). PreviewMouseRightButtonDown so we capture before
+    /// the (now-absent) ContextMenu trigger and so the user gets
+    /// instant feedback rather than a transient menu flash.
     /// </summary>
-    private void TabContextSettings_Click(object sender, RoutedEventArgs e)
+    private void TabItem_PreviewRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (TryGetTabFromContextMenuItem(sender, out var vm) && _vm is not null)
+        if (sender is FrameworkElement fe &&
+            fe.DataContext is TabViewModel vm &&
+            _vm is not null)
+        {
             _vm.OpenTabSettingsForCommand.Execute(vm);
+            e.Handled = true;
+        }
     }
 
     /// <summary>
-    /// Right-click → "Open in new window" menu item. Migrates this tab
-    /// out of the main strip and into a new FloatingClockWindow. Reverse
-    /// operation (right-click on the floating window's "?" menu →
-    /// "Bring back into tabs") is handled in FloatingClockWindow.
+    /// "?" overlay → "Open in new window" menu item. Migrates this tab
+    /// out of the main strip and into a new FloatingClockWindow. v0.0.34
+    /// moved this here from the tab right-click menu (which was removed).
     /// </summary>
-    private void TabContextOpenInNewWindow_Click(object sender, RoutedEventArgs e)
+    private void OpenInNewWindowMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        if (TryGetTabFromContextMenuItem(sender, out var vm) && _vm is not null)
+        if (_vm is null) return;
+        if (TryGetTabFromContextMenuItem(sender, out var vm))
             _vm.OpenInNewWindowCommand.Execute(vm);
     }
 
