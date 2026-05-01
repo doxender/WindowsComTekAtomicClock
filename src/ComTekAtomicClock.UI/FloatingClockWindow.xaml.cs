@@ -52,26 +52,18 @@ public partial class FloatingClockWindow : FluentWindow
     internal TabViewModel Tab => _tab;
 
     // ----------------------------------------------------------------
-    // Overlay buttons
+    // Overlay button
     // ----------------------------------------------------------------
 
     /// <summary>
-    /// ✕ overlay → close the window. Returning the tab to the main
-    /// strip is a separate action ("Bring back into tabs"); closing
-    /// dismisses the floating window AND removes the tab from the
-    /// app's persisted tab list (the MainWindowViewModel observes
-    /// Closed and updates settings.json accordingly).
+    /// v0.0.35: ⋯ overlay (Fluent SymbolRegular.MoreHorizontal20) →
+    /// open the attached ContextMenu (Settings / Themes / Bring back
+    /// into tabs / Help / About). Replaces the v0.0.34 stacked
+    /// ✕ + ? button pair — ✕ was redundant with the OS title-bar
+    /// close button, and consolidating the menu items under a single
+    /// "more options" affordance is more discoverable.
     /// </summary>
-    private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
-    /// <summary>
-    /// ? overlay → open the attached ContextMenu (Themes / Bring back
-    /// into tabs / Help / About).
-    /// </summary>
-    private void HelpButton_Click(object sender, RoutedEventArgs e)
+    private void MoreOptionsButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not System.Windows.Controls.Button btn) return;
         if (btn.ContextMenu is null) return;
@@ -80,7 +72,12 @@ public partial class FloatingClockWindow : FluentWindow
         btn.ContextMenu.IsOpen          = true;
     }
 
-    private void TabSettingsMenuItem_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// "Settings…" menu item (renamed from "Tab settings…" in v0.0.35
+    /// because the word "tab" is wrong on a free-floating window).
+    /// Opens the same Tab Settings dialog used by the in-strip tabs.
+    /// </summary>
+    private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
     {
         var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
         mainVm?.OpenTabSettingsForCommand.Execute(_tab);

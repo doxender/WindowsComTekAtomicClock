@@ -2,11 +2,12 @@
 
 | | |
 |---|---|
-| **Document version** | 1.2 |
+| **Document version** | 1.3 |
 | **Date** | 2026-05-01 |
-| **Code baseline** | v0.0.34 |
+| **Code baseline** | v0.0.35 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
+| **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
 | **v1.1 → v1.2 changes** | First-run polish on v0.0.33: toolbar `+ New tab` / `+ New window` switched to `ui:Button` for contrast; tab right-click ContextMenu removed (right-click now directly opens Tab Settings dialog); "Open in new window" migration moved to the "?" overlay menu on the clock face. See §7 / §8 and CHANGELOG.md `[0.0.34]`. |
 | **v1.1 changes** | Dragablz removed (replaced with native WPF `TabControl`); tear-away gesture removed; explicit "+ New window" / "Open in new window" / "Bring back into tabs" commands added; magnetic snap added as Phase-2 Planned. See §22 / §17 / §21; CHANGELOG.md `[0.0.33]`. |
 
@@ -486,10 +487,20 @@ A free-floating top-level window hosting **one** clock face. Spawned by:
 
 Its DataContext is the single `TabViewModel` for the hosted clock. The window has:
 
-- A Wpf.Ui `TitleBar` whose `Title="{Binding Label}"` so the OS taskbar shows the city name.
+- A Wpf.Ui `TitleBar` whose `Title="{Binding Label}"` so the OS taskbar shows the city name. Closing via the title bar's `×` removes the clock (and purges its `TabSettings` from `settings.json` — see closing semantics below).
 - The same Viewbox-scaled 400×400 clock canvas as a tab.
-- `✕` overlay button → closes the window (and removes the underlying `TabSettings` from `settings.json` — closing the window is a "delete this clock" action; to keep the clock, use "Bring back into tabs" instead).
-- `?` overlay button → ContextMenu with: Tab settings… / Themes… / Bring back into tabs / Help… / About….
+- A single `⋯` overlay button (Fluent `SymbolRegular.MoreHorizontal20`) in the top-right of the clock area. Clicking opens a ContextMenu with all 5 items:
+  - **Settings…** — opens the Tab Settings dialog (Time zone / Theme / Sync frequency)
+  - **Themes…** — opens the 12-tile theme gallery
+  - **Bring back into tabs** — re-attaches this clock to the main window's tab strip and closes the floating window
+  - **Help…** — opens the Help dialog
+  - **About…** — opens the About dialog
+
+> **v0.0.34 → v0.0.35 simplification.** Earlier the window had a stacked `✕` (close window) + `?` (menu) pair. The `✕` was redundant with the OS title-bar's close button; the v0.0.35 swap replaces both with a single `⋯` "more options" button. "Tab settings…" was also renamed to "Settings…" on this surface — the word "tab" is wrong on a free-floating window.
+
+### Closing semantics (v0.0.33+)
+
+Closing the window via the OS title-bar's `×` is a **"delete this clock"** action — it removes the underlying `TabSettings` from `settings.json` so the clock doesn't reappear on restart. To keep the clock and just put it away, use **Bring back into tabs** first.
 
 **Bring back into tabs** dispatches to `MainWindowViewModel.BringWindowIntoTabsCommand`, which re-adds the `TabViewModel` to the `Tabs` collection (mirrored to `_settings.Tabs` via `OnTabsCollectionChanged`) and closes the floating window.
 
@@ -1611,8 +1622,8 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 
 ## End of document
 
-**Document version:** 1.2  
-**Code baseline:** v0.0.34  
+**Document version:** 1.3  
+**Code baseline:** v0.0.35  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.

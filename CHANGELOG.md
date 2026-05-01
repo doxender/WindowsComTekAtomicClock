@@ -4,6 +4,36 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.35] - 2026-05-01 — FloatingClockWindow: single ⋯ overlay button replaces ✕ + ? pair
+
+**Problem:** Dan's first-run testing of v0.0.34's floating windows surfaced two issues:
+
+1. The `✕` overlay button on the clock face was redundant — the OS title-bar's `×` already closes the window. Two close buttons within a few pixels of each other.
+2. The Settings / Themes / Bring back into tabs items were buried under the `?` overlay, which was confusing — `?` reads as "Help" not "Settings", and even with the menu items there, discoverability was poor. Dan: *"is there any way to change the tz and face on the new window?"*
+
+**Solution:** Removed both the `✕` and `?` overlay buttons. Replaced with a **single `⋯` "more options" button** at the same top-right position, using `<ui:SymbolIcon Symbol="MoreHorizontal20"/>` — the same Fluent three-dot affordance Windows 11 uses across the shell. All 5 menu items hang off this single button:
+
+- **Settings…** (renamed from "Tab settings…" — "tab" is wrong on a window)
+- **Themes…**
+- **Bring back into tabs**
+- **Help…**
+- **About…**
+
+Foreground stays bound to `TabViewModel.OverlayGlyphBrush` so the icon reads white on dark themes / near-black on light themes per the existing per-theme luminance map.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` — removed `✕` Button + `?` Button; added single `⋯` Button with `ui:SymbolIcon` and the 5-item ContextMenu
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` — removed `CloseWindowButton_Click` and `HelpButton_Click`; added `MoreOptionsButton_Click`; renamed `TabSettingsMenuItem_Click` → `SettingsMenuItem_Click`
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 0.0.34 → 0.0.35
+- `windows/SPEC.md` v1.2 → v1.3 (front matter, §6 Floating clock window subsection rewritten, end-of-doc)
+- `windows/CONTEXT.md` (session log entry, repo state line)
+- `windows/CHANGELOG.md` (this entry)
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj -c Debug` → compilation clean (no `error CS####` or `error MC####`). Post-compile file copy errored because Dan's running v0.0.34 instance had `Shared.dll` locked — close the running clock and rebuild to deploy v0.0.35.
+
 ## [0.0.34] - 2026-05-01 — First-run polish: toolbar contrast + remove tab right-click menu
 
 Two fixes from Dan's first-run feedback on v0.0.33.

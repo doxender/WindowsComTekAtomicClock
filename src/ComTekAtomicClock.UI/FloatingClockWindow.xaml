@@ -56,44 +56,38 @@
                     Theme="{Binding Theme}"
                     SmoothSecondHand="{Binding SmoothSecondHand}"/>
 
+                <!--
+                  v0.0.35: single overlay button hosting ALL options.
+                  Replaces the v0.0.34 stacked ✕ + ? overlay pair. Per
+                  Dan: "the 'x' on the clock face is redundant on the
+                  new clock face (they can just hit the one in the
+                  corner), change it to something else." OS title-bar
+                  X already closes the window; ✕ overlay deleted.
+
+                  Glyph: ui:SymbolIcon Symbol="MoreHorizontal20" — the
+                  Fluent three-dot "more options" affordance, identical
+                  to the one Windows 11 itself uses across the shell.
+                  Foreground bound to TabViewModel.OverlayGlyphBrush so
+                  it picks up white on dark themes / near-black on
+                  light themes.
+                -->
                 <Button HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         Margin="0,14,16,0"
-                        Width="22" Height="22"
+                        Width="26" Height="22"
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
                         Cursor="Hand"
-                        ToolTip="Close this window"
-                        Click="CloseWindowButton_Click">
-                    <TextBlock Text="&#x2715;"
-                               FontWeight="Bold"
-                               FontSize="12"
-                               Foreground="{Binding OverlayGlyphBrush}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
-                </Button>
-
-                <Button HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="0,42,16,0"
-                        Width="22" Height="22"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Cursor="Hand"
-                        ToolTip="Help / About"
-                        Click="HelpButton_Click">
-                    <TextBlock Text="?"
-                               FontWeight="Bold"
-                               FontSize="14"
-                               Foreground="{Binding OverlayGlyphBrush}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                        ToolTip="More options"
+                        Click="MoreOptionsButton_Click">
+                    <ui:SymbolIcon Symbol="MoreHorizontal20"
+                                   FontSize="16"
+                                   Foreground="{Binding OverlayGlyphBrush}"/>
                     <Button.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Tab settings…"
-                                      Click="TabSettingsMenuItem_Click"/>
+                            <MenuItem Header="Settings…"
+                                      Click="SettingsMenuItem_Click"/>
                             <MenuItem Header="Themes…"
                                       Click="ThemesMenuItem_Click"/>
                             <Separator/>
