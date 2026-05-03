@@ -1,7 +1,7 @@
 ; ComTek Atomic Clock — Inno Setup script
 ;
 ; Builds a single-file Windows installer (Setup.exe) that bundles the
-; v0.0.36 self-contained build (UI + Service + Installer subfolders),
+; v1.0.0 self-contained build (UI + Service + Installer subfolders),
 ; runs the bundled ServiceInstaller.exe to register the Windows Service
 ; with SCM, creates Start Menu / optional Desktop shortcuts, and
 ; registers an Add/Remove Programs entry that cleanly uninstalls the
@@ -11,11 +11,11 @@
 ;   "C:\Users\<you>\AppData\Local\Programs\Inno Setup 6\ISCC.exe" tools\installer.iss
 ;
 ; Output:
-;   release\ComTekAtomicClock-v0.0.36-Setup.exe
+;   release\ComTekAtomicClock-v1.0.0-Setup.exe
 ;
 ; Source layout (must exist before running ISCC — produced by the
-; self-contained dotnet publish, see release\v0.0.36\):
-;   release\v0.0.36\
+; self-contained dotnet publish, see release\v1.0.0\):
+;   release\v1.0.0\
 ;     UI\          ComTekAtomicClock.UI.exe + 268 dependency files
 ;     Service\     ComTekAtomicClock.Service.exe + 221 dependency files
 ;     Installer\   ComTekAtomicClock.ServiceInstaller.exe + 191 dependency files
@@ -60,7 +60,7 @@ PrivilegesRequiredOverridesAllowed=
 
 ; UX: license + ready/install/finished pages. Skip the directory
 ; picker by default since most users won't override Program Files.
-LicenseFile=..\release\v0.0.36\LICENSE
+LicenseFile=..\release\v{#MyAppVersion}\LICENSE
 DisableDirPage=auto
 DisableProgramGroupPage=yes
 
@@ -91,16 +91,16 @@ Name: "desktopicon";  Description: "Create a &desktop shortcut"; GroupDescriptio
 [Files]
 ; The three publish folders, recursive. Source paths are relative to
 ; the .iss file itself (this script lives in tools\, so ..\release\...).
-Source: "..\release\v0.0.36\UI\*";        DestDir: "{app}\UI";        Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\release\v0.0.36\Service\*";   DestDir: "{app}\Service";   Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\release\v0.0.36\Installer\*"; DestDir: "{app}\Installer"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\release\v{#MyAppVersion}\UI\*";        DestDir: "{app}\UI";        Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\release\v{#MyAppVersion}\Service\*";   DestDir: "{app}\Service";   Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\release\v{#MyAppVersion}\Installer\*"; DestDir: "{app}\Installer"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Top-level docs the user might want to read.
-Source: "..\release\v0.0.36\LICENSE";      DestDir: "{app}"; Flags: ignoreversion
-Source: "..\release\v0.0.36\README.md";    DestDir: "{app}"; Flags: ignoreversion
-Source: "..\release\v0.0.36\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\release\v0.0.36\SPEC.md";      DestDir: "{app}"; Flags: ignoreversion
-Source: "..\release\v0.0.36\INSTALL.md";   DestDir: "{app}"; Flags: ignoreversion
+Source: "..\release\v{#MyAppVersion}\LICENSE";      DestDir: "{app}"; Flags: ignoreversion
+Source: "..\release\v{#MyAppVersion}\README.md";    DestDir: "{app}"; Flags: ignoreversion
+Source: "..\release\v{#MyAppVersion}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\release\v{#MyAppVersion}\SPEC.md";      DestDir: "{app}"; Flags: ignoreversion
+Source: "..\release\v{#MyAppVersion}\INSTALL.md";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu shortcut for the UI (always created).

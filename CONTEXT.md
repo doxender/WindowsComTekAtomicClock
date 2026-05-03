@@ -186,6 +186,35 @@ Any code change must update every project doc that describes the area touched: `
 
 ## Session log (newest first)
 
+### 2026-05-03 — v1.0.0 BETA framing + README rewrite (post-ship)
+
+After publishing v1.0.0 to GitHub Releases as `isPrerelease: false` with title "First stable release," Dan asked to reframe as **BETA / first public release**. The 1.0 version commits to a stable-feature claim; the BETA tag honestly tells users broad-deployment testing has just started.
+
+**Three label changes** (no code change, no version bump per the doc-only-doesn't-bump rule):
+
+1. `README.md` — full rewrite. New BETA WARNING block at top; Download section with direct asset links; features list cleaned up (12 themes split correctly into 6 analog + 4 digital + 2 encoders; tear-away removed; Boulder/Brazil time source; per-face source label); Architecture table corrected (Service is `net8.0-windows`, not `net8.0`); `start= demand` instead of legacy `start= auto`; pointer to TODO.md / SPEC.md / CHANGELOG.md / CONTEXT.md; explicit "Reporting issues" section.
+2. GitHub Release v1.0.0 — flipped `isPrerelease: true` via `gh release edit --prerelease`. Title updated to "v1.0.0 — First public release (BETA)" and notes body opening reframed accordingly.
+3. `release/v1.0.0-release-notes.md` — BETA-aware opening line replacing the "first stable release" framing. (The Setup.exe + zip artifacts themselves are unchanged — same SHA-256 hashes.)
+
+**Rationale for v1.0.0 + BETA both:** semver 1.0 means "we commit to this feature surface and won't break it without a major bump." BETA is an orthogonal claim about real-world readiness — "tested locally, not yet in 100 hands." Common pattern; lets the version number stay clean while tempering user expectations.
+
+### 2026-05-03 — v1.0.0: First stable release; consolidated backlog into TODO.md
+
+Symbolic milestone. Code jumps 0.0.39 → 1.0.0. Functionally v0.0.39 + version stamp + new TODO.md — no runtime change, but the version leap declares the core feature set is stable enough for end-user distribution.
+
+What's stable: NIST + NTP.br stratum-1 sync, 12 themable clock faces, native WPF TabControl tabbed UI, free-floating clock windows, three-process architecture, atomic settings persistence, three-handler exception net.
+
+What's deferred: ~38 items in `windows/TODO.md` — timer/countdown (active queue), magnetic snap (Phase 2), tray icon, color overrides, MSIX, Authenticode signing, ARM64.
+
+**Build + ship:**
+- `dotnet publish` (Release, win-x64, self-contained) for UI/Service/Installer → `release/v1.0.0/` (315 MB unzipped)
+- `tools/installer.iss` parameterized on `MyAppVersion`, ISCC compiled → `release/ComTekAtomicClock-v1.0.0-Setup.exe` (97 MB)
+- Portable zip → `release/ComTekAtomicClock-v1.0.0-win-x64-self-contained.zip` (134 MB)
+- `git tag -a v1.0.0 a39c7ce` + `git push origin v1.0.0` (Dan's "damn the torpedoes" override of the Sunday rule)
+- `gh release create v1.0.0` with both artifacts attached → <https://github.com/doxender/WindowsComTekAtomicClock/releases/tag/v1.0.0>
+
+**Files changed in the v1.0.0 commit (a39c7ce):** csproj (0.0.39 → 1.0.0), tools/installer.iss (parameterized + 1.0.0), TODO.md NEW, CONTEXT.md (replaced backlog dump with TODO.md pointer), SPEC.md (front matter doc 1.4 → 2.0, §21 callout), CHANGELOG.md ([1.0.0] entry).
+
 ### 2026-05-03 — v0.0.39: Settings + Themes dialog Owner — center over originating window
 
 Discharged the queued Settings-dialog-Owner bug Dan logged when he hit it on Sunday (was queued in this CONTEXT.md alongside timer/countdown).
