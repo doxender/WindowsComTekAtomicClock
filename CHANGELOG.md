@@ -4,6 +4,14 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.37] - 2026-05-03 — TabSettingsDialog height +100 px (Time Source group fit)
+
+**Problem:** Dan's first run of v0.0.36 with the new Time Source radio group: *"the settings screen is about an inch too short."* The v0.0.36 patch added three rows to the dialog (Time source label + RadioButton group with two two-line items + explanatory subtitle ≈ 120 px of new content) inside a fixed-size `NoResize` window that was already tightly packed at 540 px. The Save / Cancel button row was clipping below the visible area on Dan's display.
+
+**Solution:** Bumped `Height` 540 → 640 in `TabSettingsDialog.xaml`. Width unchanged. Adds about an inch (96 px at 96 DPI + 4 px slack) of vertical room — comfortably accommodates the Time Source group plus a small breathing margin around the Save row.
+
+**Files touched:** `windows/src/ComTekAtomicClock.UI/Dialogs/TabSettingsDialog.xaml`, `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` (0.0.36 → 0.0.37), `windows/SPEC.md` (§6 windows table + §13 dialog properties), `windows/CONTEXT.md` (session log), `windows/CHANGELOG.md`.
+
 ## [0.0.36 release tooling] — Inno Setup installer added (2026-05-03)
 
 Documentation/tooling addition; no runtime code changed, no version bump.

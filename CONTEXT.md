@@ -8,9 +8,9 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | v0.0.36 |
-| **Code-as-ground-truth baseline** | `SPEC.md` v1.4 (2026-05-01) |
-| **Repo state** | branch `tab-header-refresh-reliability` @ 38cc47c (v0.0.35) + uncommitted v0.0.36 working-tree changes — **local only**, 5 commits ahead of master |
+| **Current version** | v0.0.37 |
+| **Code-as-ground-truth baseline** | `SPEC.md` v1.4 (2026-05-03) |
+| **Repo state** | `master` @ 1ea3ddc (pushed) + uncommitted v0.0.37 working-tree changes — local-only ahead of origin |
 
 ## Quick navigation
 
@@ -211,6 +211,12 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-05-03 — v0.0.37: TabSettingsDialog height bumped +100 px
+
+Dan testing v0.0.36 the day after ship: the Settings dialog was clipping the Save row because the new Time Source radio group consumed ~120 px the original 540 px window couldn't accommodate. Bumped `Height` 540 → 640 in `TabSettingsDialog.xaml`. One-line fix; full doc + version pass per the standing rule.
+
+This is the first follow-up commit after the v0.0.36 ship — confirms Phase-1 (Dragablz removal + native TabControl + multi-source) is stable in real use; only the window-sizing oversight needed a touch-up.
 
 ### 2026-05-01 — v0.0.36: Time-source picker (Boulder + Brazil); per-face source label; dynamic NIST badge
 

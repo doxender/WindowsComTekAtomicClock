@@ -419,7 +419,7 @@ catch (JsonException) {
 |---|---|---|---|---|---|---|
 | Main window | `MainWindow` | 560 × 640 | 380 × 420 | Default | Mica / Round | Tabbed view, banner, status bar |
 | Floating clock | `FloatingClockWindow` | 500 × 500 | 320 × 320 | Default | Mica / Round | `WindowStartupLocation=Manual`. Spawned by Dragablz tear-off via `AppInterTabClient` |
-| Tab settings | `TabSettingsDialog` | 560 × 540 | — | NoResize | Mica / Round | Modal |
+| Tab settings | `TabSettingsDialog` | 560 × 640 | — | NoResize | Mica / Round | Modal. Was 540 px tall pre-v0.0.37; bumped +100 to fit the v0.0.36 Time Source radio group cleanly. |
 | About | `AboutDialog` | 520 × 430 | — | NoResize | Mica / Round | Modal. Includes "ALPHA" badge (`#7A3A1A` bg, `#FFB000` border, `#FFF5D8` text) |
 | Help | `HelpDialog` | 560 × 540 | — | NoResize | Mica / Round | Modal |
 | Themes gallery | `ThemesDialog` | 820 × 720 | — | Default (resizable) | Mica / Round | Modal. Renders 12 SVG previews via `SharpVectors.SvgViewbox` |
@@ -1142,7 +1142,7 @@ Modal dialog opened by:
 
 | Property | Value |
 |---|---|
-| Size | 560 × 540 |
+| Size | 560 × 640 |
 | `ResizeMode` | `NoResize` |
 | `WindowStartupLocation` | `CenterOwner` |
 | Backdrop | Mica / Round (FluentWindow) |
@@ -1679,7 +1679,7 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 ## End of document
 
 **Document version:** 1.4  
-**Code baseline:** v0.0.36  
+**Code baseline:** v0.0.37  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.
