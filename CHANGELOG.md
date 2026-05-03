@@ -4,6 +4,18 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.36 release tooling] — Inno Setup installer added (2026-05-03)
+
+Documentation/tooling addition; no runtime code changed, no version bump.
+
+Added `windows/tools/installer.iss` — an Inno Setup script that wraps the self-contained `dotnet publish` output into a single `Setup.exe` (~97 MB, LZMA2/max compression). The installer bundles all three projects (UI / Service / Installer) plus the supporting docs (LICENSE, CHANGELOG, README, SPEC, INSTALL), shows the MIT license on first screen, defaults to `%ProgramFiles%\ComTekAtomicClock\`, runs `ServiceInstaller.exe install` post-copy to register the Windows Service with SCM, creates Start Menu (and optional desktop) shortcuts, and registers an Add/Remove Programs uninstall entry that runs `ServiceInstaller.exe uninstall` before file removal.
+
+Supersedes the bare zip distribution as the "give it to a non-technical user" path. The zip remains available in `release/` for portable / no-installer use cases.
+
+Build: `winget install JRSoftware.InnoSetup` (one-time), then `& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" tools\installer.iss` after each `dotnet publish` round-trip. SPEC.md §20 carries the full step-by-step.
+
+Future: bump `MyAppVersion` in `installer.iss` when the project version bumps. Authenticode signing of the installer + bundled exes is still on the v1.0 roadmap (SmartScreen will warn on first run until then).
+
 ## [0.0.36] - 2026-05-01 — Time source picker (Boulder + Brazil); per-face source label; dynamic NIST badge
 
 **Problem:** Until v0.0.35 the app was hardcoded to the NIST stratum-1 pool out of Boulder, CO. Dan testing from / building for South-American users would see ~150-300 ms of trans-equatorial RTT on every sync against NIST. NTP.br (operated by NIC.br in São Paulo) is the regional equivalent and a much better fit.

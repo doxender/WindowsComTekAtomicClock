@@ -1418,6 +1418,33 @@ ComTekAtomicClock.ServiceInstaller.exe uninstall [--purge-user-data]
 
 The UI starts up gracefully when the service is not installed — the banner appears with "Install and start the time-sync service" and clock faces still render. The status bar shows `Service: Not installed` and `Last sync: service not running`.
 
+### Producing a release installer (Setup.exe)
+
+The repo ships an Inno Setup script at `windows/tools/installer.iss` that bundles the self-contained publish output into a single `Setup.exe`. Build steps:
+
+```powershell
+# 1. Self-contained publish of all three projects (315 MB output)
+cd C:\ComputerSource\ComTekAtomicClock\windows
+dotnet publish src\ComTekAtomicClock.UI\ComTekAtomicClock.UI.csproj `
+    -c Release -r win-x64 --self-contained true -o release\v0.0.36\UI
+dotnet publish src\ComTekAtomicClock.Service\ComTekAtomicClock.Service.csproj `
+    -c Release -r win-x64 --self-contained true -o release\v0.0.36\Service
+dotnet publish src\ComTekAtomicClock.ServiceInstaller\ComTekAtomicClock.ServiceInstaller.csproj `
+    -c Release -r win-x64 --self-contained true -o release\v0.0.36\Installer
+
+# 2. Copy supporting docs into the staging dir
+Copy-Item LICENSE,CHANGELOG.md,README.md,SPEC.md,release\v0.0.36\INSTALL.md release\v0.0.36\
+
+# 3. Compile the installer
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" tools\installer.iss
+
+# Output: release\ComTekAtomicClock-v0.0.36-Setup.exe (~97 MB, LZMA2 max)
+```
+
+Inno Setup is a one-time install: `winget install JRSoftware.InnoSetup`. The script does the user-facing install: license screen, install-dir picker (default `%ProgramFiles%\ComTekAtomicClock\`), Start Menu shortcuts, optional desktop shortcut, post-install service registration, and a clean Add/Remove Programs uninstall path that runs `ServiceInstaller.exe uninstall` first.
+
+**Bump `MyAppVersion`** in `installer.iss` whenever the project version bumps — it's currently kept in lockstep manually. (A `.iss`-from-csproj generator is a future possibility but the manual edit is one line.)
+
 ---
 
 ## §21 — Implementation Status
@@ -1533,6 +1560,9 @@ This is the bridging table from "what `requirements.txt` aspires to" to "what co
 | Help | Help corpus refresh to remove right-click context-menu reference | D-16, M-8 |
 | Privacy | `PRIVACY.md` + TLS-pinned telemetry endpoint + scrubbing pipeline | S-14 / §2.11 of legacy spec |
 | Window | Window state persistence (size / position / maximized) across restarts | Legacy spec § 1.3 |
+| Modes | **Timer** — stopwatch / elapsed-time mode per tab/window, alongside the always-on clock | Queued 2026-05-01 |
+| Modes | **Countdown** — user-set target duration, count down to zero with notification | Queued 2026-05-01 |
+| Bug | Settings dialog Owner hardcoded to MainWindow — should be the originating window when opened from a `FloatingClockWindow` `⋯` menu | Queued 2026-05-01 |
 
 ---
 

@@ -160,6 +160,12 @@ If a future session sees an open issue about tab UX and is tempted to add Dragab
 - `windows/SPEC.md` created 2026-05-01 (this session) — the regeneration baseline Dan asked for.
 - `windows/CONTEXT.md` created 2026-05-01 (this session) — per the new standing rule.
 
+### Queued (added 2026-05-01 PM, weekend backlog)
+
+- **Add timer feature.** Stopwatch / elapsed-time mode on a clock face — separate from the always-on time display. Probably a new `TabSettings.Mode` enum (`Clock` / `Timer` / `Countdown`) with per-mode renderer paths in `ClockFaceControl`. Atomic Lab is the natural anchor theme; other themes can opt in.
+- **Add countdown feature.** User sets a target duration; face counts down. Same `Mode` enum extension as timer. Need an alarm/notification for hitting zero.
+- **Bug — Settings dialog owner.** When the user opens Settings from a `FloatingClockWindow`'s `⋯` → Settings… menu, the dialog appears centered on the **main window**, not on the floating window that triggered it. Root cause: `MainWindowViewModel.OpenTabSettingsCore` hardcodes `Owner = Application.Current?.MainWindow`. Fix: pass the originating window down (extra param on `OpenTabSettingsForCommand` or have `FloatingClockWindow.SettingsMenuItem_Click` open the dialog directly with `Owner = this`). Simple, ~10 LOC.
+
 ### Code follow-ups discovered during the SPEC-writing pass
 
 - `ThemeCatalog.cs:32-34` comment misclassifies the 12-theme grouping as "3 digital, 2 specialty, 1 binary digital." Correct grouping: 6 analog + 4 digital-only + 2 encoder. Fix on next touch.
