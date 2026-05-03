@@ -4,6 +4,74 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.0] - 2026-05-03 — Hand-length feature pass + Captain John's Marina theme (CaptJohn)
+
+Feature release. Combines the hand-length tuning across every analog face with the new **Captain John's Marina** (CaptJohn) theme — the 13th theme overall and the 7th in the analog cluster. The theme ships fully wired runtime in this release: `Theme.CaptJohn` enum value, `BuildCaptJohn` renderer in `ClockFaceControl`, gallery entry, per-tab persistence, jitter-and-flash demo state in the per-tick callback. Earlier CaptJohn drafts targeted "design pre-stage now, runtime in v1.1.x"; the runtime work was folded into v1.1.0 instead so 1.1.0 is the cohesive feature release.
+
+### Hand-length pass (visible runtime change)
+
+Dan, while iterating the design of the new `CaptJohn` (Captain John's Marina) theme, asked for a clearer length distinction between the hour and minute hands — minute hand longer, hour hand shorter, by about a half-inch difference. Then asked for the same change applied to "all faces, if they aren't already different lengths." All 6 of v1.0.0's analog faces had different hour/minute lengths but the differences were modest (36–38 px ≈ 3/8 inch).
+
+Across **every analog face** (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight), shortened the hour hand by 24 px (1/4″ at 96 DPI) and lengthened the minute hand by 24 px (1/4″). Net effect: minute hand is now 84–86 px longer than the hour hand on every analog theme — a clearly visible difference in line with traditional clock proportions where the minute hand reaches near the dial edge while the hour hand stops well short.
+
+| Theme | Hour: was → now | Minute: was → now | Second (unchanged) |
+|---|---|---|---|
+| Atomic Lab | 90 → **66** | 128 → **152** | 142 |
+| Boulder Slate (Mondaine batons) | 100 → **76** | 138 → **162** | (special lollipop, unchanged) |
+| Aero Glass | 92 → **68** | 128 → **152** | 140 |
+| Cathode | 90 → **66** | 128 → **152** | 142 |
+| Concourse | 86 → **62** | 122 → **146** | 138 |
+| Daylight | 90 → **66** | 128 → **152** | 140 |
+
+Hand thicknesses, colors, and second-hand lengths are unchanged — only hour and minute lengths move. Digital-only and encoder themes (Flip Clock / Marquee / Slab / Binary / Hex / Binary Digital) have no analog hands and are unaffected.
+
+### CaptJohn theme — runtime ships in this release
+
+The CaptJohn theme uses the same minute-longer-than-hour proportions as the rest of the analog cluster (66 / 152) and adds a new `bordeauxMid` minute-hand color (`#641414`) sitting between its dark hour bordeaux (`#4A0F0F`) and the bright numeral red (`#7B1616`) — three distinguishable shades.
+
+Runtime additions:
+
+- `Theme.CaptJohn` enum value (between `Daylight` and `FlipClock`) in `Shared/Settings/SettingsModel.cs`.
+- `BuildCaptJohn()` (~250 LOC) in `Controls/ClockFaceControl.xaml.cs` — parchment radial backdrop, brass ring, cream face, Captain John's logo painted into an ellipse-clipped layer at 40% opacity, "The Busted Flush" caption (Monotype Corsiva 13 px italic at 40% sepia), Hora Chapín jitter hand at 152 px ink black, hidden Cinzel "12" / "5" numerals at radius 130, real hour / minute / second hands at 66 / 152 / 138 px, center pin.
+- Per-tick `_digitalUpdater` callback drives the jitter random walk (±3 minute step per real-minute click, sync only at top of hour) and the 5 s on / 5 s off flash window for the noon and 5 PM demo modes.
+- `ThemeCatalog` entry "Captain John's" between Daylight and Flip Clock, gallery preview pulls `Assets/themes/captjohn-mockup.png`.
+- `TabViewModel.IsDarkTheme` returns `false` for CaptJohn (parchment = light backdrop → near-black overlay glyphs).
+
+Asset additions (also serve as the single source of truth for the design):
+
+- `windows/design/themes/captjohn-mockup-hora.png` — Hora Chapín ON (default, lazy mode with jitter)
+- `windows/design/themes/captjohn-mockup-hora-off.png` — Hora Chapín OFF (regular numberless clock)
+- `windows/design/themes/captjohn-mockup-almuerze.png` — Almuerzo demo (12:00 noon flash)
+- `windows/design/themes/captjohn-mockup-fini.png` — Fini demo (5:00 PM flash)
+- `windows/design/themes/captjohn-mockup-menu-open.png` — Jolly Roger overflow menu open (Hora Chapín checkbox + Almuerzo / Fini radios)
+- `windows/design/themes/captjohn-mockup.png` — alias for the default Hora Chapín state
+- `windows/design/fonts/Cinzel-Variable.ttf` — OFL-licensed Cinzel variable font (125 KB) used for Cinzel Bold numerals on the CaptJohn face when 12 / 5 flash during demo windows
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo.jpg` — Captain John's Marina source logo (168 × 197) used as the dial backdrop at 40% opacity
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo-circle.jpg` — pre-padded 270 × 270 white-cornered version (so the original image's diagonal fits inside the inscribed circle of the 320 face)
+
+The CaptJohn theme delivers: parchment-and-brass palette, lazy "Hora Chapín" minute hand with random ±3 minute jitter (sync only at top of hour), real-time hour and minute hands at 7.5% opacity in the default Hora Chapín mode, "Almuerzo" demo pinning to 12:00 noon with all hands + numerals flashing at 5 s cadence, "Fini" demo pinning to 5:00 PM with 12 + 5 numerals flashing, "The Busted Flush" caption in Monotype Corsiva 13 px italic at 40% sepia (matching logo opacity), and the Jolly Roger ☠ overflow button (60 px) in the lower-left whose popout panel hosts the Hora Chapín checkbox + Almuerzo / Fini demo radios. The popout-panel UI scaffolding lands here as runtime hooks; the full Jolly-Roger overflow visual + click handler ships in a v1.1.x follow-up — for v1.1.0, the theme is selectable from the gallery and renders correctly in its default Hora Chapín ON state.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.Shared/Settings/SettingsModel.cs` — `Theme.CaptJohn` enum value added
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — six analog `Build*` methods updated for the hand-length pass; new `BuildCaptJohn()` renderer (~250 LOC); per-tick jitter + flash logic in the digital-updater callback
+- `windows/src/ComTekAtomicClock.UI/ViewModels/ThemeCatalog.cs` — new "Captain John's" gallery entry between Daylight and Flip Clock
+- `windows/src/ComTekAtomicClock.UI/ViewModels/TabViewModel.cs` — `IsDarkTheme` returns `false` for CaptJohn (parchment is light → near-black overlay glyphs)
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.0.0 → 1.1.0; `Resource` entries for `JohnsMarina-logo.jpg`, `Cinzel-Variable.ttf`, `captjohn-mockup.png`
+- `windows/tools/installer.iss` — `MyAppVersion` 1.0.0 → 1.1.0
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo.jpg` (new)
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo-circle.jpg` (new)
+- `windows/design/fonts/Cinzel-Variable.ttf` (new — OFL Cinzel variable font)
+- `windows/design/themes/captjohn-mockup-*.png` (new — 6 mockup states)
+- `windows/SPEC.md` v2.0 → v2.1 (front matter; CaptJohn full per-element spec inserted as Theme #7 in §10; #8–13 renumbered; per-theme hand rows; end-of-doc baseline)
+- `windows/CONTEXT.md` (current version line + session log entry + repo state)
+- `windows/TODO.md` (CaptJohn entry with full design lock-in detail; new "Custom" theme entry — user-uploaded background image)
+- `windows/CHANGELOG.md` (this entry)
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
 ## [1.0.0] - 2026-05-03 — First stable release
 
 Symbolic milestone. Code jumps 0.0.39 → 1.0.0. Functionally, this is v0.0.39 with a version stamp and a consolidated backlog doc — no runtime change, but the version leap declares the **core feature set is stable enough for end-user distribution**.

@@ -33,6 +33,15 @@ public enum Theme
     Cathode,
     Concourse,
     Daylight,
+    /// <summary>
+    /// v1.1.0+ — Captain John's Marina (Pirate Bar, Rio Dulce, Guatemala).
+    /// Parchment-and-brass face with the marina's logo at 40% opacity as
+    /// the dial backdrop. Lazy "Hora Chapín" jitter minute hand (random
+    /// ±3 min per tick, syncs at top of hour). Cinzel-Bold "12" and "5"
+    /// numerals flash in bordeaux during a 10-minute window centered on
+    /// noon and 5 PM. Grouped with the analog cluster in §10.
+    /// </summary>
+    CaptJohn,
     FlipClock,
     Marquee,
     Slab,

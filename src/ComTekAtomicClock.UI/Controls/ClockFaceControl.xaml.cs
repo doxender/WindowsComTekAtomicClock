@@ -25,6 +25,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;   // v1.1.0 — BitmapImage for CaptJohn logo
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using SettingsTheme = ComTekAtomicClock.Shared.Settings.Theme;
@@ -353,6 +354,7 @@ public partial class ClockFaceControl : UserControl
             case SettingsTheme.Cathode:       BuildCathode();       break;
             case SettingsTheme.Concourse:     BuildConcourse();     break;
             case SettingsTheme.Daylight:      BuildDaylight();      break;
+            case SettingsTheme.CaptJohn:      BuildCaptJohn();      break;
             case SettingsTheme.FlipClock:     BuildFlipClock();     break;
             case SettingsTheme.Marquee:       BuildMarquee();       break;
             case SettingsTheme.Slab:          BuildSlab();          break;
@@ -468,6 +470,7 @@ public partial class ClockFaceControl : UserControl
         SettingsTheme.Cathode       => "Cathode",
         SettingsTheme.Concourse     => "Concourse",
         SettingsTheme.Daylight      => "Daylight",
+        SettingsTheme.CaptJohn      => "Captain John’s",
         SettingsTheme.FlipClock     => "Flip Clock",
         SettingsTheme.Marquee       => "Marquee",
         SettingsTheme.Slab          => "Slab",
@@ -779,8 +782,9 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeNumeral("6",  Cx,         Cy + 132, consolas, 22, amber));
         Dial.Children.Add(MakeNumeral("9",  Cx - 132,   Cy,       consolas, 22, amber));
 
-        var (hourLine,   hRot) = MakeHand(14, 90,  hands,      6);
-        var (minuteLine, mRot) = MakeHand(18, 128, hands,      4);
+        // v1.0.1 — hour -24 px (1/4"), minute +24 px (1/4")
+        var (hourLine,   hRot) = MakeHand(14, 66,  hands,      6);
+        var (minuteLine, mRot) = MakeHand(18, 152, hands,      4);
         var (secondLine, sRot) = MakeHand(22, 142, redSecond,  1.6);
         Dial.Children.Add(hourLine);   _hourRotate   = hRot;
         Dial.Children.Add(minuteLine); _minuteRotate = mRot;
@@ -841,8 +845,9 @@ public partial class ClockFaceControl : UserControl
         // No numerals — Mondaine has none.
 
         // Hands as solid black batons
-        var (hourBaton,   hRot) = MakeBatonHand(14, 100, 10, black);
-        var (minuteBaton, mRot) = MakeBatonHand(18, 138,  7, black);
+        // v1.0.1 — hour -24, minute +24 (Mondaine batons stay proportional in width).
+        var (hourBaton,   hRot) = MakeBatonHand(14, 76,  10, black);
+        var (minuteBaton, mRot) = MakeBatonHand(18, 162,  7, black);
         Dial.Children.Add(hourBaton);   _hourRotate   = hRot;
         Dial.Children.Add(minuteBaton); _minuteRotate = mRot;
 
@@ -975,8 +980,9 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeNumeral("6",  Cx,         Cy + 132, segoe, 22, white, FontWeights.SemiBold));
         Dial.Children.Add(MakeNumeral("9",  Cx - 132,   Cy,       segoe, 22, white, FontWeights.SemiBold));
 
-        var (hLine, hRot) = MakeHand(14, 92,  white, 7, PenLineCap.Round);
-        var (mLine, mRot) = MakeHand(18, 128, white, 5, PenLineCap.Round);
+        // v1.0.1 — hour -24, minute +24
+        var (hLine, hRot) = MakeHand(14, 68,  white, 7, PenLineCap.Round);
+        var (mLine, mRot) = MakeHand(18, 152, white, 5, PenLineCap.Round);
         var (sLine, sRot) = MakeHand(22, 140, cyan,  2, PenLineCap.Round);
         Dial.Children.Add(hLine); _hourRotate   = hRot;
         Dial.Children.Add(mLine); _minuteRotate = mRot;
@@ -1049,8 +1055,9 @@ public partial class ClockFaceControl : UserControl
             Dial.Children.Add(tb);
         }
 
-        var (hLine, hRot) = MakeHand(14, 90,  phosphor,       5, PenLineCap.Round);
-        var (mLine, mRot) = MakeHand(18, 128, phosphor,     3.5, PenLineCap.Round);
+        // v1.0.1 — hour -24, minute +24 (CRT phosphor glow stays scaled to thickness, not length)
+        var (hLine, hRot) = MakeHand(14, 66,  phosphor,       5, PenLineCap.Round);
+        var (mLine, mRot) = MakeHand(18, 152, phosphor,     3.5, PenLineCap.Round);
         var (sLine, sRot) = MakeHand(22, 142, phosphorBright, 1.4, PenLineCap.Round);
         hLine.Effect = glow.Clone();
         mLine.Effect = glow.Clone();
@@ -1124,8 +1131,9 @@ public partial class ClockFaceControl : UserControl
         }
 
         // Thick rectangular hands
-        var (hRect, hRot) = MakeBatonHand(0, 86, 10, orange, 1.5);
-        var (mRect, mRot) = MakeBatonHand(0, 122, 8, orange, 1.5);
+        // v1.0.1 — hour -24, minute +24
+        var (hRect, hRot) = MakeBatonHand(0, 62, 10, orange, 1.5);
+        var (mRect, mRot) = MakeBatonHand(0, 146, 8, orange, 1.5);
         Dial.Children.Add(hRect); _hourRotate   = hRot;
         Dial.Children.Add(mRect); _minuteRotate = mRot;
 
@@ -1195,8 +1203,9 @@ public partial class ClockFaceControl : UserControl
             Dial.Children.Add(MakeNumeral(h.ToString(), x, y, inter, 22, navy, FontWeights.Bold));
         }
 
-        var (hRect, hRot) = MakeBatonHand(0, 90,  9, navy, 1.5);
-        var (mRect, mRot) = MakeBatonHand(0, 128, 7, navy, 1.5);
+        // v1.0.1 — hour -24, minute +24
+        var (hRect, hRot) = MakeBatonHand(0, 66,  9, navy, 1.5);
+        var (mRect, mRot) = MakeBatonHand(0, 152, 7, navy, 1.5);
         Dial.Children.Add(hRect); _hourRotate   = hRot;
         Dial.Children.Add(mRect); _minuteRotate = mRot;
 
@@ -1231,6 +1240,298 @@ public partial class ClockFaceControl : UserControl
         // textblock placed once at Cx-half-of-"00:00:00" and never
         // re-centered — actual time strings drift width tick-to-tick.
         _recenterTextReadoutsOnUpdate = true;
+    }
+
+    // ===============================================================
+    // Theme: Captain John's Marina (v1.1.0)
+    //
+    // Hand-drawn parchment-and-brass face featuring the marina logo at
+    // 40% opacity. Lazy "Hora Chapín" jitter minute hand drifts ±3 min
+    // each tick, snapping back to 12 at the top of every hour. During
+    // ±5 minutes of noon and 5 PM, the face wakes up: real hour /
+    // minute / second hands flash to 100% opacity and the bordeaux
+    // Cinzel-Bold "12" (and "5" at 5 PM) flash on top — 5 s on, 5 s
+    // off — over a 10-minute window. Outside those windows the real
+    // hands sit at 7.5% opacity as a faint reference behind the
+    // jittered hand.
+    //
+    // v1.1.0 ships the rendering. Not yet shipped (deferred to v1.1.x):
+    //   - Jolly Roger ⋯ button + popout panel in the lower-left
+    //   - Hora Chapín ON/OFF toggle (currently always ON)
+    //   - Almuerzo / Fini momentary demo buttons
+    // See windows/TODO.md "Active queue" #1 for the wire-up scope.
+    // ===============================================================
+
+    // Per-theme state — only used while CaptJohn is the active theme.
+    // Reset to null in RenderActiveTheme via the existing _digitalUpdater
+    // and rotate-handle clears.
+    private Line? _captJohnHourHand;
+    private Line? _captJohnMinuteHand;
+    private Line? _captJohnSecondHand;
+    private Line? _captJohnJitterHand;
+    private RotateTransform? _captJohnJitterRotate;
+    private TextBlock? _captJohn12Numeral;
+    private TextBlock? _captJohn5Numeral;
+    private int _captJohnJitterMinute;
+    private int _captJohnJitterLastTickRealMinute = -1;
+    private static readonly Random _captJohnRng = new();
+
+    private void BuildCaptJohn()
+    {
+        // ---- Palette --------------------------------------------------
+        var parchment    = Color.FromRgb(0xF5, 0xE9, 0xD0);
+        var parchmentEd  = Color.FromRgb(0xE8, 0xD7, 0xB2);
+        var brass        = Color.FromRgb(0xB8, 0x92, 0x4E);
+        var ink          = Color.FromRgb(0x1A, 0x1A, 0x1A);
+        var gold         = Color.FromRgb(0xD4, 0xA5, 0x47);
+        var bordeaux     = Color.FromRgb(0x7B, 0x16, 0x16);   // numerals
+        var bordeauxDark = Color.FromRgb(0x4A, 0x0F, 0x0F);   // hour hand
+        var bordeauxMid  = Color.FromRgb(0x64, 0x14, 0x14);   // minute + second hand
+        var face         = Color.FromRgb(0xFC, 0xF4, 0xE0);
+
+        var inkBrush          = new SolidColorBrush(ink);
+        var goldBrush         = new SolidColorBrush(gold);
+        var bordeauxBrush     = new SolidColorBrush(bordeaux);
+        var bordeauxDarkBrush = new SolidColorBrush(bordeauxDark);
+        var bordeauxMidBrush  = new SolidColorBrush(bordeauxMid);
+
+        // ---- 1. Parchment radial backdrop -----------------------------
+        var bgBrush = new RadialGradientBrush
+        {
+            Center = new Point(0.5, 0.5),
+            GradientOrigin = new Point(0.5, 0.5),
+            RadiusX = 0.7, RadiusY = 0.7,
+            GradientStops =
+            {
+                new GradientStop(parchment,   0),
+                new GradientStop(parchmentEd, 1),
+            },
+        };
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = bgBrush }.At(0, 0));
+
+        // ---- 2. Brass ring (344×344) ---------------------------------
+        Dial.Children.Add(new Ellipse
+        {
+            Width  = 344, Height = 344,
+            Stroke = new SolidColorBrush(brass), StrokeThickness = 2,
+        }.At(28, 28));
+
+        // ---- 3. Inner cream face (320×320) ---------------------------
+        Dial.Children.Add(new Ellipse
+        {
+            Width = 320, Height = 320, Fill = new SolidColorBrush(face),
+        }.At(40, 40));
+
+        // ---- 4. Marina logo at 40% opacity, clipped to face circle ----
+        try
+        {
+            var logoUri = new Uri("pack://application:,,,/Assets/JohnsMarina-logo.jpg");
+            var logoSrc = new BitmapImage(logoUri);
+            // Original 168×197. Scale so the diagonal fits inside the
+            // 320 face circle with a 4% safety margin (matches the
+            // mockup math in tools/captjohn-mockup.ps1).
+            var diag = Math.Sqrt(168 * 168 + 197 * 197);
+            var scale = (320.0 / diag) * 1.04;
+            var dw = 168 * scale;
+            var dh = 197 * scale;
+            var logoImage = new Image
+            {
+                Source  = logoSrc,
+                Width   = dw,
+                Height  = dh,
+                Opacity = 0.40,
+                Stretch = Stretch.Fill,
+            };
+            // Clip to the face circle. Clip is in the Image's own local
+            // coords (top-left = 0,0), so the ellipse center is at
+            // (logoImage.Width/2 + (Cx - dw/2 - dx), ...). Easier: use
+            // an EllipseGeometry whose RadiusX/Y is the inscribed-circle
+            // radius (160) translated into local coords by subtracting
+            // the image's canvas position from Cx/Cy.
+            var imgX = Cx - dw / 2.0;
+            var imgY = Cy - dh / 2.0;
+            logoImage.Clip = new EllipseGeometry(
+                center:  new Point(Cx - imgX, Cy - imgY),
+                radiusX: 160, radiusY: 160);
+            Dial.Children.Add(logoImage.At(imgX, imgY));
+        }
+        catch (Exception ex)
+        {
+            // Asset missing or corrupt — log and continue without the
+            // logo backdrop. The face still renders (parchment + ring +
+            // hands) so the user sees a recognizable clock.
+            System.Diagnostics.Trace.WriteLine(
+                $"[ClockFaceControl] BuildCaptJohn: failed to load logo — {ex.Message}");
+        }
+
+        // ---- 5. "The Busted Flush" caption ----------------------------
+        // Monotype Corsiva 13 px italic, sepia at 40% — same visual
+        // weight as the logo so it reads as a logo extension.
+        var bustedFlush = new TextBlock
+        {
+            Text       = "The Busted Flush",
+            FontFamily = new FontFamily("Monotype Corsiva, Segoe Script, cursive"),
+            FontSize   = 13,
+            FontStyle  = FontStyles.Italic,
+            Foreground = new SolidColorBrush(Color.FromArgb(0x66, 0x3C, 0x28, 0x1C)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
+        bustedFlush.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Dial.Children.Add(bustedFlush.At(Cx - bustedFlush.DesiredSize.Width / 2, 283));
+
+        // ---- 6. Center pin (drawn AFTER hands so it sits on top, but
+        //         we add hands above this in z-order via Dial.Children
+        //         order) ------------------------------------------------
+        // (deferred — added after hands below)
+
+        // ---- 7. Real-time hour hand: length 66, dark bordeaux, 7.5% ----
+        var (hourLine, hRot) = MakeHand(14, 66, bordeauxDarkBrush, 9, PenLineCap.Round);
+        hourLine.Opacity = 0.075;
+        Dial.Children.Add(hourLine);
+        _captJohnHourHand = hourLine;
+        _hourRotate = hRot;
+
+        // ---- 8. Real-time minute hand: length 152, mid bordeaux, 7.5% ----
+        var (minLine, mRot) = MakeHand(18, 152, bordeauxMidBrush, 5, PenLineCap.Round);
+        minLine.Opacity = 0.075;
+        Dial.Children.Add(minLine);
+        _captJohnMinuteHand = minLine;
+        _minuteRotate = mRot;
+
+        // ---- 9. Real-time second hand: length 138, mid bordeaux, hidden by default --
+        var (secLine, sRot) = MakeHand(22, 138, bordeauxMidBrush, 2, PenLineCap.Round);
+        secLine.Opacity = 0;   // hidden until flash window
+        Dial.Children.Add(secLine);
+        _captJohnSecondHand = secLine;
+        _secondRotate = sRot;
+
+        // ---- 10. Jittered "lazy" minute hand on top, ink black, full opacity --
+        // Same length as the real minute hand. Position is updated by
+        // the digital updater each tick based on the random-walk state.
+        var jitterRotate = new RotateTransform(0, Cx, Cy);
+        var jitterLine = new Line
+        {
+            X1 = Cx, Y1 = Cy + 18,
+            X2 = Cx, Y2 = Cy - 152,
+            Stroke = inkBrush,
+            StrokeThickness = 7,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap   = PenLineCap.Round,
+            RenderTransform = jitterRotate,
+        };
+        Dial.Children.Add(jitterLine);
+        _captJohnJitterHand = jitterLine;
+        _captJohnJitterRotate = jitterRotate;
+        // Reset the random-walk state on each theme rebuild so a fresh
+        // CaptJohn render starts at "12" (i.e., 0 minutes displayed).
+        _captJohnJitterMinute = 0;
+        _captJohnJitterLastTickRealMinute = -1;
+
+        // ---- 11. Center pin (12 ink + 4 gold) — z-order on top -------
+        Dial.Children.Add(new Ellipse { Width = 12, Height = 12, Fill = inkBrush  }.At(Cx - 6, Cy - 6));
+        Dial.Children.Add(new Ellipse { Width = 4,  Height = 4,  Fill = goldBrush }.At(Cx - 2, Cy - 2));
+
+        // ---- 12. Numerals "12" and "5" — Cinzel Bold 38, bordeaux, hidden by default --
+        // Visible only during their respective flash windows on the
+        // "on" frame of the 5 s flash cycle.
+        var cinzelFamily = new FontFamily(
+            "pack://application:,,,/Assets/Fonts/Cinzel-Variable.ttf#Cinzel"
+            + ", Cambria, Times New Roman, serif");
+        const double numRadius = 130;
+        // "12" at top (angle 0)
+        _captJohn12Numeral = new TextBlock
+        {
+            Text       = "12",
+            FontFamily = cinzelFamily,
+            FontSize   = 38,
+            FontWeight = FontWeights.Bold,
+            Foreground = bordeauxBrush,
+            Opacity    = 0,
+        };
+        _captJohn12Numeral.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Dial.Children.Add(_captJohn12Numeral.At(
+            Cx - _captJohn12Numeral.DesiredSize.Width / 2,
+            (Cy - numRadius) - _captJohn12Numeral.DesiredSize.Height / 2));
+
+        // "5" at the 5 o'clock position (angle 150°)
+        var ang5 = 150 * Math.PI / 180.0;
+        var pos5x = Cx + numRadius * Math.Sin(ang5);
+        var pos5y = Cy - numRadius * Math.Cos(ang5);
+        _captJohn5Numeral = new TextBlock
+        {
+            Text       = "5",
+            FontFamily = cinzelFamily,
+            FontSize   = 38,
+            FontWeight = FontWeights.Bold,
+            Foreground = bordeauxBrush,
+            Opacity    = 0,
+        };
+        _captJohn5Numeral.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Dial.Children.Add(_captJohn5Numeral.At(
+            pos5x - _captJohn5Numeral.DesiredSize.Width / 2,
+            pos5y - _captJohn5Numeral.DesiredSize.Height / 2));
+
+        // ---- 13. Per-tick state machine ------------------------------
+        // Drives:
+        //   · Jitter advance / hour-mark sync of the lazy minute hand.
+        //   · Flash-window detection (±5 min of noon and 5 PM).
+        //   · 5 s on / 5 s off cadence within the window.
+        //   · Visibility toggling of real hands at 7.5% / 100% and the
+        //     numerals at 0 / 100%.
+        _digitalUpdater = local =>
+        {
+            // Jitter random walk: advance once per minute. At top of
+            // hour (minute == 0), reset to 0 (sync to 12 — Dan's
+            // "even things up" rule).
+            if (local.Minute != _captJohnJitterLastTickRealMinute)
+            {
+                _captJohnJitterLastTickRealMinute = local.Minute;
+                if (local.Minute == 0)
+                {
+                    _captJohnJitterMinute = 0;
+                }
+                else
+                {
+                    var delta = _captJohnRng.Next(-3, 4);   // [-3, +3] inclusive
+                    _captJohnJitterMinute = ((_captJohnJitterMinute + delta) % 60 + 60) % 60;
+                }
+            }
+            if (_captJohnJitterRotate is not null)
+                _captJohnJitterRotate.Angle = _captJohnJitterMinute * 6.0;
+
+            // Flash-window detection — wraparound-safe modulo distance
+            // from noon (720 min from midnight) and 5 PM (1020 min).
+            var minSinceMidnight = local.Hour * 60 + local.Minute;
+            var distNoon = WrappedAbsDiff(minSinceMidnight, 720);
+            var dist5PM  = WrappedAbsDiff(minSinceMidnight, 1020);
+            var inNoonWindow = distNoon <= 5;
+            var in5PMWindow  = dist5PM  <= 5;
+            var inFlash = inNoonWindow || in5PMWindow;
+            // 5 s on / 5 s off cadence
+            var flashOn = ((local.Second / 5) % 2) == 0;
+
+            // Real hands: 7.5% baseline; jump to 100% during the
+            // "on" frame of a flash window.
+            var realOpacity = (inFlash && flashOn) ? 1.0 : 0.075;
+            if (_captJohnHourHand   is not null) _captJohnHourHand.Opacity   = realOpacity;
+            if (_captJohnMinuteHand is not null) _captJohnMinuteHand.Opacity = realOpacity;
+
+            // Second hand: only visible during flash on-frames.
+            if (_captJohnSecondHand is not null)
+                _captJohnSecondHand.Opacity = (inFlash && flashOn) ? 1.0 : 0;
+
+            // Numerals: each visible only in its own window's on-frames.
+            if (_captJohn12Numeral is not null)
+                _captJohn12Numeral.Opacity = ((inNoonWindow || in5PMWindow) && flashOn) ? 1.0 : 0;
+            if (_captJohn5Numeral is not null)
+                _captJohn5Numeral.Opacity  = (in5PMWindow && flashOn) ? 1.0 : 0;
+        };
+
+        static int WrappedAbsDiff(int a, int target)
+        {
+            var d = Math.Abs(a - target);
+            return Math.Min(d, 1440 - d);
+        }
     }
 
     // ===============================================================

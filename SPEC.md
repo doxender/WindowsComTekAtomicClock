@@ -2,13 +2,14 @@
 
 | | |
 |---|---|
-| **Document version** | 2.0 |
+| **Document version** | 2.1 |
 | **Date** | 2026-05-03 |
-| **Code baseline** | v1.0.0 |
+| **Code baseline** | v1.1.0 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
 | **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
+| **v2.0 → v2.1 changes** | Hand-length pass on every analog face — hour −24 px (≈ 1/4 inch at 96 DPI), minute +24 px. Net effect: minute hand is 84–86 px longer than the hour hand on Atomic Lab / Boulder Slate / Aero Glass / Cathode / Concourse / Daylight (was 36–38 px). Hand thicknesses, colors, and second-hand lengths unchanged. **Plus: shipped the new `Theme.CaptJohn` (Captain John's Marina) — Theme #7 in the analog cluster.** Parchment + brass face, marina logo at 40%, Cinzel-Bold "12"/"5" numerals that flash at noon and 5 PM (5 s on / 5 s off over a ±5 min window), lazy "Hora Chapín" jitter minute hand (random ±3 min, sync at top of hour), real-time hands at 7.5% / 100% opacity tied to flash window. Total theme count 12 → 13. See §10 Theme #7; CHANGELOG.md `[1.1.0]`. Deferred to v1.1.x: Jolly Roger ⋯ button + popout panel + Hora ON/OFF toggle + Almuerzo / Fini momentary demos. |
 | **v1.4 → v2.0 changes** | First stable release stamp. Code baseline jumps 0.0.39 → 1.0.0. v0.0.37 (dialog height) + v0.0.38 (Daylight/Boulder Slate readout alignment) + v0.0.39 (dialog Owner — center over originating window) all rolled in. Doc-version 1.4 → 2.0 reflects the symbolic stability rather than further content changes. `windows/TODO.md` introduced as the canonical open-work list (replaces scattered "Pending" / "Planned" lists). See CHANGELOG.md `[1.0.0]`. |
 | **v1.1 → v1.2 changes** | First-run polish on v0.0.33: toolbar `+ New tab` / `+ New window` switched to `ui:Button` for contrast; tab right-click ContextMenu removed (right-click now directly opens Tab Settings dialog); "Open in new window" migration moved to the "?" overlay menu on the clock face. See §7 / §8 and CHANGELOG.md `[0.0.34]`. |
 | **v1.1 changes** | Dragablz removed (replaced with native WPF `TabControl`); tear-away gesture removed; explicit "+ New window" / "Open in new window" / "Bring back into tabs" commands added; magnetic snap added as Phase-2 Planned. See §22 / §17 / §21; CHANGELOG.md `[0.0.33]`. |
@@ -793,7 +794,7 @@ Each theme's `Build*` method begins by painting a 400 × 400 rectangle at (0, 0)
 
 ---
 
-## §10 — Themes (12 total)
+## §10 — Themes (13 total — v1.1.0+)
 
 Categories per the `Theme` enum and `ThemeCatalog.All` (in this order):
 
@@ -805,12 +806,13 @@ Categories per the `Theme` enum and `ThemeCatalog.All` (in this order):
 | 4 | `Cathode` | Analog | Cathode | |
 | 5 | `Concourse` | Analog | Concourse | |
 | 6 | `Daylight` | Analog | Daylight | |
-| 7 | `FlipClock` | Digital-only | Flip Clock | |
-| 8 | `Marquee` | Digital-only | Marquee | |
-| 9 | `Slab` | Digital-only | Slab | |
-| 10 | `Binary` | Specialty (encoder) | Binary | |
-| 11 | `Hex` | Specialty (encoder) | Hex | |
-| 12 | `BinaryDigital` | Digital-only (encoder) | Binary Digital | |
+| 7 | `CaptJohn` | Analog (v1.1.0+) | Captain John's | |
+| 8 | `FlipClock` | Digital-only | Flip Clock | |
+| 9 | `Marquee` | Digital-only | Marquee | |
+| 10 | `Slab` | Digital-only | Slab | |
+| 11 | `Binary` | Specialty (encoder) | Binary | |
+| 12 | `Hex` | Specialty (encoder) | Hex | |
+| 13 | `BinaryDigital` | Digital-only (encoder) | Binary Digital | |
 
 **Date strip uniformity (per v0.0.22).** Every theme renders a date with day-of-week, date-of-month, month, AND year. Most analog/digital themes use the format string `"ddd · MMMM d · yyyy"` upper-cased (e.g. `MON · APRIL 26 · 2026`). The two encoder themes (Hex, Binary) render the same four parts in their respective encodings. Boulder Slate and Daylight center the date below the clock face (per v0.0.24).
 
@@ -821,7 +823,7 @@ Categories per the `Theme` enum and `ThemeCatalog.All` (in this order):
 | Theme | Class | Glyph color |
 |---|---|---|
 | AtomicLab, AeroGlass, Cathode, Concourse, Marquee, Slab, Binary, Hex, BinaryDigital | dark | white `#FFFFFF` |
-| BoulderSlate, Daylight, FlipClock | light | near-black `#101010` |
+| BoulderSlate, Daylight, CaptJohn, FlipClock | light | near-black `#101010` |
 
 ### Theme #1 — Atomic Lab (`BuildAtomicLab`)
 
@@ -835,8 +837,8 @@ The default. Black-and-amber lab-bench instrument aesthetic with a NIST badge.
 | **Minute ticks** | `AddMinuteTicks(160, 155, amber, 1, 0.55)`. Amber = `#FFB000` |
 | **Hour ticks** | `AddHourTicks(160, 145, amber, 3)` |
 | **Numerals** | 4: `12 / 3 / 6 / 9` at radius 132 from center. Font `"Consolas, Courier New"`, size 22, color amber, FontWeight Bold |
-| **Hour hand** | line, overhang 14 / length 90, white `#F5F5F5`, thickness 6 |
-| **Minute hand** | line, overhang 18 / length 128, white, thickness 4 |
+| **Hour hand** (v1.1.0+) | line, overhang 14 / length **66** (was 90), white `#F5F5F5`, thickness 6 |
+| **Minute hand** (v1.1.0+) | line, overhang 18 / length **152** (was 128), white, thickness 4 |
 | **Second hand** | line, overhang 22 / length 142, red `#FF3030`, thickness 1.6 |
 | **Center pin** | 14×14 amber ellipse + 5×5 inner faceBrush ellipse |
 | **Digital panel** | Border 146×60, fill `#040B04`, BorderBrush amber, BorderThickness 0.6, CornerRadius 4. Position `(Cx-73, Cy+34)` |
@@ -856,8 +858,8 @@ Mondaine-inspired Swiss railway clock. Cream backdrop, white face, red lollipop 
 | **Minute ticks** | `(160, 152)` black thickness 2 |
 | **Hour ticks** | `(160, 138)` black thickness 6 |
 | **Numerals** | none |
-| **Hour hand** | black baton, overhang 14 / length 100 / width 10, no corner radius |
-| **Minute hand** | black baton, overhang 18 / length 138 / width 7 |
+| **Hour hand** (v1.1.0+) | black baton, overhang 14 / length **76** (was 100) / width 10, no corner radius |
+| **Minute hand** (v1.1.0+) | black baton, overhang 18 / length **162** (was 138) / width 7 |
 | **Second hand** (special — SBB lollipop) | a 400×400 sub-canvas containing: red rod `#E3001B` thickness 2.5, from `(Cx, Cy+22)` to `(Cx, Cy-118)` + 28×28 disc at `(Cx, Cy-132)` lined up with the rod tip |
 | **Center pin** | 10×10 black |
 | **Date + time below center** | bare text. Font `"Segoe UI Variable, Segoe UI, sans-serif"`, FontWeight Medium, both black. Date FontSize 9, time FontSize 14. Format `"ddd · MMMM d · yyyy"` upper for date, `"h:mm:ss tt"` for time |
@@ -876,8 +878,8 @@ Windows 7-era acrylic over a wallpaper-mock backdrop.
 | **Acrylic disc** | 344×344 ellipse, fill linear gradient `#52FFFFFF` → `#24FFFFFF` (alpha-prefixed), stroke `#8CFFFFFF` thickness 1, DropShadowEffect blur 14, direction 270, depth 4, opacity 0.4 |
 | **Hour ticks** | only (12), `AddHourTicks(156, 142, white, 3, Round)`. No minute ticks. |
 | **Numerals** | 4 (`12 / 3 / 6 / 9`), font `"Segoe UI Variable, Segoe UI, sans-serif"` size 22, white, FontWeight SemiBold |
-| **Hour hand** | round-cap, length 92, thickness 7, white |
-| **Minute hand** | round-cap, length 128, thickness 5, white |
+| **Hour hand** (v1.1.0+) | round-cap, length **68** (was 92), thickness 7, white |
+| **Minute hand** (v1.1.0+) | round-cap, length **152** (was 128), thickness 5, white |
 | **Second hand** | round-cap, length 140, thickness 2, cyan `#00B7FF` |
 | **Center pin** | 12 white + 4 cyan |
 | **Digital pill** | 130×50 Border, background `#59000000` (alpha-translucent), CornerRadius 14 |
@@ -897,8 +899,8 @@ CRT phosphor-green terminal nostalgia. Glow on every element.
 | **Minute ticks** | `(160, 153)` `#00B048` thickness 0.8 opacity 0.5 |
 | **Hour ticks** | `(160, 145)` phosphor thickness 2.5 round |
 | **Numerals** | 4, font `"Lucida Console, Consolas, monospace"` size 20 Bold, phosphor green, with cloned `BlurEffect{Radius=4}` |
-| **Hour hand** | phosphor, length 90 thickness 5 round, glow |
-| **Minute hand** | phosphor, length 128 thickness 3.5 round, glow |
+| **Hour hand** (v1.1.0+) | phosphor, length **66** (was 90) thickness 5 round, glow |
+| **Minute hand** (v1.1.0+) | phosphor, length **152** (was 128) thickness 3.5 round, glow |
 | **Second hand** | bright phosphor `#A8FF8A`, length 142 thickness 1.4 round, glow |
 | **Center pin** | 10 phosphor with glow |
 | **Digital panel** | 144×50, fill `#000A05`, BorderBrush phosphor 0.5, CornerRadius 2, opacity 0.92 |
@@ -917,8 +919,8 @@ Train-station departure-board aesthetic. Charcoal face, orange ink.
 | **Inner face** | 320×320 charcoal `#0F0F0F` |
 | **Hour ticks** | only `(160, 142)` orange `#FF8C00` thickness 4. No minute ticks. |
 | **Numerals** | 1–12 at radius 122, font `"Bebas Neue, DIN Alternate, Impact, sans-serif"` size 28 Bold, orange `#FF8C00` |
-| **Hour hand** | baton, length 86 width 10, orange, CornerRadius 1.5 |
-| **Minute hand** | baton, length 122 width 8, orange, CornerRadius 1.5 |
+| **Hour hand** (v1.1.0+) | baton, length **62** (was 86) width 10, orange, CornerRadius 1.5 |
+| **Minute hand** (v1.1.0+) | baton, length **146** (was 122) width 8, orange, CornerRadius 1.5 |
 | **Second hand** | white line, length 138 thickness 1.8 round |
 | **Center pin** | 16 orange + 6 charcoal |
 | **Digital panel** | 156×56, fill `#1A0D00`, BorderBrush orange 0.6, CornerRadius 3 |
@@ -938,8 +940,8 @@ High-contrast cream-and-navy. Outdoor / readability theme.
 | **Minute ticks** | `(160, 153)` navy `#003366` thickness 1.2 |
 | **Hour ticks** | `(160, 145)` navy thickness 3.5 |
 | **Numerals** | 1–12 at radius 124, font `"Inter, Segoe UI, sans-serif"` size 22 Bold, navy |
-| **Hour hand** | baton, length 90 width 9, navy, CornerRadius 1.5 |
-| **Minute hand** | baton, length 128 width 7, navy, CornerRadius 1.5 |
+| **Hour hand** (v1.1.0+) | baton, length **66** (was 90) width 9, navy, CornerRadius 1.5 |
+| **Minute hand** (v1.1.0+) | baton, length **152** (was 128) width 7, navy, CornerRadius 1.5 |
 | **Second hand** | line, length 140 thickness 2 round, color `#E84A1A` orange-red |
 | **Center pin** | 12 navy + 4 orange-red |
 | **Date + time below center** | bare text. Date `Inter` size 11 SemiBold navy at `(Cx, Cy+60)`; time `Inter` size 18 Bold navy at `(Cx, Cy+76)` |
@@ -947,7 +949,36 @@ High-contrast cream-and-navy. Outdoor / readability theme.
 | **Smooth-second default** | `false` |
 | **Luminance class** | light (near-black `#101010` glyphs) |
 
-### Theme #7 — Flip Clock (`BuildFlipClock`)
+### Theme #7 — Captain John's (`BuildCaptJohn`) — v1.1.0+
+
+Hand-drawn parchment-and-brass face featuring the marina's logo at 40% opacity. Lazy "Hora Chapín" jitter minute hand drifts ±3 minutes each tick, syncing back to 12 at the top of every hour. Around noon and 5 PM the face wakes up: real hands flash to 100% opacity and the bordeaux Cinzel-Bold "12" (and "5" at 5 PM) flash on top — 5 s on, 5 s off — over a 10-minute window centered on the hour mark.
+
+| Element | Spec |
+|---|---|
+| **Backdrop** | 400×400 radial gradient parchment `#F5E9D0` (center, 0.5/0.5) → `#E8D7B2` (radius 0.7) |
+| **Brass ring** | 344×344 ellipse, no fill, stroke `#B8924E` thickness 2 |
+| **Inner face** | 320×320 ellipse, fill `#FCF4E0` (warm cream) |
+| **Logo backdrop** | `pack://application:,,,/Assets/JohnsMarina-logo.jpg`, scaled so the 168×197 source's diagonal fits inside the inscribed circle of the 320 face with 4% safety margin (scale ≈ 1.286). Centered on `(Cx, Cy)`, opacity 0.40, clipped to face circle via `EllipseGeometry(radius=160)` |
+| **Caption** | "The Busted Flush" — Monotype Corsiva (fallback Segoe Script / cursive) Italic 13 px, sepia `#3C281C` at alpha 0x66 (40%), centered horizontally, top y=283 |
+| **Hour ticks** | none (face is numberless except during demo flash windows) |
+| **Minute ticks** | none |
+| **Numerals** | none normally. **"12"** (Cinzel-Variable Bold 38 px, bordeaux `#7B1616`) at top (Cx, Cy−130) flashes during the noon AND 5 PM windows. **"5"** at 5 o'clock (`Cx + 130·sin(150°)`, `Cy − 130·cos(150°)`) flashes only during the 5 PM window |
+| **Real hour hand** | `MakeHand(overhang 14, length 66)`, dark bordeaux `#4A0F0F`, thickness 9, round-cap. Default opacity 0.075 (7.5% — ghost reference); flashes to 1.0 during flash windows |
+| **Real minute hand** | `MakeHand(overhang 18, length 152)`, mid bordeaux `#641414`, thickness 5, round-cap. Default opacity 0.075; flashes to 1.0 |
+| **Real second hand** | `MakeHand(overhang 22, length 138)`, mid bordeaux `#641414`, thickness 2, round-cap. Default opacity 0 (hidden); visible only during flash on-frames |
+| **"Lazy" jitter minute hand** | Line, overhang 18 / length 152, ink black `#1A1A1A`, thickness 7, round-cap. Always rendered on top of the real minute hand at 100% opacity. Position is the displayed minute computed by the per-tick state machine (random walk, ±3 min per minute tick, hard reset to 0 at the top of each hour) |
+| **Center pin** | 12×12 ink black ellipse + 4×4 pirate gold `#D4A547` ellipse |
+| **Smooth-second default** | `true` (the second hand is hidden most of the time; smooth motion is fluid for the rare flash windows) |
+| **Luminance class** | **light** (parchment / cream — overlay glyphs render near-black `#101010`) |
+| **Per-tick state** | `_captJohnJitterMinute` (displayed minute), `_captJohnJitterLastTickRealMinute` (so the random walk advances exactly once per real minute), `_captJohnRng` (process-shared `Random`) |
+| **Flash window** | `WrappedAbsDiff(minutesSinceMidnight, target)` ≤ 5 minutes from either 720 (noon) or 1020 (5 PM). Wraparound-safe so the window crosses midnight cleanly even though neither target does. |
+| **Flash cadence** | `(local.Second / 5) % 2 == 0` → 5 s on / 5 s off |
+| **Date display** | (intentionally absent — CaptJohn is a "lazy bar clock" not a daily-info dashboard. The other 11 themes show the day/date/month/year strip per v0.0.22; CaptJohn explicitly opts out for the visual quiet) |
+| **Deferred to v1.1.x** | Jolly Roger ⋯ button (60 px) in the bottom-left + popout panel hosting Hora Chapín ON/OFF toggle (persistent) and Almuerzo / Fini momentary demo buttons that override `local` to 12:00 / 17:00 while the popout is open. Implementation: WPF `Popup` with `StaysOpen=False`, demo flags cleared on `Closed`. Per-tab persistence via `TabSettings.HoraChapinOn` |
+
+> **Note on the analog cluster.** With CaptJohn slotted in as Theme #7, the analog cluster grows from 6 → 7 themes, and the total theme count from 12 → 13. Themes #8–13 below were #7–12 in v1.0.x.
+
+### Theme #8 — Flip Clock (`BuildFlipClock`)
 
 1971-era split-flap nightstand clock with chrome legs and a brand line.
 
@@ -968,7 +999,7 @@ High-contrast cream-and-navy. Outdoor / readability theme.
 | **Luminance class** | light (near-black `#101010` glyphs) |
 | **Card-flip animation** | TODO marker at `:1366-1367` — actual flip animation not yet implemented |
 
-### Theme #8 — Marquee (`BuildMarquee`)
+### Theme #9 — Marquee (`BuildMarquee`)
 
 Theater marquee with chase bulbs and big amber show-time digits. Always 12-h.
 
@@ -986,7 +1017,7 @@ Theater marquee with chase bulbs and big amber show-time digits. Always 12-h.
 | **Luminance class** | dark (white glyphs) |
 | **Chase-bulb wave animation** | TODO marker at `:1366-1367` — wave animation not yet implemented |
 
-### Theme #9 — Slab (`BuildSlab`)
+### Theme #10 — Slab (`BuildSlab`)
 
 Brutalist concrete with a single huge time figure. Slab serif type.
 
@@ -1004,7 +1035,7 @@ Brutalist concrete with a single huge time figure. Slab serif type.
 | **Smooth-second default** | `true` |
 | **Luminance class** | dark (white glyphs — though backdrop is light, the dark accents push the perceived class) |
 
-### Theme #10 — Binary (`BuildBinary`)
+### Theme #11 — Binary (`BuildBinary`)
 
 Six-column BCD board with red LEDs. Always 24-h (matches the bit-width rationale).
 
@@ -1026,7 +1057,7 @@ Six-column BCD board with red LEDs. Always 24-h (matches the bit-width rationale
 | **Time format default** | **24-h always** (per v0.0.27 correction — encoders never honor 12-h) |
 | **Luminance class** | dark (white glyphs) |
 
-### Theme #11 — Hex (`BuildHex`)
+### Theme #12 — Hex (`BuildHex`)
 
 Mock Linux terminal showing time as hex bytes, with a synesthetic day-as-color swatch. Always 24-h.
 
@@ -1047,7 +1078,7 @@ Mock Linux terminal showing time as hex bytes, with a synesthetic day-as-color s
 | **Time format default** | **24-h always** (per v0.0.27 correction) |
 | **Luminance class** | dark (white glyphs) |
 
-### Theme #12 — Binary Digital (`BuildBinaryDigital`)
+### Theme #13 — Binary Digital (`BuildBinaryDigital`)
 
 Pure-text binary clock in magenta, in a mock terminal window. Always 24-h.
 
@@ -1700,8 +1731,8 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 
 ## End of document
 
-**Document version:** 2.0  
-**Code baseline:** v1.0.0  
-**Last reviewed:** 2026-05-01
+**Document version:** 2.1  
+**Code baseline:** v1.1.0  
+**Last reviewed:** 2026-05-03
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.

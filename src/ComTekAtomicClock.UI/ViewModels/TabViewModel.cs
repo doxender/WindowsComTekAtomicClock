@@ -94,6 +94,7 @@ public sealed class TabViewModel : INotifyPropertyChanged
         Theme.Cathode       => true,   // CRT black
         Theme.Concourse     => true,   // charcoal
         Theme.Daylight      => false,  // cream/white
+        Theme.CaptJohn      => false,  // parchment + brass (v1.1.0)
         Theme.FlipClock     => false,  // white tile cards
         Theme.Marquee       => true,   // theater red+black
         Theme.Slab          => true,   // brutalist concrete dark

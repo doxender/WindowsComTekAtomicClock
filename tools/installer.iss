@@ -23,13 +23,12 @@
 ;     CHANGELOG.md
 ;     README.md
 ;     SPEC.md
-;     INSTALL.md
 ;
 ; Friday/weekend rule: building this artifact is fine. Distributing
 ; (signing, uploading, releasing) waits till Monday.
 
 #define MyAppName        "ComTek Atomic Clock"
-#define MyAppVersion     "1.0.0"
+#define MyAppVersion     "1.1.0"
 #define MyAppPublisher   "Daniel V. Oxender"
 #define MyAppURL         "https://github.com/doxender/WindowsComTekAtomicClock"
 #define MyAppExeName     "ComTekAtomicClock.UI.exe"
@@ -100,7 +99,6 @@ Source: "..\release\v{#MyAppVersion}\LICENSE";      DestDir: "{app}"; Flags: ign
 Source: "..\release\v{#MyAppVersion}\README.md";    DestDir: "{app}"; Flags: ignoreversion
 Source: "..\release\v{#MyAppVersion}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\release\v{#MyAppVersion}\SPEC.md";      DestDir: "{app}"; Flags: ignoreversion
-Source: "..\release\v{#MyAppVersion}\INSTALL.md";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu shortcut for the UI (always created).
