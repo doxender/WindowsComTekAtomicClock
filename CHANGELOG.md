@@ -4,6 +4,67 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.0.0] - 2026-05-03 — First stable release
+
+Symbolic milestone. Code jumps 0.0.39 → 1.0.0. Functionally, this is v0.0.39 with a version stamp and a consolidated backlog doc — no runtime change, but the version leap declares the **core feature set is stable enough for end-user distribution**.
+
+### What's stable in 1.0
+
+- **NIST stratum-1 sync** (Boulder pool — anycast `time.nist.gov` plus 10 named servers across Gaithersburg MD + Fort Collins CO).
+- **NTP.br stratum-1 sync** (Brazil pool — `a.ntp.br` anycast plus 5 GPS-disciplined servers in São Paulo). User picks via Settings → Time source. Atomic Lab face's NIST-panel subtitle and per-face source label both update dynamically.
+- **12 themable clock faces** (6 analog: Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight; 4 digital-only: Flip Clock, Marquee, Slab, Binary Digital; 2 encoders: Binary, Hex). All faces show day-of-week + date-of-month + month + year. Atomic Lab is the default theme; per-tab theme choice persists.
+- **Chrome-style tabs** via native WPF `TabControl` (Dragablz removed in v0.0.33). Active 19pt Bold / inactive 9pt; right-click → Tab Settings dialog directly; `+ New tab` / `+ New window` toolbar buttons. Single-click selection is reliable.
+- **Per-tab IANA time zones** (~140 from Windows zones — full ~600-entry IANA catalog still on the roadmap).
+- **Free-floating clock windows** spawned by `+ New window` or "Open in new window" right-click. Each hosts one clock; single `⋯` overlay button hosts Settings… / Themes… / Bring back into tabs / Help… / About…. Settings dialog centers over the originating window (v0.0.39 fix).
+- **Three-process architecture** with named-pipe IPC (`ComTekAtomicClock.UiToService`, length-prefixed JSON, schema-versioned, ACL-restricted to interactive users + LocalSystem).
+- **Service lifecycle:** UI starts the service on launch and stops on exit (`start= demand` mode is the alpha simplification; `auto` for headless operation is on the roadmap).
+- **Settings persistence:** `%APPDATA%\ComTekAtomicClock\settings.json` (per-user) + `%ProgramData%\ComTekAtomicClock\service.json` (per-machine). Atomic write, corrupt-file recovery, JsonExtensionData forward-compat.
+- **Three exception handlers** (Dispatcher / AppDomain / TaskScheduler) wired in App constructor.
+
+### What's deferred to post-1.0 — see `windows/TODO.md`
+
+~38 open items (2 active queue, 5 Phase 2 magnetic-snap, 29 Phase 3+ Planned, 3 doc-cleanups). Highlights of what 1.0 doesn't yet have:
+
+- Timer + Countdown modes (in active queue)
+- Magnetic-snap floating windows (Phase 2)
+- System tray icon
+- Five-slot color overrides
+- Time-format selector UI (Auto / 12h / 24h)
+- Confirm-large-offset toast flow
+- Authenticode code-signing of Setup.exe (SmartScreen warns until then)
+- MSIX packaging + GitHub Pages publish pipeline
+- ARM64 build target
+
+`windows/TODO.md` is the day-to-day operational view; `SPEC.md` §21 retains the spec-grade Implemented/Planned matrix for reference.
+
+### Why jump 0.0.x → 1.0.0 (not 0.1.0)
+
+The 0.0.x churn reflected an iterative bug-fix cycle (v0.0.14 → v0.0.39, ~25 patches) where each release fixed something specific. The core was working from ~v0.0.20-ish; the patches were polish. Stamping 1.0 doesn't claim feature-complete — it claims "we're confident enough to put this in front of users with a clean version number on the title bar." Future feature drops will bump the minor (1.1, 1.2, …); fixes bump patch (1.0.1, 1.0.2, …) per `feedback_version_bump_on_change.md`.
+
+### Files touched in this commit
+
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — `<Version>` 0.0.39 → 1.0.0; `<AssemblyVersion>` 0.0.39.0 → 1.0.0.0; `<FileVersion>` 0.0.39.0 → 1.0.0.0
+- `windows/tools/installer.iss` — `MyAppVersion` 0.0.36 → 1.0.0 (had been stale; now matches the bumped csproj)
+- `windows/TODO.md` — **NEW.** Consolidated backlog from `CONTEXT.md` "Pending" + `SPEC.md` §21 "Planned" into one numbered, grouped, "recently shipped"-trail-tracking doc.
+- `windows/CONTEXT.md` — replaced the inline backlog dump with a one-paragraph pointer to `TODO.md`; updated repo state header to v1.0.0.
+- `windows/SPEC.md` — front matter doc version 1.4 → 2.0; added v1.4 → v2.0 changelog row; §21 Planned table prefaced with a "TODO.md is the operational view" callout; end-of-doc baseline bumped.
+- `windows/CHANGELOG.md` — this entry.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Debug` → 0 errors, 0 warnings.
+
+### Distribution
+
+Build the v1.0.0 install package by re-running the publish + ISCC pipeline (see SPEC.md §20). Output:
+
+```
+release\ComTekAtomicClock-v1.0.0-Setup.exe                     (~97 MB)
+release\ComTekAtomicClock-v1.0.0-win-x64-self-contained.zip    (~135 MB)
+```
+
+Per the narrowed Friday rule (`feedback_no_friday_ship.md`), routine dev pushes to `master` are free on weekends; **publishing a tagged release for customers** is the action that holds till Monday. The Setup.exe sitting in `release/` is fine; `git push origin v1.0.0` (the customer-facing event) waits for explicit override.
+
 ## [0.0.39] - 2026-05-03 — Settings / Themes dialog: center over the originating window
 
 **Problem:** Dan: *"Can we fix the settings appearing over the original clock face instead of the one on which we clicked the settings button on?"* When the user opened Settings (or Themes…) from a `FloatingClockWindow`'s `⋯` menu, the dialog appeared centered on the main window, even if the floating window was on a different monitor or far from the main window. Disorienting.

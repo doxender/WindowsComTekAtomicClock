@@ -8,9 +8,10 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | v0.0.39 |
-| **Code-as-ground-truth baseline** | `SPEC.md` v1.4 (2026-05-03) |
-| **Repo state** | `master` @ 5b39f8f (v0.0.38) + uncommitted v0.0.39 working-tree changes — local-only, 3 commits ahead of origin (v0.0.37 + v0.0.38 + v0.0.39) |
+| **Current version** | **v1.0.0** — first stable release |
+| **Code-as-ground-truth baseline** | `SPEC.md` v2.0 (2026-05-03) |
+| **Open backlog** | `windows/TODO.md` (single source of truth for all open work) |
+| **Repo state** | `master` working tree carrying v1.0.0 — pushed/local-only state evolving this session |
 
 ## Quick navigation
 
@@ -160,43 +161,16 @@ If a future session sees an open issue about tab UX and is tempted to add Dragab
 - `windows/SPEC.md` created 2026-05-01 (this session) — the regeneration baseline Dan asked for.
 - `windows/CONTEXT.md` created 2026-05-01 (this session) — per the new standing rule.
 
-### Queued (added 2026-05-01 PM, weekend backlog)
+### Open backlog → see `TODO.md`
 
-- **Add timer feature.** Stopwatch / elapsed-time mode on a clock face — separate from the always-on time display. Probably a new `TabSettings.Mode` enum (`Clock` / `Timer` / `Countdown`) with per-mode renderer paths in `ClockFaceControl`. Atomic Lab is the natural anchor theme; other themes can opt in.
-- **Add countdown feature.** User sets a target duration; face counts down. Same `Mode` enum extension as timer. Need an alarm/notification for hitting zero.
-- ~~**Bug — Settings dialog owner.**~~ **Resolved v0.0.39.** Added `OpenTabSettingsForOwner` / `OpenThemesPickerForOwner` overloads on `MainWindowViewModel` taking an explicit `Window?` parameter. `FloatingClockWindow`'s Settings… and Themes… menu handlers now call those with `owner: this`. The in-tab `RelayCommand` paths still default to MainWindow (correct for that origin).
+As of v1.0.0 (2026-05-03) the open-work list lives in `windows/TODO.md` as the single source of truth — formerly scattered across this section and `SPEC.md` §21. Highlights:
 
-### Code follow-ups discovered during the SPEC-writing pass
+- **Active queue:** Timer mode, Countdown mode (Dan's direct asks).
+- **Phase 2:** magnetic snap on `FloatingClockWindow` (~280–390 LOC, 1–2 days).
+- **Phase 3+:** ~29 items spanning tray / floating windows / sync flow / dialog UI / renderer animations / packaging (MSIX + ARM64) / Authenticode signing / privacy.
+- **Tiny polish:** 3 stale-comment / help-corpus fixes that can ride alongside any commit.
 
-- `ThemeCatalog.cs:32-34` comment misclassifies the 12-theme grouping as "3 digital, 2 specialty, 1 binary digital." Correct grouping: 6 analog + 4 digital-only + 2 encoder. Fix on next touch.
-- `MainWindow.xaml:238-244` comment claims base `FontSize=13` but actual setter is 9. Active = 19, inactive = 9, delta = 10pt. Fix on next touch.
-- `HelpDialog.xaml:72` mentions right-click → Close tab; the context menu was removed in v0.0.26. Refresh help corpus.
-
-### Planned work (large items from SPEC.md §21)
-
-**Phase 2 (next major UX) — magnetic snap on FloatingClockWindow**
-- `Behaviors/WindowSnap.cs` — `HwndSource.AddHook` on `WM_MOVING` / `WM_WINDOWPOSCHANGING`, mutate proposed RECT before Windows applies. Threshold ~12 px. Multi-monitor DPI / virtual desktop / snap-while-maximized are the known edge cases.
-- `Services/SnapGroupRegistry.cs` — process-wide tracker of which windows are snapped to which.
-- Visual feedback during drag — edge highlight or ghost outline.
-- `WindowSettings.SnapGroupId : Guid?` + `SnapEdge : enum` model fields, persistence so groups reconstitute on app restart.
-- Settings dialog: "Enable snap" toggle (default OFF until proven stable in production).
-- Estimated 280-390 LOC, 1-2 days.
-
-**Other planned items**
-- Tray icon + last-window-minimizes-to-tray
-- Confirm-large-offset toast flow `[Apply][Skip]` with 30 s timeout
-- UI persistence of sync-frequency to `service.json` (`SettingsStore.SaveServiceConfig` exists; no caller)
-- Five-slot color overrides (Ring/Face/Hands/Numbers/Digital) + HSV wheel UI
-- Time-format selector (Auto / 12h / 24h) UI + renderer wiring
-- Show-digital-readout toggle for analog themes + renderer consumer
-- Second-hand motion override UI
-- Tab rename input
-- Sync-server selector with `IsKnownNistHost` validation
-- Floating-window position persistence (X/Y/Width/Height across restart)
-- Telemetry opt-in + endpoint + `PRIVACY.md`
-- Card-flip animation on Flip Clock; chase-bulb wave on Marquee
-- MSIX packaging + `.appinstaller` + GitHub Pages publishing pipeline
-- ARM64 build target
+Read `TODO.md` on session start. Move items from "open" to "Recently shipped" as they land.
 
 ---
 

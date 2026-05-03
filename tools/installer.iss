@@ -29,7 +29,7 @@
 ; (signing, uploading, releasing) waits till Monday.
 
 #define MyAppName        "ComTek Atomic Clock"
-#define MyAppVersion     "0.0.36"
+#define MyAppVersion     "1.0.0"
 #define MyAppPublisher   "Daniel V. Oxender"
 #define MyAppURL         "https://github.com/doxender/WindowsComTekAtomicClock"
 #define MyAppExeName     "ComTekAtomicClock.UI.exe"

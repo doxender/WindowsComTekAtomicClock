@@ -2,13 +2,14 @@
 
 | | |
 |---|---|
-| **Document version** | 1.4 |
-| **Date** | 2026-05-01 |
-| **Code baseline** | v0.0.36 |
+| **Document version** | 2.0 |
+| **Date** | 2026-05-03 |
+| **Code baseline** | v1.0.0 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
 | **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
+| **v1.4 → v2.0 changes** | First stable release stamp. Code baseline jumps 0.0.39 → 1.0.0. v0.0.37 (dialog height) + v0.0.38 (Daylight/Boulder Slate readout alignment) + v0.0.39 (dialog Owner — center over originating window) all rolled in. Doc-version 1.4 → 2.0 reflects the symbolic stability rather than further content changes. `windows/TODO.md` introduced as the canonical open-work list (replaces scattered "Pending" / "Planned" lists). See CHANGELOG.md `[1.0.0]`. |
 | **v1.1 → v1.2 changes** | First-run polish on v0.0.33: toolbar `+ New tab` / `+ New window` switched to `ui:Button` for contrast; tab right-click ContextMenu removed (right-click now directly opens Tab Settings dialog); "Open in new window" migration moved to the "?" overlay menu on the clock face. See §7 / §8 and CHANGELOG.md `[0.0.34]`. |
 | **v1.1 changes** | Dragablz removed (replaced with native WPF `TabControl`); tear-away gesture removed; explicit "+ New window" / "Open in new window" / "Bring back into tabs" commands added; magnetic snap added as Phase-2 Planned. See §22 / §17 / §21; CHANGELOG.md `[0.0.33]`. |
 
@@ -1536,6 +1537,9 @@ This is the bridging table from "what `requirements.txt` aspires to" to "what co
 
 ### Planned (in scope for v1; not yet coded)
 
+> **For day-to-day work, use `windows/TODO.md`** as the single source of truth — it numbers and groups the open items, includes the tiny polish list, and tracks "recently shipped" so a future session sees the resolved trail. The table below is the spec-grade reference for *what* the items are; `TODO.md` is the operational view.
+
+
 | Area | Item | Reference |
 |---|---|---|
 | **Phase 2 (snap)** | **Magnetic-snap floating clock windows** — drag a `FloatingClockWindow` within ~12 px of another clock window's edge → it snaps and joins a "snap group" so they move as a unit. Implementation: `HwndSource.AddHook` on `WM_MOVING` / `WM_WINDOWPOSCHANGING`, mutate proposed RECT before Windows applies the move. Estimated 280-390 LOC, 1-2 days. | v0.0.33 design — see CONTEXT.md |
@@ -1696,8 +1700,8 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 
 ## End of document
 
-**Document version:** 1.4  
-**Code baseline:** v0.0.39  
+**Document version:** 2.0  
+**Code baseline:** v1.0.0  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.
