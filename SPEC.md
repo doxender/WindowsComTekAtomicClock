@@ -860,7 +860,7 @@ Mondaine-inspired Swiss railway clock. Cream backdrop, white face, red lollipop 
 | **Second hand** (special — SBB lollipop) | a 400×400 sub-canvas containing: red rod `#E3001B` thickness 2.5, from `(Cx, Cy+22)` to `(Cx, Cy-118)` + 28×28 disc at `(Cx, Cy-132)` lined up with the rod tip |
 | **Center pin** | 10×10 black |
 | **Date + time below center** | bare text. Font `"Segoe UI Variable, Segoe UI, sans-serif"`, FontWeight Medium, both black. Date FontSize 9, time FontSize 14. Format `"ddd · MMMM d · yyyy"` upper for date, `"h:mm:ss tt"` for time |
-| **Date centering** | `_recenterDateReadoutOnUpdate = true` so the date re-centers per tick (per v0.0.24) |
+| **Readout centering** | `_recenterTextReadoutsOnUpdate = true` so **both** date and time re-center per tick (date per v0.0.24, time added v0.0.38). They share the same Cx so they're vertically stacked center-on-center. |
 | **Smooth-second default** | `false` (Mondaine cadence — second hand pauses at 12 each minute on real Mondaines; current renderer steps without pause) |
 | **Luminance class** | light (near-black `#101010` glyphs) |
 
@@ -942,7 +942,7 @@ High-contrast cream-and-navy. Outdoor / readability theme.
 | **Second hand** | line, length 140 thickness 2 round, color `#E84A1A` orange-red |
 | **Center pin** | 12 navy + 4 orange-red |
 | **Date + time below center** | bare text. Date `Inter` size 11 SemiBold navy at `(Cx, Cy+60)`; time `Inter` size 18 Bold navy at `(Cx, Cy+76)` |
-| **Date centering** | `_recenterDateReadoutOnUpdate = true` (per v0.0.24) |
+| **Readout centering** | `_recenterTextReadoutsOnUpdate = true` — both date and time re-center per tick on the same Cx (date per v0.0.24, time added v0.0.38 to fix Dan's "the day is not centered above the digital time" report) |
 | **Smooth-second default** | `false` |
 | **Luminance class** | light (near-black `#101010` glyphs) |
 
@@ -1679,7 +1679,7 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 ## End of document
 
 **Document version:** 1.4  
-**Code baseline:** v0.0.37  
+**Code baseline:** v0.0.38  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.

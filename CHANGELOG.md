@@ -4,6 +4,20 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.38] - 2026-05-03 — Daylight + Boulder Slate: time readout recenters on each tick (alignment fix)
+
+**Problem:** Dan: *"On at least the daylight theme, the day is not centered above the digital time. They should be centered over each other on all screens."*
+
+Root cause in `ClockFaceControl.UpdateClock`: the date `TextBlock` was being re-measured + re-centered on every tick (since v0.0.24's `_recenterDateReadoutOnUpdate` flag), but the **time** `TextBlock` was placed once at build with a placeholder string (`"00:00:00"`) and never re-centered. As actual time strings of varying width replaced the placeholder tick-by-tick (`"1:02:03 AM"` is narrower than `"12:34:56 PM"`), the time's visual center drifted while the date stayed pinned at `Cx`. Result: date and time visibly misaligned on every theme that uses bare canvas text instead of a panel-wrapped readout (Boulder Slate + Daylight).
+
+**Solution:** Extended the recenter block in `UpdateClock` to recenter **both** `_dateReadout` and `_digitalReadout` when the flag is set. Both elements now share the same measure-then-center logic, so they line up at `Cx` every tick regardless of rendered string widths.
+
+**Renamed** the flag from `_recenterDateReadoutOnUpdate` → `_recenterTextReadoutsOnUpdate` to reflect the broader scope. Doc comment updated to explain the rename and the underlying drift mechanism.
+
+**Themes affected (positive):** Boulder Slate, Daylight. **Themes unaffected:** the other 10 — Atomic Lab / Aero Glass / Cathode / Concourse wrap their readouts in panels with `HorizontalAlignment="Center"` (auto-centered, don't set the flag); Flip Clock / Marquee / Slab / Binary / Hex / Binary Digital position their text via custom Canvas math that doesn't use this code path.
+
+**Files touched:** `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` (4 sites: field rename + UpdateClock recenter block + 2 setters in BuildBoulderSlate / BuildDaylight), `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` (0.0.37 → 0.0.38), `windows/SPEC.md` (§10 Daylight / Boulder Slate "Date centering" notes), `windows/CONTEXT.md` (session log), `windows/CHANGELOG.md` (this entry).
+
 ## [0.0.37] - 2026-05-03 — TabSettingsDialog height +100 px (Time Source group fit)
 
 **Problem:** Dan's first run of v0.0.36 with the new Time Source radio group: *"the settings screen is about an inch too short."* The v0.0.36 patch added three rows to the dialog (Time source label + RadioButton group with two two-line items + explanatory subtitle ≈ 120 px of new content) inside a fixed-size `NoResize` window that was already tightly packed at 540 px. The Save / Cancel button row was clipping below the visible area on Dan's display.

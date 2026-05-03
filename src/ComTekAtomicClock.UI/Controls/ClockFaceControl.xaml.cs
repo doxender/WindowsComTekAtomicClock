@@ -177,18 +177,30 @@ public partial class ClockFaceControl : UserControl
     private TextBlock? _dateReadout;
 
     /// <summary>
-    /// True when <see cref="_dateReadout"/> is plain text on the dial
-    /// (no enclosing panel) and we need to re-measure + re-center it
-    /// after each <see cref="UpdateClock"/> tick. Boulder Slate and
-    /// Daylight set this — they place the date as bare text below the
-    /// center pin and the displayed-text width varies day-to-day
-    /// (e.g., "MAY 1" vs "DECEMBER 28"), so a one-shot center at
-    /// build time leaves it offset whenever the new text is wider or
-    /// narrower than the build-time placeholder. Themes that wrap
-    /// the date in a Border / panel with HorizontalAlignment="Center"
-    /// don't need this flag — the panel auto-centers its content.
+    /// True when <see cref="_dateReadout"/> AND <see cref="_digitalReadout"/>
+    /// are plain text directly on the dial canvas (no enclosing panel)
+    /// and need to be re-measured + re-centered on every
+    /// <see cref="UpdateClock"/> tick. Boulder Slate and Daylight set
+    /// this — they place both readouts as bare text below the center
+    /// pin, and the displayed-text widths vary every tick (the date
+    /// changes day-to-day, "MAY 1" vs "DECEMBER 28"; the time changes
+    /// per-second, "1:02:03 AM" vs "12:34:56 PM"). A one-shot center
+    /// at build time leaves either readout offset whenever the
+    /// rendered text differs from the build-time placeholder.
+    ///
+    /// Themes that wrap the readouts in a Border / panel with
+    /// HorizontalAlignment="Center" don't set this flag — the panel
+    /// auto-centers its content.
+    ///
+    /// Renamed from <c>_recenterDateReadoutOnUpdate</c> in v0.0.38
+    /// after Dan reported the date and time were misaligned on
+    /// Daylight ("the day is not centered above the digital time").
+    /// Root cause: the time readout was placed once at build with a
+    /// placeholder string and never re-centered, so its visual center
+    /// drifted as actual time strings of different widths replaced
+    /// the placeholder.
     /// </summary>
-    private bool _recenterDateReadoutOnUpdate;
+    private bool _recenterTextReadoutsOnUpdate;
 
     /// <summary>
     /// Per-theme update hook for digital renderers (Flip Clock, Marquee,
@@ -321,7 +333,7 @@ public partial class ClockFaceControl : UserControl
         _hourRotate = _minuteRotate = _secondRotate = null;
         _digitalReadout = _dateReadout = null;
         _digitalUpdater = null;
-        _recenterDateReadoutOnUpdate = false;
+        _recenterTextReadoutsOnUpdate = false;
 
         // Stamp the field BEFORE the build, so a re-entrant call (e.g.,
         // theme changes again mid-build via a binding ripple) is
@@ -510,17 +522,34 @@ public partial class ClockFaceControl : UserControl
                 .ToUpperInvariant();
 
             // Re-center after the new text size is known. Themes that
-            // place the date as bare canvas text (Boulder Slate,
+            // place the readouts as bare canvas text (Boulder Slate,
             // Daylight) need this — their initial center-at-build was
-            // computed against a zero-width measure (text not set
-            // yet), and even with a placeholder the width varies
-            // day-to-day. Themes that wrap the date in a panel skip
-            // this flag and rely on the panel's HorizontalAlignment
-            // to auto-center.
-            if (_recenterDateReadoutOnUpdate)
+            // computed against a zero-width or placeholder measure,
+            // and the rendered widths vary tick-by-tick. Themes that
+            // wrap the readouts in a panel skip this flag and rely on
+            // the panel's HorizontalAlignment to auto-center.
+            //
+            // v0.0.38: also re-center the digital readout (the time
+            // string), not just the date. Previously the time was
+            // measured once at build with a placeholder ("00:00:00")
+            // and never re-centered. As the rendered string changed
+            // width tick-to-tick (1-digit vs 2-digit hour, AM vs PM,
+            // 12-hour suffix etc.), its visual center drifted. Date
+            // was being re-centered to Cx; time was stuck at the
+            // build-time placeholder offset. Result: date and time
+            // appeared misaligned. Re-centering both shares the same
+            // center point and matches the "centered over each other"
+            // user expectation.
+            if (_recenterTextReadoutsOnUpdate)
             {
                 _dateReadout.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 Canvas.SetLeft(_dateReadout, Cx - _dateReadout.DesiredSize.Width / 2.0);
+
+                if (_digitalReadout is not null)
+                {
+                    _digitalReadout.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    Canvas.SetLeft(_digitalReadout, Cx - _digitalReadout.DesiredSize.Width / 2.0);
+                }
             }
         }
 
@@ -884,8 +913,11 @@ public partial class ClockFaceControl : UserControl
         _digitalReadout = timeTb;
         _dateReadout    = dateTb;
         // Bare canvas text (no enclosing centered panel) — UpdateClock
-        // re-measures and re-centers each tick.
-        _recenterDateReadoutOnUpdate = true;
+        // re-measures and re-centers BOTH date and time each tick
+        // (per v0.0.38 — earlier the time stayed at its build-time
+        // placeholder offset and visually drifted off-center as the
+        // rendered string width changed).
+        _recenterTextReadoutsOnUpdate = true;
     }
 
     // ===============================================================
@@ -1190,12 +1222,15 @@ public partial class ClockFaceControl : UserControl
         _digitalReadout = timeTb;
         _dateReadout    = dateTb;
         // Bare canvas text (no enclosing centered panel) — UpdateClock
-        // re-measures and re-centers each tick. Same fix as Boulder
-        // Slate; Dan flagged the date stuck right-of-center on this
-        // theme because the build-time measure was against an empty
-        // dateTb (Text not yet set), so Canvas.SetLeft was at Cx-0
-        // instead of Cx-half-of-rendered-width.
-        _recenterDateReadoutOnUpdate = true;
+        // re-measures and re-centers BOTH date and time each tick.
+        // Same fix as Boulder Slate; v0.0.24 fixed the date drift
+        // ("MAY 1" vs "DECEMBER 28" widths), v0.0.38 extended the
+        // recenter to cover the time string too after Dan reported
+        // the date and time visually misaligned ("the day is not
+        // centered above the digital time"). Root cause was the time
+        // textblock placed once at Cx-half-of-"00:00:00" and never
+        // re-centered — actual time strings drift width tick-to-tick.
+        _recenterTextReadoutsOnUpdate = true;
     }
 
     // ===============================================================

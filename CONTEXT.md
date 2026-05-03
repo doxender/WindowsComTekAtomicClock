@@ -8,9 +8,9 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | v0.0.37 |
+| **Current version** | v0.0.38 |
 | **Code-as-ground-truth baseline** | `SPEC.md` v1.4 (2026-05-03) |
-| **Repo state** | `master` @ 1ea3ddc (pushed) + uncommitted v0.0.37 working-tree changes — local-only ahead of origin |
+| **Repo state** | `master` @ e175097 (v0.0.37, pushed?) + uncommitted v0.0.38 working-tree changes — local-only ahead of origin |
 
 ## Quick navigation
 
@@ -211,6 +211,16 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-05-03 — v0.0.38: Daylight / Boulder Slate readout-alignment fix
+
+Dan: *"On at least the daylight theme, the day is not centered above the digital time. They should be centered over each other on all screens."*
+
+Diagnosis: `UpdateClock` recentered the date `TextBlock` on every tick (per v0.0.24's flag) but the time `TextBlock` was placed once at build with a `"00:00:00"` placeholder and never recentered. As actual time strings of varying width replaced the placeholder, the time's visual center drifted while the date stayed at Cx. Result: visible misalignment.
+
+Fix: extended the recenter block to recenter **both** date and time. Renamed the flag `_recenterDateReadoutOnUpdate` → `_recenterTextReadoutsOnUpdate` to reflect the broader scope. Affects Boulder Slate and Daylight (the only two themes that set the flag — every other theme uses panel-wrapped readouts that auto-center).
+
+**Files changed:** `Controls/ClockFaceControl.xaml.cs` (1 field rename, 1 reset, 1 read+extend, 2 set sites), `ComTekAtomicClock.UI.csproj` (0.0.37 → 0.0.38), `SPEC.md` (§10 Daylight + Boulder Slate "Readout centering" notes), `CONTEXT.md` (this entry + repo state), `CHANGELOG.md` (v0.0.38 entry).
 
 ### 2026-05-03 — v0.0.37: TabSettingsDialog height bumped +100 px
 
