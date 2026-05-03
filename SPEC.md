@@ -1174,6 +1174,24 @@ Modal dialog opened by:
 - **OK / Save.** Dialog returns `true`. Caller (`MainWindowViewModel.OpenTabSettingsCore`) calls `PersistAfterDialog()` to write `settings.json`, then calls `MainWindow.SetTabHeaderInAllDisplays(tab)` to refresh the tab name imperatively across all open windows (per §7).
 - **Cancel.** Dialog returns `false` or `null`. No persistence; in-memory `TabViewModel` is reverted to its pre-dialog state. (The dialog uses a clone of the view-model and only commits on Save.)
 
+### Dialog Owner — origin-window-aware (v0.0.39+)
+
+The dialog's `Owner` determines its centering anchor (`WindowStartupLocation="CenterOwner"`). Two entry points:
+
+| Caller | Owner |
+|---|---|
+| In-tab right-click → "Tab settings…" → `RelayCommand OpenTabSettingsForCommand` | `Application.Current?.MainWindow` (the main window — correct, that's where the tab strip lives) |
+| `FloatingClockWindow` `⋯` menu → "Settings…" → `MainWindowViewModel.OpenTabSettingsForOwner(tab, owner: this)` | The floating window itself — dialog centers over the clock the user invoked it from |
+
+Same pattern for the Themes gallery dialog:
+
+| Caller | Owner |
+|---|---|
+| In-tab `?` overlay → "Themes…" → `RelayCommand OpenThemesPickerForCommand` | MainWindow |
+| `FloatingClockWindow` `⋯` menu → "Themes…" → `MainWindowViewModel.OpenThemesPickerForOwner(tab, owner: this)` | The floating window |
+
+The pre-v0.0.39 behavior hardcoded both to MainWindow, which was wrong when the user opened either dialog from a floating window — the dialog would appear on the main window, possibly on a different monitor.
+
 ### Visual styling
 
 - Amber + dark-cream palette: `#FFB000` for headings + Save button background, `#0A0A0A` for Save-button text, `#A8A39A` for sub-labels, `#A0E0FF` for clickable links.
@@ -1562,7 +1580,7 @@ This is the bridging table from "what `requirements.txt` aspires to" to "what co
 | Window | Window state persistence (size / position / maximized) across restarts | Legacy spec § 1.3 |
 | Modes | **Timer** — stopwatch / elapsed-time mode per tab/window, alongside the always-on clock | Queued 2026-05-01 |
 | Modes | **Countdown** — user-set target duration, count down to zero with notification | Queued 2026-05-01 |
-| Bug | Settings dialog Owner hardcoded to MainWindow — should be the originating window when opened from a `FloatingClockWindow` `⋯` menu | Queued 2026-05-01 |
+| ~~Bug — Settings dialog Owner~~ | ~~Hardcoded to MainWindow — should be the originating window when opened from a `FloatingClockWindow`~~ | **Resolved v0.0.39** — see §13 "Dialog Owner — origin-window-aware" |
 
 ---
 
@@ -1679,7 +1697,7 @@ The legacy `requirements.txt` (591 lines, 2026-04-25) accumulated several intern
 ## End of document
 
 **Document version:** 1.4  
-**Code baseline:** v0.0.38  
+**Code baseline:** v0.0.39  
 **Last reviewed:** 2026-05-01
 
 Update this document in the same commit as any change that affects behavior described here. Use `windows/CONTEXT.md` (a separate, faster-moving doc) for ongoing decisions and constraints between formal SPEC revisions.

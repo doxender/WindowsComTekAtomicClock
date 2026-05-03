@@ -4,6 +4,25 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [0.0.39] - 2026-05-03 — Settings / Themes dialog: center over the originating window
+
+**Problem:** Dan: *"Can we fix the settings appearing over the original clock face instead of the one on which we clicked the settings button on?"* When the user opened Settings (or Themes…) from a `FloatingClockWindow`'s `⋯` menu, the dialog appeared centered on the main window, even if the floating window was on a different monitor or far from the main window. Disorienting.
+
+**Root cause:** `MainWindowViewModel.OpenTabSettingsCore` and `OpenThemesPickerFor` hardcoded `Owner = Application.Current?.MainWindow` on the dialogs. The Owner determines `WindowStartupLocation="CenterOwner"` placement.
+
+**Solution:** Added explicit-owner overloads:
+
+- `MainWindowViewModel.OpenTabSettingsForOwner(TabViewModel, Window?)` → forwards to the existing `OpenTabSettingsCore`, now taking a Window? parameter that becomes the dialog's Owner. Falls back to MainWindow if null.
+- `MainWindowViewModel.OpenThemesPickerForOwner(TabViewModel, Window?)` → same shape, splits the existing handler into a public-explicit + private-core pair (`OpenThemesPickerCore`).
+- `FloatingClockWindow.SettingsMenuItem_Click` now calls `mainVm.OpenTabSettingsForOwner(_tab, owner: this)`.
+- `FloatingClockWindow.ThemesMenuItem_Click` now calls `mainVm.OpenThemesPickerForOwner(_tab, owner: this)`.
+
+The existing `OpenTabSettingsForCommand` / `OpenThemesPickerForCommand` `RelayCommand` paths (used by the in-tab right-click and the in-tab `?` overlay) keep their previous behavior — Owner falls back to MainWindow, which is correct for those callers.
+
+Help… and About… on the floating-window menu were already correct (`Owner = this` set inline in the `*MenuItem_Click` handlers; no command routing).
+
+**Files touched:** `windows/src/ComTekAtomicClock.UI/ViewModels/MainWindowViewModel.cs` (Owner-aware overloads + Core split for the Themes path), `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` (Settings + Themes menu handlers route to the explicit-owner methods), `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` (0.0.38 → 0.0.39), `windows/SPEC.md` (§13 dialog-Owner notes), `windows/CONTEXT.md` (session log + repo state, queue item discharged), `windows/CHANGELOG.md` (this entry).
+
 ## [0.0.38] - 2026-05-03 — Daylight + Boulder Slate: time readout recenters on each tick (alignment fix)
 
 **Problem:** Dan: *"On at least the daylight theme, the day is not centered above the digital time. They should be centered over each other on all screens."*

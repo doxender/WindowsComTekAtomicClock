@@ -116,17 +116,26 @@ public partial class FloatingClockWindow : FluentWindow
     /// "Settings…" menu item (renamed from "Tab settings…" in v0.0.35
     /// because the word "tab" is wrong on a free-floating window).
     /// Opens the same Tab Settings dialog used by the in-strip tabs.
+    ///
+    /// v0.0.39: passes <c>owner: this</c> so the dialog centers over
+    /// THIS floating window, not the main window. Earlier the dialog
+    /// always appeared centered on MainWindow regardless of which
+    /// window invoked it (Dan's Sunday-evening report).
     /// </summary>
     private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
     {
         var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
-        mainVm?.OpenTabSettingsForCommand.Execute(_tab);
+        mainVm?.OpenTabSettingsForOwner(_tab, owner: this);
     }
 
+    /// <summary>
+    /// v0.0.39: "Themes…" routes through the explicit-owner overload
+    /// for the same dialog-centering reason as Settings… above.
+    /// </summary>
     private void ThemesMenuItem_Click(object sender, RoutedEventArgs e)
     {
         var mainVm = (Application.Current?.MainWindow as MainWindow)?.GetViewModel();
-        mainVm?.OpenThemesPickerForCommand.Execute(_tab);
+        mainVm?.OpenThemesPickerForOwner(_tab, owner: this);
     }
 
     /// <summary>

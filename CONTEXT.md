@@ -8,9 +8,9 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | v0.0.38 |
+| **Current version** | v0.0.39 |
 | **Code-as-ground-truth baseline** | `SPEC.md` v1.4 (2026-05-03) |
-| **Repo state** | `master` @ e175097 (v0.0.37, pushed?) + uncommitted v0.0.38 working-tree changes — local-only ahead of origin |
+| **Repo state** | `master` @ 5b39f8f (v0.0.38) + uncommitted v0.0.39 working-tree changes — local-only, 3 commits ahead of origin (v0.0.37 + v0.0.38 + v0.0.39) |
 
 ## Quick navigation
 
@@ -164,7 +164,7 @@ If a future session sees an open issue about tab UX and is tempted to add Dragab
 
 - **Add timer feature.** Stopwatch / elapsed-time mode on a clock face — separate from the always-on time display. Probably a new `TabSettings.Mode` enum (`Clock` / `Timer` / `Countdown`) with per-mode renderer paths in `ClockFaceControl`. Atomic Lab is the natural anchor theme; other themes can opt in.
 - **Add countdown feature.** User sets a target duration; face counts down. Same `Mode` enum extension as timer. Need an alarm/notification for hitting zero.
-- **Bug — Settings dialog owner.** When the user opens Settings from a `FloatingClockWindow`'s `⋯` → Settings… menu, the dialog appears centered on the **main window**, not on the floating window that triggered it. Root cause: `MainWindowViewModel.OpenTabSettingsCore` hardcodes `Owner = Application.Current?.MainWindow`. Fix: pass the originating window down (extra param on `OpenTabSettingsForCommand` or have `FloatingClockWindow.SettingsMenuItem_Click` open the dialog directly with `Owner = this`). Simple, ~10 LOC.
+- ~~**Bug — Settings dialog owner.**~~ **Resolved v0.0.39.** Added `OpenTabSettingsForOwner` / `OpenThemesPickerForOwner` overloads on `MainWindowViewModel` taking an explicit `Window?` parameter. `FloatingClockWindow`'s Settings… and Themes… menu handlers now call those with `owner: this`. The in-tab `RelayCommand` paths still default to MainWindow (correct for that origin).
 
 ### Code follow-ups discovered during the SPEC-writing pass
 
@@ -211,6 +211,20 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-05-03 — v0.0.39: Settings + Themes dialog Owner — center over originating window
+
+Discharged the queued Settings-dialog-Owner bug Dan logged when he hit it on Sunday (was queued in this CONTEXT.md alongside timer/countdown).
+
+Dialogs from `FloatingClockWindow`'s `⋯` menu were hardcoded to `Owner = Application.Current?.MainWindow`, so they centered on the main window — confusing if the floating clock was on a different monitor.
+
+Fix: added explicit-owner overloads `OpenTabSettingsForOwner(TabViewModel, Window?)` and `OpenThemesPickerForOwner(TabViewModel, Window?)` on `MainWindowViewModel`. Each forwards to a private `*Core` method that uses `owner ?? Application.Current?.MainWindow` as the dialog Owner. `FloatingClockWindow.SettingsMenuItem_Click` and `ThemesMenuItem_Click` now call the overloads with `owner: this`.
+
+The in-tab right-click and `?`-overlay paths still go through the existing `RelayCommand` (no owner passed → falls back to MainWindow, which is correct since those originate from the main window). Help/About were already correct (opened inline with `Owner = this` in the floating window's handlers).
+
+**Files changed:** `ViewModels/MainWindowViewModel.cs` (Owner overloads + Core split for Themes path), `FloatingClockWindow.xaml.cs` (Settings + Themes menu handlers), `ComTekAtomicClock.UI.csproj` (0.0.38 → 0.0.39), `SPEC.md` (§13 new Dialog-Owner subsection + §21 queue item struck through), `CONTEXT.md` (this entry + Pending discharge), `CHANGELOG.md` (v0.0.39 entry). Build clean.
+
+**Queue status:** still open — Timer mode, Countdown mode. Settings-Owner discharged.
 
 ### 2026-05-03 — v0.0.38: Daylight / Boulder Slate readout-alignment fix
 

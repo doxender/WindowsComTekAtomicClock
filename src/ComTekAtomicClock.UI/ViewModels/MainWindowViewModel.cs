@@ -359,19 +359,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private void OpenTabSettings(object? _)
     {
         if (SelectedTab is null) return;
-        OpenTabSettingsCore(SelectedTab);
+        OpenTabSettingsCore(SelectedTab, owner: null);
     }
 
     private void OpenTabSettingsFor(object? param)
     {
-        if (param is TabViewModel vm) OpenTabSettingsCore(vm);
+        if (param is TabViewModel vm) OpenTabSettingsCore(vm, owner: null);
     }
 
-    private void OpenTabSettingsCore(TabViewModel tab)
+    /// <summary>
+    /// v0.0.39: explicit-owner entry point used by floating clock
+    /// windows so the dialog centers over the originating window
+    /// instead of the main window. Callable from
+    /// <see cref="FloatingClockWindow"/>'s "⋯" → Settings… handler
+    /// with <c>owner: this</c>.
+    /// </summary>
+    internal void OpenTabSettingsForOwner(TabViewModel tab, Window? owner)
+        => OpenTabSettingsCore(tab, owner);
+
+    private void OpenTabSettingsCore(TabViewModel tab, Window? owner)
     {
         var dlg = new TabSettingsDialog(tab)
         {
-            Owner = Application.Current?.MainWindow,
+            // v0.0.39: prefer explicit owner so the dialog centers
+            // over whichever window initiated it. Falls back to
+            // MainWindow for the in-strip right-click path which
+            // doesn't pass an owner.
+            Owner = owner ?? Application.Current?.MainWindow,
         };
         var result = dlg.ShowDialog();
         if (result == true)
@@ -436,10 +450,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void OpenThemesPickerFor(object? param)
     {
-        if (param is not TabViewModel vm) return;
-        var dlg = new ThemesDialog(vm)
+        if (param is TabViewModel vm) OpenThemesPickerCore(vm, owner: null);
+    }
+
+    /// <summary>
+    /// v0.0.39: explicit-owner entry point for floating clock
+    /// windows so the Themes gallery centers over the originating
+    /// window instead of the main window.
+    /// </summary>
+    internal void OpenThemesPickerForOwner(TabViewModel tab, Window? owner)
+        => OpenThemesPickerCore(tab, owner);
+
+    private void OpenThemesPickerCore(TabViewModel tab, Window? owner)
+    {
+        var dlg = new ThemesDialog(tab)
         {
-            Owner = Application.Current?.MainWindow,
+            // v0.0.39: prefer explicit owner; fall back to MainWindow.
+            Owner = owner ?? Application.Current?.MainWindow,
         };
         var result = dlg.ShowDialog();
         if (result == true)
