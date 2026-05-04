@@ -4,6 +4,45 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.4] - 2026-05-03 — CaptJohn: jitter starts at current minute, syncs only at noon; demos play out 11:55 → 12:05 at real speed
+
+Two related fixes after Dan's v1.1.3 testing.
+
+### 1. Jitter starts at the current minute and syncs only at noon
+
+Per Dan: *"the captjohn hour capin min hand jitter should start out at the current time when started and sync up with real time at noon."*
+
+- On `BuildCaptJohn`, the random-walk seed is now the current local minute instead of 0. The jitter hand's initial visible position matches the real time the moment the theme renders, so the user doesn't see the lazy hand snap from "12" to its walk position on the first minute tick.
+- The walk's "even things up" sync condition was `local.Minute == 0` (every top-of-hour). Now it's `local.Hour == 12 && local.Minute == 0` — only the noon transition resets the displayed minute to 0. Every other hour boundary just gets a normal ±3 random walk step.
+- Walk also now runs unconditionally (was previously gated by `showJitter`). Visibility is still gated by state — the walk advances even while the hand is hidden so the displayed minute stays roughly current if the user later toggles Hora Chapín ON.
+
+### 2. Almuerzo / Fini demos play out at real speed from 11:55 → 12:05 (or 16:55 → 17:05)
+
+Per Dan: *"If the almurtzo or fini demo buttons are clicked they should set the hour and min hands at 5 min to either 12 or 5 PM (the time the normal flash activity would take place) and proceed as they normally would if not checked. That is, stop flashing at 5 min after the hour."*
+
+- Earlier passes pinned `local` to a constant (12:00:00 / 17:00:00). The flash continued indefinitely until the user clicked the radio off — that wasn't a faithful demo of the noon / 5 PM event, just a frozen single moment.
+- v1.1.4 instead establishes a demo-start checkpoint on activation (`_captJohnDemoStartLocal`) and remaps `local` as `demoBase + (real - checkpoint)`, where `demoBase` is today at 11:55:00 (Almuerzo) or 16:55:00 (Fini). Real elapsed time advances demo time at the same rate.
+- Result: clicking Almuerzo at any moment makes the clock instantly read 11:55:00, the "12" appears, all three flash on/off; one real minute later the clock reads 11:56:00; … five real minutes later it reads 12:00:00 (the apex of the event); ten real minutes later it reads 12:05:00 and the flash window closes naturally. The demo radio stays checked but no flashing happens — exactly what the clock would do on its own at noon if no demo were active.
+- Click the radio off then on to restart the play-out at 11:55:00. Switching between Almuerzo and Fini also resets the checkpoint via the `OnCaptJohnDemoModeChanged` DP callback.
+- Demo time also drives the analog hand rotations (`_hourRotate.Angle` / `_minuteRotate.Angle` / `_secondRotate.Angle`) — the outer `UpdateClock` already set them against real time on the same dispatcher tick; `_digitalUpdater` now overwrites them with demo-time values when a demo is active.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — new `_captJohnDemoStartLocal` field; `OnCaptJohnDemoModeChanged` DP callback wired into `CaptJohnDemoModeProperty`; `BuildCaptJohn` initializes the jitter at `nowLocal.Minute` and sets the rotate transform's initial angle accordingly; `_digitalUpdater` rewritten with the demo-time mapping + noon-only sync.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.3 → 1.1.4.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.3 → 1.1.4.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.4 → v2.5: §10 Theme #7 — Per-tick state, Demo time-pinning, and Demo persistence rows rewritten to reflect the v1.1.4 model.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.4-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
 ## [1.1.3] - 2026-05-03 — CaptJohn: flash-window state machine corrected + demos persist + Hora Chapín hands at 10%
 
 Three coordinated fixes after Dan smoke-tested v1.1.2:

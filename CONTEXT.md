@@ -8,11 +8,11 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | **v1.1.3** — CaptJohn: flash-window state machine corrected (only relevant numeral flashes; demos pin time and persist until clicked off; Hora Chapín ON real hands at 10% opacity / 90% transparent). |
+| **Current version** | **v1.1.4** — CaptJohn: jitter seeds at current minute (was 0), syncs only at noon (was every hour); Almuerzo / Fini demos start at 11:55 / 16:55 and advance at real speed for 10 minutes (was pinned to a single instant). |
 | **Code-as-ground-truth baseline** | `SPEC.md` v2.1 (2026-05-03) |
 | **Next minor target** | **v1.1.x** — top-right ⋯ overlay menu refinements on CaptJohn (currently the standard `?` menu); revisit if Dan finds more polish opportunities. |
 | **Open backlog** | `windows/TODO.md` (single source of truth for all open work) |
-| **Repo state** | `captain-john` branch at v1.1.3 (four commits: v1.1.0 amend + v1.1.1 Jolly Roger + v1.1.2 hand-opacity bump + v1.1.3 flash state machine) — local only, awaiting Dan's test-then-push. `master` clean at v1.0.0 / origin parity. |
+| **Repo state** | `captain-john` branch at v1.1.4 (five commits: v1.1.0 amend + v1.1.1 Jolly Roger + v1.1.2 hand-opacity bump + v1.1.3 flash state machine + v1.1.4 jitter init / demo timeline) — local only, awaiting Dan's test-then-push. `master` clean at v1.0.0 / origin parity. |
 
 ## Quick navigation
 
