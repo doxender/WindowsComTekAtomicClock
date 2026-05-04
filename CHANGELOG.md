@@ -4,6 +4,25 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.2] - 2026-05-03 — CaptJohn: real hand opacity 7.5% → 90% in Hora Chapín ON
+
+Per Dan after smoke-testing v1.1.1: with Hora Chapín ON the real hour/minute hands at 7.5% were too faint to read. Bumped the baseline to 90%, keeping the 100% bump during the noon / 5 PM flash windows. The lazy/jittered novelty still reads — the jitter hand is full-black ink at 100% on top of the parchment — but the real time is now legible behind it.
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — `BuildCaptJohn` `_digitalUpdater`: `realOpacity` baseline `0.075` → `0.9` (Hora Chapín ON branch). Flash-window peak still 1.0; second-hand visibility unchanged. Hora Chapín OFF branch unaffected (100% always).
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.1 → 1.1.2.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.1 → 1.1.2.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.2 → v2.3: §10 Theme #7 — Default Hora Chapín state row updated; "real hands at 7.5% baseline" → "90% baseline" everywhere it appeared.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.2-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
 ## [1.1.1] - 2026-05-03 — CaptJohn: Jolly Roger overlay + Hora Chapín default OFF
 
 Patch on top of v1.1.0. Two issues Dan flagged after smoke-testing the v1.1.0 build:

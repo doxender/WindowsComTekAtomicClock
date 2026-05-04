@@ -1591,16 +1591,18 @@ public partial class ClockFaceControl : UserControl
             // 5 s on / 5 s off cadence
             var flashOn = ((local.Second / 5) % 2) == 0;
 
-            // Real hands:
-            //   · Hora Chapín ON  → 7.5% baseline; jump to 100% during
-            //     the "on" frame of a flash window (or any frame in a
-            //     demo).
+            // Real hour + minute hands:
+            //   · Hora Chapín ON  → 90% baseline (v1.1.2 — was 7.5% in
+            //     v1.1.0/1.1.1). Jumps to 100% during the "on" frame of
+            //     a flash window or whenever a demo is pinned. Per Dan:
+            //     the lazy/jittered novelty mode still needs the real
+            //     hands to be readable, not ghost-faint.
             //   · Hora Chapín OFF → 100% always (regular clock face).
             double realOpacity;
             if (!horaChapin)
                 realOpacity = 1.0;
             else
-                realOpacity = (inFlash && flashOn) ? 1.0 : 0.075;
+                realOpacity = (inFlash && flashOn) ? 1.0 : 0.9;
             if (_captJohnHourHand   is not null) _captJohnHourHand.Opacity   = realOpacity;
             if (_captJohnMinuteHand is not null) _captJohnMinuteHand.Opacity = realOpacity;
 

@@ -2,13 +2,14 @@
 
 | | |
 |---|---|
-| **Document version** | 2.2 |
+| **Document version** | 2.3 |
 | **Date** | 2026-05-03 |
-| **Code baseline** | v1.1.1 |
+| **Code baseline** | v1.1.2 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
 | **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
+| **v2.2 → v2.3 changes** | CaptJohn — real hour/minute hand opacity in the Hora Chapín ON branch raised from **7.5% to 90%** (peak still 100% during noon / 5 PM flash). At 7.5% the hands were too faint to read against the parchment + logo backdrop; the lazy/jittered novelty still reads because the jitter hand is full-black ink at 100% on top. See §10 Theme #7; CHANGELOG.md `[1.1.2]`. |
 | **v2.1 → v2.2 changes** | CaptJohn — Jolly Roger ☠ overlay button + ContextMenu popup wired in (lower-left, visible only on this theme), hosting **Hora Chapín** (checkable, persistent, two-way bound to `TabSettings.CaptJohnHoraChapin`) and **Almuerzo** / **Fini** momentary demos that pin time to 12:00 / 17:00 while the popup is open and clear on `Closed`. **Default Hora Chapín state flipped to OFF** — the regular numberless face is now the default presentation; the lazy/jittered novelty mode is opt-in. See §10 Theme #7; CHANGELOG.md `[1.1.1]`. |
 | **v2.0 → v2.1 changes** | Hand-length pass on every analog face — hour −24 px (≈ 1/4 inch at 96 DPI), minute +24 px. Net effect: minute hand is 84–86 px longer than the hour hand on Atomic Lab / Boulder Slate / Aero Glass / Cathode / Concourse / Daylight (was 36–38 px). Hand thicknesses, colors, and second-hand lengths unchanged. **Plus: shipped the new `Theme.CaptJohn` (Captain John's Marina) — Theme #7 in the analog cluster.** Parchment + brass face, marina logo at 40%, Cinzel-Bold "12"/"5" numerals that flash at noon and 5 PM (5 s on / 5 s off over a ±5 min window), lazy "Hora Chapín" jitter minute hand (random ±3 min, sync at top of hour), real-time hands at 7.5% / 100% opacity tied to flash window. Total theme count 12 → 13. See §10 Theme #7; CHANGELOG.md `[1.1.0]`. (Jolly Roger overlay popup wired in v1.1.1.) |
 | **v1.4 → v2.0 changes** | First stable release stamp. Code baseline jumps 0.0.39 → 1.0.0. v0.0.37 (dialog height) + v0.0.38 (Daylight/Boulder Slate readout alignment) + v0.0.39 (dialog Owner — center over originating window) all rolled in. Doc-version 1.4 → 2.0 reflects the symbolic stability rather than further content changes. `windows/TODO.md` introduced as the canonical open-work list (replaces scattered "Pending" / "Planned" lists). See CHANGELOG.md `[1.0.0]`. |
@@ -964,8 +965,8 @@ Hand-drawn parchment-and-brass face featuring the marina's logo at 40% opacity. 
 | **Hour ticks** | none (face is numberless except during demo flash windows) |
 | **Minute ticks** | none |
 | **Numerals** | none normally. **"12"** (Cinzel-Variable Bold 38 px, bordeaux `#7B1616`) at top (Cx, Cy−130) flashes during the noon AND 5 PM windows. **"5"** at 5 o'clock (`Cx + 130·sin(150°)`, `Cy − 130·cos(150°)`) flashes only during the 5 PM window |
-| **Real hour hand** | `MakeHand(overhang 14, length 66)`, dark bordeaux `#4A0F0F`, thickness 9, round-cap. Default opacity 0.075 (7.5% — ghost reference); flashes to 1.0 during flash windows |
-| **Real minute hand** | `MakeHand(overhang 18, length 152)`, mid bordeaux `#641414`, thickness 5, round-cap. Default opacity 0.075; flashes to 1.0 |
+| **Real hour hand** | `MakeHand(overhang 14, length 66)`, dark bordeaux `#4A0F0F`, thickness 9, round-cap. In Hora Chapín ON: opacity 0.9 baseline (v1.1.2 — was 0.075 in v1.1.0/1.1.1; raised because the hands were too faint to read), flashes to 1.0 during flash windows. In Hora Chapín OFF: 1.0 always. |
+| **Real minute hand** | `MakeHand(overhang 18, length 152)`, mid bordeaux `#641414`, thickness 5, round-cap. In Hora Chapín ON: opacity 0.9 baseline, flashes to 1.0. In Hora Chapín OFF: 1.0 always. |
 | **Real second hand** | `MakeHand(overhang 22, length 138)`, mid bordeaux `#641414`, thickness 2, round-cap. Default opacity 0 (hidden); visible only during flash on-frames |
 | **"Lazy" jitter minute hand** | Line, overhang 18 / length 152, ink black `#1A1A1A`, thickness 7, round-cap. Always rendered on top of the real minute hand at 100% opacity. Position is the displayed minute computed by the per-tick state machine (random walk, ±3 min per minute tick, hard reset to 0 at the top of each hour) |
 | **Center pin** | 12×12 ink black ellipse + 4×4 pirate gold `#D4A547` ellipse |
