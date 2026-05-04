@@ -8,10 +8,11 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | **v1.0.0** — first stable release |
-| **Code-as-ground-truth baseline** | `SPEC.md` v2.0 (2026-05-03) |
+| **Current version** | **v1.1.6** — Installer wipes `%APPDATA%\…\settings.json` and `%ProgramData%\…\service.json` on install so every Setup.exe starts from factory defaults (testing-clarity directive). |
+| **Code-as-ground-truth baseline** | `SPEC.md` v2.1 (2026-05-03) |
+| **Next minor target** | **v1.1.x** — top-right ⋯ overlay menu refinements on CaptJohn (currently the standard `?` menu); revisit if Dan finds more polish opportunities. |
 | **Open backlog** | `windows/TODO.md` (single source of truth for all open work) |
-| **Repo state** | `master` working tree carrying v1.0.0 — pushed/local-only state evolving this session |
+| **Repo state** | `captain-john` branch at v1.1.6 (seven commits: v1.1.0 amend + v1.1.1 Jolly Roger + v1.1.2 hand-opacity + v1.1.3 flash state machine + v1.1.4 jitter init / demo timeline + v1.1.5 hour+half-hour sync + v1.1.6 wipe-on-install) — local only, awaiting Dan's test-then-push. `master` clean at v1.0.0 / origin parity. |
 
 ## Quick navigation
 
@@ -185,6 +186,35 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-05-03 — v1.0.1: Hand-length pass on all 6 analog faces
+
+While iterating the new `CaptJohn` theme mockup Dan asked to make the minute hand "about 1/2 inch" longer than the hour hand by shortening hour 1/4 inch and lengthening minute 1/4 inch. Then asked to apply the same change to **all 6 analog faces** (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight). At 96 DPI, 1/4 inch ≈ 24 px on the 400 px logical canvas.
+
+Applied uniform `hour −24 / minute +24` across all analog Build* methods in `Controls/ClockFaceControl.xaml.cs`:
+
+| Theme | Hour | Minute |
+|---|---|---|
+| Atomic Lab | 90 → 66 | 128 → 152 |
+| Boulder Slate | 100 → 76 | 138 → 162 |
+| Aero Glass | 92 → 68 | 128 → 152 |
+| Cathode | 90 → 66 | 128 → 152 |
+| Concourse | 86 → 62 | 122 → 146 |
+| Daylight | 90 → 66 | 128 → 152 |
+
+Net minute-vs-hour difference: was ~36–38 px (3/8 inch); now ~84–86 px (7/8 inch). Slightly more dramatic than Dan's "1/2 inch" target, but his explicit mechanism (1/4 each direction) on top of an already-different base produces this end state. Visually: minute hand reaches near the dial edge, hour stops well short — traditional clock proportions.
+
+Hand thicknesses, hand colors, and second-hand lengths are **unchanged**. Digital and encoder themes have no analog hands and are untouched.
+
+The `CaptJohn` theme (still in mockup phase) was iterated separately:
+- Same hand lengths (hour 66, min 152)
+- Minute-hand color new: `bordeauxMid` `#641414` — sits between the dark hour bordeaux `#4A0F0F` and the bright numeral red `#7B1616`. All three shades distinguishable.
+- "The Busted Flush" caption added in Monotype Corsiva 13 px italic, 40% sepia (matches logo opacity), centered just above "Rio Dulce, Guatemala"
+- Jitter range refined from `+0..+4` to `−3..+3` per minute tick (random walk averages 0 drift); resets to 12 only at the top of each hour
+
+**Files changed:** `Controls/ClockFaceControl.xaml.cs` (six Build* methods), `ComTekAtomicClock.UI.csproj` (1.0.0 → 1.0.1), `SPEC.md` v2.0 → v2.1 (front matter + 6 per-theme hand rows + end-of-doc), `CONTEXT.md` (this entry + repo state), `CHANGELOG.md` ([1.0.1] entry). Also `design/themes/captjohn-mockup-*.png` updated, `design/fonts/Cinzel-Variable.ttf` added (OFL, used for the in-progress CaptJohn numerals).
+
+Build verified: 0 errors, 0 warnings.
 
 ### 2026-05-03 — v1.0.0 BETA framing + README rewrite (post-ship)
 

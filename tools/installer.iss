@@ -23,13 +23,12 @@
 ;     CHANGELOG.md
 ;     README.md
 ;     SPEC.md
-;     INSTALL.md
 ;
 ; Friday/weekend rule: building this artifact is fine. Distributing
 ; (signing, uploading, releasing) waits till Monday.
 
 #define MyAppName        "ComTek Atomic Clock"
-#define MyAppVersion     "1.0.0"
+#define MyAppVersion     "1.1.6"
 #define MyAppPublisher   "Daniel V. Oxender"
 #define MyAppURL         "https://github.com/doxender/WindowsComTekAtomicClock"
 #define MyAppExeName     "ComTekAtomicClock.UI.exe"
@@ -88,6 +87,27 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon";  Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
+[InstallDelete]
+; v1.1.6 (Dan's directive): every install resets the clock to factory
+; defaults by wiping the persisted user settings. Removes:
+;   · %APPDATA%\ComTekAtomicClock\settings.json   (per-user — tabs,
+;     themes, time format, second-hand override, CaptJohn Hora Chapín
+;     toggle, etc. — all the per-tab / global UI state)
+;   · %ProgramData%\ComTekAtomicClock\service.json (per-machine —
+;     time-source pool, sync interval, large-offset confirmation)
+; Both files are recreated at first launch with the current code's
+; baked-in defaults. This is the testing-clarity tradeoff: end users
+; lose any customization on every update, but Dan's iteration cycle
+; never has to chase "was that the new default or my old setting?"
+; ambiguity.
+;
+; Note: the installed-tree files under {app}\... are NOT touched here
+; — InstallDelete runs before the Files section copies the new build,
+; and we want the new build's own files left alone. Only the user-
+; data files outside {app} are wiped.
+Type: files; Name: "{userappdata}\ComTekAtomicClock\settings.json"
+Type: files; Name: "{commonappdata}\ComTekAtomicClock\service.json"
+
 [Files]
 ; The three publish folders, recursive. Source paths are relative to
 ; the .iss file itself (this script lives in tools\, so ..\release\...).
@@ -100,7 +120,6 @@ Source: "..\release\v{#MyAppVersion}\LICENSE";      DestDir: "{app}"; Flags: ign
 Source: "..\release\v{#MyAppVersion}\README.md";    DestDir: "{app}"; Flags: ignoreversion
 Source: "..\release\v{#MyAppVersion}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\release\v{#MyAppVersion}\SPEC.md";      DestDir: "{app}"; Flags: ignoreversion
-Source: "..\release\v{#MyAppVersion}\INSTALL.md";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu shortcut for the UI (always created).

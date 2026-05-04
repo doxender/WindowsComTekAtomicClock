@@ -64,6 +64,96 @@ public sealed class TabViewModel : INotifyPropertyChanged
             _settings.Theme = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(OverlayGlyphBrush));
+            OnPropertyChanged(nameof(IsCaptJohnTheme));
+            // Switching off CaptJohn always clears any active demo
+            // momentary state — there's no Jolly Roger panel on the
+            // new theme to clear it through, so we clear it here.
+            if (value != Theme.CaptJohn && _captJohnDemoMode.Length != 0)
+            {
+                _captJohnDemoMode = string.Empty;
+                OnPropertyChanged(nameof(CaptJohnDemoMode));
+            }
+        }
+    }
+
+    /// <summary>
+    /// True iff the active theme is <see cref="Shared.Settings.Theme.CaptJohn"/>.
+    /// MainWindow / FloatingClockWindow XAML binds the Jolly Roger
+    /// overflow button's <c>Visibility</c> through a
+    /// <see cref="System.Windows.Controls.BooleanToVisibilityConverter"/>
+    /// so the button only renders when CaptJohn is active.
+    /// </summary>
+    public bool IsCaptJohnTheme => _settings.Theme == Theme.CaptJohn;
+
+    /// <summary>
+    /// v1.1.1+ — Persistent CaptJohn Hora Chapín toggle. Surfaced as the
+    /// "Hora Chapín" checkable item in the Jolly Roger overflow popup.
+    /// Two-way bound against the menu item's IsChecked. Forwarded into
+    /// <c>ClockFaceControl.CaptJohnHoraChapinEnabled</c> via the
+    /// DataTemplate binding in MainWindow / FloatingClockWindow.
+    /// Defaults to false (regular numberless clock face).
+    /// </summary>
+    public bool CaptJohnHoraChapin
+    {
+        get => _settings.CaptJohnHoraChapin;
+        set
+        {
+            if (_settings.CaptJohnHoraChapin == value) return;
+            _settings.CaptJohnHoraChapin = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _captJohnDemoMode = string.Empty;
+
+    /// <summary>
+    /// v1.1.1+ — Momentary CaptJohn demo override. One of "" (default),
+    /// "Almuerzo" (pin to 12:00 noon, all hands + numerals flashing),
+    /// or "Fini" (pin to 5 PM). Set when the user clicks Almuerzo / Fini
+    /// in the Jolly Roger popup; CLEARED by MainWindow / FloatingClockWindow
+    /// the moment the popup closes — demo never outlives the user's
+    /// active interaction. Not persisted (transient session state).
+    /// </summary>
+    public string CaptJohnDemoMode
+    {
+        get => _captJohnDemoMode;
+        set
+        {
+            value ??= string.Empty;
+            if (_captJohnDemoMode == value) return;
+            _captJohnDemoMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsAlmuerzoActive));
+            OnPropertyChanged(nameof(IsFiniActive));
+        }
+    }
+
+    /// <summary>
+    /// Two-way-bindable wrapper for the Almuerzo radio item. Setting
+    /// true puts the tab into Almuerzo demo; setting false clears the
+    /// demo only if Almuerzo was the active mode (radio-style).
+    /// </summary>
+    public bool IsAlmuerzoActive
+    {
+        get => _captJohnDemoMode == "Almuerzo";
+        set
+        {
+            if (value)
+                CaptJohnDemoMode = "Almuerzo";
+            else if (_captJohnDemoMode == "Almuerzo")
+                CaptJohnDemoMode = string.Empty;
+        }
+    }
+
+    public bool IsFiniActive
+    {
+        get => _captJohnDemoMode == "Fini";
+        set
+        {
+            if (value)
+                CaptJohnDemoMode = "Fini";
+            else if (_captJohnDemoMode == "Fini")
+                CaptJohnDemoMode = string.Empty;
         }
     }
 
@@ -94,6 +184,7 @@ public sealed class TabViewModel : INotifyPropertyChanged
         Theme.Cathode       => true,   // CRT black
         Theme.Concourse     => true,   // charcoal
         Theme.Daylight      => false,  // cream/white
+        Theme.CaptJohn      => false,  // parchment + brass (v1.1.0)
         Theme.FlipClock     => false,  // white tile cards
         Theme.Marquee       => true,   // theater red+black
         Theme.Slab          => true,   // brutalist concrete dark

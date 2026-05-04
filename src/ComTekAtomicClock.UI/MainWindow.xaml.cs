@@ -168,6 +168,28 @@ public partial class MainWindow : FluentWindow
         btn.ContextMenu.IsOpen          = true;
     }
 
+    /// <summary>
+    /// v1.1.1 — Jolly Roger overlay button click handler. Mirrors the
+    /// HelpButton pattern: opens the attached ContextMenu (Hora Chapín
+    /// checkable + Almuerzo / Fini momentary demos). Visible only on
+    /// CaptJohn (button Visibility is bound via BoolToVis on
+    /// TabViewModel.IsCaptJohnTheme).
+    /// </summary>
+    private void JollyRogerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button btn) return;
+        if (btn.ContextMenu is null) return;
+        btn.ContextMenu.PlacementTarget = btn;
+        btn.ContextMenu.Placement       = System.Windows.Controls.Primitives.PlacementMode.Top;
+        btn.ContextMenu.IsOpen          = true;
+    }
+
+    // v1.1.3: JollyRogerMenu_Closed handler removed. Demos now persist
+    // across menu close per Dan's spec ("demonstrate the visual effects
+    // until the demo button is clicked off"). The radio-style setters
+    // on IsAlmuerzoActive / IsFiniActive handle mutex between the two
+    // demos; explicit click-off (or theme switch off CaptJohn) clears.
+
     private void HelpMenuItem_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new HelpDialog { Owner = this };

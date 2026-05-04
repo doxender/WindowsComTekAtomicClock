@@ -1,11 +1,11 @@
 # ComTek Atomic Clock — Windows
 
 > [!IMPORTANT]
-> **v1.0.0 — BETA · First public release (2026-05-03).**
+> **v1.0.0 — BETA · First public release (2026-05-03).** Code on `master` has progressed to **v1.1.6** with the new **Captain John's Marina (CaptJohn)** theme; that build is not yet published as a GitHub Release, so the v1.0.0 assets below remain the latest downloadable installer.
 >
-> The core feature set is stable enough for real-world use, but this is the **first public build** — broad-deployment testing is just starting. Please file bugs at <https://github.com/doxender/WindowsComTekAtomicClock/issues>. The bundled Windows Service adjusts your system clock against NIST or NTP.br stratum-1 servers, so don't rely on this for timekeeping that matters in a regulated context until the v1.0.x patch cycle settles. ~38 known limitations are tracked in [TODO.md](TODO.md). Code-signing is on the post-1.0 list — Windows SmartScreen will warn on first launch.
+> The core feature set is stable enough for real-world use, but broad-deployment testing is just starting. Please file bugs at <https://github.com/doxender/WindowsComTekAtomicClock/issues>. The bundled Windows Service adjusts your system clock against NIST or NTP.br stratum-1 servers, so don't rely on this for timekeeping that matters in a regulated context until the patch cycle settles. ~38 known limitations are tracked in [TODO.md](TODO.md). Code-signing is on the post-1.0 list — Windows SmartScreen will warn on first launch.
 
-A Windows desktop atomic clock that synchronizes the system clock to NIST (Boulder, CO) or NTP.br (São Paulo, BR) stratum-1 servers, with 12 themable clock faces and a Chrome-style tabbed time-zone view.
+A Windows desktop atomic clock that synchronizes the system clock to NIST (Boulder, CO) or NTP.br (São Paulo, BR) stratum-1 servers, with 13 themable clock faces and a Chrome-style tabbed time-zone view.
 
 ## Download v1.0.0
 
@@ -20,10 +20,11 @@ Both are **self-contained** (the .NET 8 runtime is bundled — no separate runti
 
 The exes are not Authenticode-signed in 1.0. Windows SmartScreen will warn ("Windows protected your PC" / "unknown publisher") on first launch. Click **More info** → **Run anyway**. Code-signing is the highest-priority post-1.0 item.
 
-## Features (v1.0.0)
+## Features
 
 - **Stratum-1 atomic time sync** — NIST Boulder pool (default, 10 named servers across Gaithersburg, MD + Fort Collins, CO, plus the `time.nist.gov` anycast) and NIC.br / NTP.br pool (5 GPS-disciplined servers in São Paulo, BR). Switch the source via Settings.
-- **12 themable clock faces** — 6 analog (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight) + 4 digital (Flip Clock, Marquee, Slab, Binary Digital) + 2 encoders (Binary, Hex). Atomic Lab is the default. Picker reachable from the `?` overlay (in-tab) or `⋯` menu (floating window) → **Themes…**.
+- **13 themable clock faces** — 7 analog (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight, **Captain John's Marina** — v1.1+) + 4 digital (Flip Clock, Marquee, Slab, Binary Digital) + 2 encoders (Binary, Hex). Atomic Lab is the default. Picker reachable from the `?` overlay (in-tab) or `⋯` menu (floating window) → **Themes…**.
+- **Captain John's Marina** (CaptJohn) — v1.1+ — parchment + brass face with the Rio Dulce marina's "Busted Flush" logo at 40% opacity. The bottom-left ☠ Jolly Roger button opens a popup with three controls: **Hora Chapín** (lazy bar-clock mode — minute hand jitters ±3 min, syncs to real time on every `:00` / `:30`; real hands at 10% opacity behind it); **Almuerzo** (12:00 demo — sets clock to 11:55 and plays the noon flash event over the next 10 minutes); **Fini** (5:00 PM demo — same shape, 16:55 → 17:05). The flash event also fires automatically at real noon and real 5 PM regardless of mode.
 - **Chrome-style tabbed time-zone view** — native WPF `TabControl`; right-click a tab → Settings; `+ New tab` / `+ New window` toolbar buttons; per-tab IANA time zone (~140 zones).
 - **Free-floating clock windows** — spawn via `+ New window` or per-tab "Open in new window". Each hosts one clock; single `⋯` overlay button hosts Settings / Themes / Bring back into tabs / Help / About.
 - **Per-face source label** — single warm-amber `BOULDER` or `BRASIL` header on every theme reflects the active time source at a glance.
@@ -98,26 +99,30 @@ ComTekAtomicClock.ServiceInstaller.exe install --service-exe "<full path>\ComTek
 
 (The legacy `sc.exe create … start= auto` shape is wrong for this build — v1.0 uses `start= demand` with the UI managing the service lifecycle.)
 
-### Building the v1.0.0 release package
+### Building the release package
 
-See [SPEC.md §20](SPEC.md) for the full pipeline. Short version:
+See [SPEC.md §20](SPEC.md) for the full pipeline. The version comes from `tools/installer.iss` (`MyAppVersion`); update both the .csproj `<Version>` and the .iss `MyAppVersion` for a release. Short version, with `$ver` as the version string:
 
 ```pwsh
+$ver = "1.1.6"   # match the csproj <Version> / installer.iss MyAppVersion
+
 # 1. Self-contained publish of all three projects (~315 MB output)
 dotnet publish src\ComTekAtomicClock.UI\ComTekAtomicClock.UI.csproj `
-    -c Release -r win-x64 --self-contained true -o release\v1.0.0\UI
+    -c Release -r win-x64 --self-contained true -o release\v$ver\UI
 dotnet publish src\ComTekAtomicClock.Service\ComTekAtomicClock.Service.csproj `
-    -c Release -r win-x64 --self-contained true -o release\v1.0.0\Service
+    -c Release -r win-x64 --self-contained true -o release\v$ver\Service
 dotnet publish src\ComTekAtomicClock.ServiceInstaller\ComTekAtomicClock.ServiceInstaller.csproj `
-    -c Release -r win-x64 --self-contained true -o release\v1.0.0\Installer
+    -c Release -r win-x64 --self-contained true -o release\v$ver\Installer
 
 # 2. Copy supporting docs into the staging dir
-Copy-Item LICENSE,CHANGELOG.md,README.md,SPEC.md,TODO.md release\v1.0.0\
+Copy-Item LICENSE,README.md,CHANGELOG.md,SPEC.md release\v$ver\
 
 # 3. Compile the Inno Setup installer
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" tools\installer.iss
-# Output: release\ComTekAtomicClock-v1.0.0-Setup.exe (~97 MB)
+# Output: release\ComTekAtomicClock-v$ver-Setup.exe (~97 MB)
 ```
+
+> **Heads-up — the installer wipes user settings (v1.1.6+).** Every Setup.exe resets `%APPDATA%\ComTekAtomicClock\settings.json` and `%ProgramData%\ComTekAtomicClock\service.json` at install time, so each install starts from the code's baked-in defaults. Intentional during the alpha/beta iteration cycle (testing clarity); will be narrowed before public-distribution releases. See [CHANGELOG.md `[1.1.6]`](CHANGELOG.md).
 
 ## NIST + NTP.br usage notes
 
@@ -139,7 +144,7 @@ ComTekAtomicClock/
     ├── TODO.md                           (consolidated open backlog)
     ├── requirements.txt                  (legacy spec — kept for history; superseded by SPEC.md)
     ├── LICENSE                           (MIT)
-    ├── design/                           (visual design artifacts: 12 .svg theme previews + index.html gallery)
+    ├── design/                           (visual design artifacts: 12 .svg theme previews + a CaptJohn .png mockup + index.html gallery + Cinzel-Variable.ttf for the CaptJohn numerals)
     ├── docs/
     │   └── code-vs-spec-audit.md         (drift audit between requirements.txt and code)
     ├── tools/
@@ -164,7 +169,7 @@ origin  https://github.com/doxender/WindowsComTekAtomicClock.git
 
 <https://github.com/doxender/WindowsComTekAtomicClock/issues> — please include:
 
-- Version (visible upper-left on every clock face: `v1.0.0`)
+- Version (visible upper-left on every clock face: e.g. `v1.1.6`)
 - Windows version (`winver`)
 - Steps to reproduce
 - Expected vs. actual behavior

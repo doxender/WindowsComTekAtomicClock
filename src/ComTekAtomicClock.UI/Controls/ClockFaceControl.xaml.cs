@@ -25,6 +25,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;   // v1.1.0 — BitmapImage for CaptJohn logo
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using SettingsTheme = ComTekAtomicClock.Shared.Settings.Theme;
@@ -106,6 +107,72 @@ public partial class ClockFaceControl : UserControl
                 ? TimeSpan.FromMilliseconds(50)
                 : TimeSpan.FromSeconds(1);
         }
+    }
+
+    // ---------------------------------------------------------------
+    // v1.1.1: CaptJohn theme runtime mode flags (Hora Chapín + Demo)
+    //
+    // Both DPs are no-ops on every theme except CaptJohn. The CaptJohn
+    // _digitalUpdater closure reads them every tick to decide:
+    //
+    //   · CaptJohnHoraChapinEnabled (bool, default FALSE — v1.1.1)
+    //       true  → Hora Chapín ON: jitter hand visible, real hands at
+    //               7.5% baseline, flash logic active around noon / 5 PM.
+    //       false → Hora Chapín OFF: jitter hand hidden, real hands at
+    //               full opacity, flash logic suppressed. The "regular
+    //               numberless clock face" state per the design spec.
+    //               Default per Dan's v1.1.1 directive — Hora Chapín is
+    //               an opt-in novelty mode, not the default presentation.
+    //
+    //   · CaptJohnDemoMode (string: "" / "Almuerzo" / "Fini", default "")
+    //       Momentary demo override that pins time to today at 12:00:00
+    //       (Almuerzo) or 17:00:00 (Fini). Forces the noon-window or
+    //       5 PM window flash logic continuously. Cleared the moment the
+    //       Jolly Roger overflow popup closes so demo state can never
+    //       outlive the user's interaction. String chosen over enum to
+    //       avoid pulling a new public type into the control's surface.
+    //
+    // Both default to "default state" so non-CaptJohn themes are
+    // unaffected. The MainWindow / FloatingClockWindow Jolly Roger
+    // overlay button is the only thing that flips them.
+    // ---------------------------------------------------------------
+
+    public static readonly DependencyProperty CaptJohnHoraChapinEnabledProperty =
+        DependencyProperty.Register(
+            nameof(CaptJohnHoraChapinEnabled),
+            typeof(bool),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(false));
+
+    public bool CaptJohnHoraChapinEnabled
+    {
+        get => (bool)GetValue(CaptJohnHoraChapinEnabledProperty);
+        set => SetValue(CaptJohnHoraChapinEnabledProperty, value);
+    }
+
+    public static readonly DependencyProperty CaptJohnDemoModeProperty =
+        DependencyProperty.Register(
+            nameof(CaptJohnDemoMode),
+            typeof(string),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(string.Empty, OnCaptJohnDemoModeChanged));
+
+    public string CaptJohnDemoMode
+    {
+        get => (string)GetValue(CaptJohnDemoModeProperty);
+        set => SetValue(CaptJohnDemoModeProperty, value);
+    }
+
+    /// <summary>
+    /// v1.1.4: any change to <see cref="CaptJohnDemoMode"/> resets the
+    /// demo-start checkpoint so the next active demo (Almuerzo or Fini)
+    /// starts the clock at 11:55 / 16:55 fresh. Toggling a demo off
+    /// then on (or switching demos) restarts the 10-minute play-out.
+    /// </summary>
+    private static void OnCaptJohnDemoModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ClockFaceControl c)
+            c._captJohnDemoStartLocal = null;
     }
 
     // ---------------------------------------------------------------
@@ -353,6 +420,7 @@ public partial class ClockFaceControl : UserControl
             case SettingsTheme.Cathode:       BuildCathode();       break;
             case SettingsTheme.Concourse:     BuildConcourse();     break;
             case SettingsTheme.Daylight:      BuildDaylight();      break;
+            case SettingsTheme.CaptJohn:      BuildCaptJohn();      break;
             case SettingsTheme.FlipClock:     BuildFlipClock();     break;
             case SettingsTheme.Marquee:       BuildMarquee();       break;
             case SettingsTheme.Slab:          BuildSlab();          break;
@@ -468,6 +536,7 @@ public partial class ClockFaceControl : UserControl
         SettingsTheme.Cathode       => "Cathode",
         SettingsTheme.Concourse     => "Concourse",
         SettingsTheme.Daylight      => "Daylight",
+        SettingsTheme.CaptJohn      => "Captain John’s",
         SettingsTheme.FlipClock     => "Flip Clock",
         SettingsTheme.Marquee       => "Marquee",
         SettingsTheme.Slab          => "Slab",
@@ -779,8 +848,9 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeNumeral("6",  Cx,         Cy + 132, consolas, 22, amber));
         Dial.Children.Add(MakeNumeral("9",  Cx - 132,   Cy,       consolas, 22, amber));
 
-        var (hourLine,   hRot) = MakeHand(14, 90,  hands,      6);
-        var (minuteLine, mRot) = MakeHand(18, 128, hands,      4);
+        // v1.0.1 — hour -24 px (1/4"), minute +24 px (1/4")
+        var (hourLine,   hRot) = MakeHand(14, 66,  hands,      6);
+        var (minuteLine, mRot) = MakeHand(18, 152, hands,      4);
         var (secondLine, sRot) = MakeHand(22, 142, redSecond,  1.6);
         Dial.Children.Add(hourLine);   _hourRotate   = hRot;
         Dial.Children.Add(minuteLine); _minuteRotate = mRot;
@@ -841,8 +911,9 @@ public partial class ClockFaceControl : UserControl
         // No numerals — Mondaine has none.
 
         // Hands as solid black batons
-        var (hourBaton,   hRot) = MakeBatonHand(14, 100, 10, black);
-        var (minuteBaton, mRot) = MakeBatonHand(18, 138,  7, black);
+        // v1.0.1 — hour -24, minute +24 (Mondaine batons stay proportional in width).
+        var (hourBaton,   hRot) = MakeBatonHand(14, 76,  10, black);
+        var (minuteBaton, mRot) = MakeBatonHand(18, 162,  7, black);
         Dial.Children.Add(hourBaton);   _hourRotate   = hRot;
         Dial.Children.Add(minuteBaton); _minuteRotate = mRot;
 
@@ -975,8 +1046,9 @@ public partial class ClockFaceControl : UserControl
         Dial.Children.Add(MakeNumeral("6",  Cx,         Cy + 132, segoe, 22, white, FontWeights.SemiBold));
         Dial.Children.Add(MakeNumeral("9",  Cx - 132,   Cy,       segoe, 22, white, FontWeights.SemiBold));
 
-        var (hLine, hRot) = MakeHand(14, 92,  white, 7, PenLineCap.Round);
-        var (mLine, mRot) = MakeHand(18, 128, white, 5, PenLineCap.Round);
+        // v1.0.1 — hour -24, minute +24
+        var (hLine, hRot) = MakeHand(14, 68,  white, 7, PenLineCap.Round);
+        var (mLine, mRot) = MakeHand(18, 152, white, 5, PenLineCap.Round);
         var (sLine, sRot) = MakeHand(22, 140, cyan,  2, PenLineCap.Round);
         Dial.Children.Add(hLine); _hourRotate   = hRot;
         Dial.Children.Add(mLine); _minuteRotate = mRot;
@@ -1049,8 +1121,9 @@ public partial class ClockFaceControl : UserControl
             Dial.Children.Add(tb);
         }
 
-        var (hLine, hRot) = MakeHand(14, 90,  phosphor,       5, PenLineCap.Round);
-        var (mLine, mRot) = MakeHand(18, 128, phosphor,     3.5, PenLineCap.Round);
+        // v1.0.1 — hour -24, minute +24 (CRT phosphor glow stays scaled to thickness, not length)
+        var (hLine, hRot) = MakeHand(14, 66,  phosphor,       5, PenLineCap.Round);
+        var (mLine, mRot) = MakeHand(18, 152, phosphor,     3.5, PenLineCap.Round);
         var (sLine, sRot) = MakeHand(22, 142, phosphorBright, 1.4, PenLineCap.Round);
         hLine.Effect = glow.Clone();
         mLine.Effect = glow.Clone();
@@ -1124,8 +1197,9 @@ public partial class ClockFaceControl : UserControl
         }
 
         // Thick rectangular hands
-        var (hRect, hRot) = MakeBatonHand(0, 86, 10, orange, 1.5);
-        var (mRect, mRot) = MakeBatonHand(0, 122, 8, orange, 1.5);
+        // v1.0.1 — hour -24, minute +24
+        var (hRect, hRot) = MakeBatonHand(0, 62, 10, orange, 1.5);
+        var (mRect, mRot) = MakeBatonHand(0, 146, 8, orange, 1.5);
         Dial.Children.Add(hRect); _hourRotate   = hRot;
         Dial.Children.Add(mRect); _minuteRotate = mRot;
 
@@ -1195,8 +1269,9 @@ public partial class ClockFaceControl : UserControl
             Dial.Children.Add(MakeNumeral(h.ToString(), x, y, inter, 22, navy, FontWeights.Bold));
         }
 
-        var (hRect, hRot) = MakeBatonHand(0, 90,  9, navy, 1.5);
-        var (mRect, mRot) = MakeBatonHand(0, 128, 7, navy, 1.5);
+        // v1.0.1 — hour -24, minute +24
+        var (hRect, hRot) = MakeBatonHand(0, 66,  9, navy, 1.5);
+        var (mRect, mRot) = MakeBatonHand(0, 152, 7, navy, 1.5);
         Dial.Children.Add(hRect); _hourRotate   = hRot;
         Dial.Children.Add(mRect); _minuteRotate = mRot;
 
@@ -1231,6 +1306,436 @@ public partial class ClockFaceControl : UserControl
         // textblock placed once at Cx-half-of-"00:00:00" and never
         // re-centered — actual time strings drift width tick-to-tick.
         _recenterTextReadoutsOnUpdate = true;
+    }
+
+    // ===============================================================
+    // Theme: Captain John's Marina (v1.1.0)
+    //
+    // Hand-drawn parchment-and-brass face featuring the marina logo at
+    // 40% opacity. Lazy "Hora Chapín" jitter minute hand drifts ±3 min
+    // each tick, snapping back to 12 at the top of every hour. During
+    // ±5 minutes of noon and 5 PM, the face wakes up: real hour /
+    // minute / second hands flash to 100% opacity and the bordeaux
+    // Cinzel-Bold "12" (and "5" at 5 PM) flash on top — 5 s on, 5 s
+    // off — over a 10-minute window. Outside those windows the real
+    // hands sit at 7.5% opacity as a faint reference behind the
+    // jittered hand.
+    //
+    // v1.1.0 ships the rendering. Not yet shipped (deferred to v1.1.x):
+    //   - Jolly Roger ⋯ button + popout panel in the lower-left
+    //   - Hora Chapín ON/OFF toggle (currently always ON)
+    //   - Almuerzo / Fini momentary demo buttons
+    // See windows/TODO.md "Active queue" #1 for the wire-up scope.
+    // ===============================================================
+
+    // Per-theme state — only used while CaptJohn is the active theme.
+    // Reset to null in RenderActiveTheme via the existing _digitalUpdater
+    // and rotate-handle clears.
+    private Line? _captJohnHourHand;
+    private Line? _captJohnMinuteHand;
+    private Line? _captJohnSecondHand;
+    private Line? _captJohnJitterHand;
+    private RotateTransform? _captJohnJitterRotate;
+    private TextBlock? _captJohn12Numeral;
+    private TextBlock? _captJohn5Numeral;
+    private int _captJohnJitterMinute;
+    private int _captJohnJitterLastTickRealMinute = -1;
+    private static readonly Random _captJohnRng = new();
+
+    /// <summary>
+    /// v1.1.4: anchor for the Almuerzo / Fini demo time-mapping. Set on
+    /// the first tick after a demo activates (or after a reset via the
+    /// <see cref="OnCaptJohnDemoModeChanged"/> DP callback); used to
+    /// translate real elapsed time into demo time as
+    /// <c>demoBase + (local - _captJohnDemoStartLocal)</c>, so the
+    /// demo plays the 10-minute flash window out at real speed and
+    /// then stops flashing naturally at 12:05 / 17:05 in demo time.
+    /// </summary>
+    private DateTime? _captJohnDemoStartLocal;
+
+    private void BuildCaptJohn()
+    {
+        // ---- Palette --------------------------------------------------
+        var parchment    = Color.FromRgb(0xF5, 0xE9, 0xD0);
+        var parchmentEd  = Color.FromRgb(0xE8, 0xD7, 0xB2);
+        var brass        = Color.FromRgb(0xB8, 0x92, 0x4E);
+        var ink          = Color.FromRgb(0x1A, 0x1A, 0x1A);
+        var gold         = Color.FromRgb(0xD4, 0xA5, 0x47);
+        var bordeaux     = Color.FromRgb(0x7B, 0x16, 0x16);   // numerals
+        var bordeauxDark = Color.FromRgb(0x4A, 0x0F, 0x0F);   // hour hand
+        var bordeauxMid  = Color.FromRgb(0x64, 0x14, 0x14);   // minute + second hand
+        var face         = Color.FromRgb(0xFC, 0xF4, 0xE0);
+
+        var inkBrush          = new SolidColorBrush(ink);
+        var goldBrush         = new SolidColorBrush(gold);
+        var bordeauxBrush     = new SolidColorBrush(bordeaux);
+        var bordeauxDarkBrush = new SolidColorBrush(bordeauxDark);
+        var bordeauxMidBrush  = new SolidColorBrush(bordeauxMid);
+
+        // ---- 1. Parchment radial backdrop -----------------------------
+        var bgBrush = new RadialGradientBrush
+        {
+            Center = new Point(0.5, 0.5),
+            GradientOrigin = new Point(0.5, 0.5),
+            RadiusX = 0.7, RadiusY = 0.7,
+            GradientStops =
+            {
+                new GradientStop(parchment,   0),
+                new GradientStop(parchmentEd, 1),
+            },
+        };
+        Dial.Children.Add(new Rectangle { Width = 400, Height = 400, Fill = bgBrush }.At(0, 0));
+
+        // ---- 2. Brass ring (344×344) ---------------------------------
+        Dial.Children.Add(new Ellipse
+        {
+            Width  = 344, Height = 344,
+            Stroke = new SolidColorBrush(brass), StrokeThickness = 2,
+        }.At(28, 28));
+
+        // ---- 3. Inner cream face (320×320) ---------------------------
+        Dial.Children.Add(new Ellipse
+        {
+            Width = 320, Height = 320, Fill = new SolidColorBrush(face),
+        }.At(40, 40));
+
+        // ---- 4. Marina logo at 40% opacity, clipped to face circle ----
+        try
+        {
+            var logoUri = new Uri("pack://application:,,,/Assets/JohnsMarina-logo.jpg");
+            var logoSrc = new BitmapImage(logoUri);
+            // Original 168×197. Scale so the diagonal fits inside the
+            // 320 face circle with a 4% safety margin (matches the
+            // mockup math in tools/captjohn-mockup.ps1).
+            var diag = Math.Sqrt(168 * 168 + 197 * 197);
+            var scale = (320.0 / diag) * 1.04;
+            var dw = 168 * scale;
+            var dh = 197 * scale;
+            var logoImage = new Image
+            {
+                Source  = logoSrc,
+                Width   = dw,
+                Height  = dh,
+                Opacity = 0.40,
+                Stretch = Stretch.Fill,
+            };
+            // Clip to the face circle. Clip is in the Image's own local
+            // coords (top-left = 0,0), so the ellipse center is at
+            // (logoImage.Width/2 + (Cx - dw/2 - dx), ...). Easier: use
+            // an EllipseGeometry whose RadiusX/Y is the inscribed-circle
+            // radius (160) translated into local coords by subtracting
+            // the image's canvas position from Cx/Cy.
+            var imgX = Cx - dw / 2.0;
+            var imgY = Cy - dh / 2.0;
+            logoImage.Clip = new EllipseGeometry(
+                center:  new Point(Cx - imgX, Cy - imgY),
+                radiusX: 160, radiusY: 160);
+            Dial.Children.Add(logoImage.At(imgX, imgY));
+        }
+        catch (Exception ex)
+        {
+            // Asset missing or corrupt — log and continue without the
+            // logo backdrop. The face still renders (parchment + ring +
+            // hands) so the user sees a recognizable clock.
+            System.Diagnostics.Trace.WriteLine(
+                $"[ClockFaceControl] BuildCaptJohn: failed to load logo — {ex.Message}");
+        }
+
+        // ---- 5. "The Busted Flush" caption ----------------------------
+        // Monotype Corsiva 13 px italic, sepia at 40% — same visual
+        // weight as the logo so it reads as a logo extension.
+        var bustedFlush = new TextBlock
+        {
+            Text       = "The Busted Flush",
+            FontFamily = new FontFamily("Monotype Corsiva, Segoe Script, cursive"),
+            FontSize   = 13,
+            FontStyle  = FontStyles.Italic,
+            Foreground = new SolidColorBrush(Color.FromArgb(0x66, 0x3C, 0x28, 0x1C)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
+        bustedFlush.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Dial.Children.Add(bustedFlush.At(Cx - bustedFlush.DesiredSize.Width / 2, 283));
+
+        // ---- 6. Center pin (drawn AFTER hands so it sits on top, but
+        //         we add hands above this in z-order via Dial.Children
+        //         order) ------------------------------------------------
+        // (deferred — added after hands below)
+
+        // ---- 7. Real-time hour hand: length 66, dark bordeaux, 7.5% ----
+        var (hourLine, hRot) = MakeHand(14, 66, bordeauxDarkBrush, 9, PenLineCap.Round);
+        hourLine.Opacity = 0.075;
+        Dial.Children.Add(hourLine);
+        _captJohnHourHand = hourLine;
+        _hourRotate = hRot;
+
+        // ---- 8. Real-time minute hand: length 152, mid bordeaux, 7.5% ----
+        var (minLine, mRot) = MakeHand(18, 152, bordeauxMidBrush, 5, PenLineCap.Round);
+        minLine.Opacity = 0.075;
+        Dial.Children.Add(minLine);
+        _captJohnMinuteHand = minLine;
+        _minuteRotate = mRot;
+
+        // ---- 9. Real-time second hand: length 138, mid bordeaux, hidden by default --
+        var (secLine, sRot) = MakeHand(22, 138, bordeauxMidBrush, 2, PenLineCap.Round);
+        secLine.Opacity = 0;   // hidden until flash window
+        Dial.Children.Add(secLine);
+        _captJohnSecondHand = secLine;
+        _secondRotate = sRot;
+
+        // ---- 10. Jittered "lazy" minute hand on top, ink black, full opacity --
+        // Same length as the real minute hand. Position is updated by
+        // the digital updater each tick based on the random-walk state.
+        //
+        // v1.1.4: initial display = current local minute (was 0 / "12"
+        // in v1.1.0..1.1.3). Per Dan: "the captjohn hour capin min
+        // hand jitter should start out at the current time when started
+        // and sync up with real time at noon." So the random walk
+        // begins at the real minute and only re-syncs to 0 when the
+        // local hour is 12 and the minute ticks to 0 (top of noon).
+        var nowLocalForInit = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone);
+        var initJitterMinute = nowLocalForInit.Minute;
+        var jitterRotate = new RotateTransform(initJitterMinute * 6.0, Cx, Cy);
+        var jitterLine = new Line
+        {
+            X1 = Cx, Y1 = Cy + 18,
+            X2 = Cx, Y2 = Cy - 152,
+            Stroke = inkBrush,
+            StrokeThickness = 7,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap   = PenLineCap.Round,
+            RenderTransform = jitterRotate,
+        };
+        Dial.Children.Add(jitterLine);
+        _captJohnJitterHand = jitterLine;
+        _captJohnJitterRotate = jitterRotate;
+        // Seed the random-walk state. _captJohnJitterLastTickRealMinute
+        // == nowLocalForInit.Minute means the first tick won't trigger
+        // an immediate walk advance — the walk advances only when the
+        // real minute changes. Demo state is also reset.
+        _captJohnJitterMinute = initJitterMinute;
+        _captJohnJitterLastTickRealMinute = initJitterMinute;
+        _captJohnDemoStartLocal = null;
+
+        // ---- 11. Center pin (12 ink + 4 gold) — z-order on top -------
+        Dial.Children.Add(new Ellipse { Width = 12, Height = 12, Fill = inkBrush  }.At(Cx - 6, Cy - 6));
+        Dial.Children.Add(new Ellipse { Width = 4,  Height = 4,  Fill = goldBrush }.At(Cx - 2, Cy - 2));
+
+        // ---- 12. Numerals "12" and "5" — Cinzel Bold 38, bordeaux, hidden by default --
+        // Visible only during their respective flash windows on the
+        // "on" frame of the 5 s flash cycle.
+        var cinzelFamily = new FontFamily(
+            "pack://application:,,,/Assets/Fonts/Cinzel-Variable.ttf#Cinzel"
+            + ", Cambria, Times New Roman, serif");
+        const double numRadius = 130;
+        // "12" at top (angle 0)
+        _captJohn12Numeral = new TextBlock
+        {
+            Text       = "12",
+            FontFamily = cinzelFamily,
+            FontSize   = 38,
+            FontWeight = FontWeights.Bold,
+            Foreground = bordeauxBrush,
+            Opacity    = 0,
+        };
+        _captJohn12Numeral.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Dial.Children.Add(_captJohn12Numeral.At(
+            Cx - _captJohn12Numeral.DesiredSize.Width / 2,
+            (Cy - numRadius) - _captJohn12Numeral.DesiredSize.Height / 2));
+
+        // "5" at the 5 o'clock position (angle 150°)
+        var ang5 = 150 * Math.PI / 180.0;
+        var pos5x = Cx + numRadius * Math.Sin(ang5);
+        var pos5y = Cy - numRadius * Math.Cos(ang5);
+        _captJohn5Numeral = new TextBlock
+        {
+            Text       = "5",
+            FontFamily = cinzelFamily,
+            FontSize   = 38,
+            FontWeight = FontWeights.Bold,
+            Foreground = bordeauxBrush,
+            Opacity    = 0,
+        };
+        _captJohn5Numeral.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Dial.Children.Add(_captJohn5Numeral.At(
+            pos5x - _captJohn5Numeral.DesiredSize.Width / 2,
+            pos5y - _captJohn5Numeral.DesiredSize.Height / 2));
+
+        // ---- 13. Per-tick state machine ------------------------------
+        // Three high-level states, each clearly distinct on screen:
+        //
+        //   A. Flash window (11:55–12:05 OR 16:55–17:05 in clock time,
+        //      where "clock time" = real time normally OR demo time
+        //      while a demo radio is active). Hour hand, minute hand,
+        //      second hand, and the relevant numeral (only "12" at noon;
+        //      only "5" at 5 PM) all flash on/off together at a 5 s on
+        //      / 5 s off cadence. Off-frames hide all four. Jitter hand
+        //      is suppressed (lazy mode steps aside for the event).
+        //
+        //   B. Hora Chapín ON, outside flash window. Lazy bar-clock
+        //      mode: jitter hand at 100% on top, real hour + minute at
+        //      0.1 opacity (= 90% transparent — Dan's directive),
+        //      second hand hidden, numerals hidden.
+        //
+        //   C. Hora Chapín OFF, outside flash window. Regular numberless
+        //      clock face: real hour, minute, second hands at 100%, no
+        //      jitter, no numerals.
+        //
+        // v1.1.4 demo behavior — radically different from v1.1.1..1.1.3.
+        // Earlier versions PINNED clock time to 12:00 / 17:00 while a
+        // demo radio was active; the flash continued indefinitely until
+        // the user clicked the radio off. Per Dan's v1.1.4 directive
+        // ("set the hour and min hands at 5 min to either 12 or 5 PM
+        // and proceed as they normally would if not checked. That is,
+        // stop flashing at 5 min after the hour."), demos now SET the
+        // clock time to 11:55 / 16:55 on activation and let real
+        // elapsed time advance from there. The flash window plays out
+        // for a real 10 minutes and stops at clock time 12:05 / 17:05.
+        // The demo radio stays checked after the flash ends — clicking
+        // it off ends the demo and returns to real time; clicking off
+        // and on restarts the play-out at 11:55 / 16:55. The other
+        // demo radio auto-clears on activation via the radio-style
+        // setters in TabViewModel.
+        //
+        // Jitter sync rule (v1.1.4): the random walk advances once per
+        // clock-minute change AT ALL TIMES (visible or hidden), and
+        // syncs to 0 only when (clock hour == 12 AND clock minute == 0)
+        // — i.e. ONLY at noon. Earlier passes synced at every top-of-
+        // hour. Per Dan: "sync up with real time at noon."
+        _digitalUpdater = local =>
+        {
+            // ---- Demo time mapping ----------------------------------
+            // While a demo is active, override the clock time so it
+            // advances from 11:55:00 / 16:55:00 forward at real speed.
+            // The demo-start checkpoint is set on the first tick after
+            // a mode change (cleared by OnCaptJohnDemoModeChanged DP
+            // callback — toggling demo off/on or switching demos
+            // restarts the clock at the 5-min-before mark).
+            var demo = CaptJohnDemoMode;
+            if (demo == "Almuerzo" || demo == "Fini")
+            {
+                if (_captJohnDemoStartLocal is null)
+                    _captJohnDemoStartLocal = local;
+
+                var elapsed = local - _captJohnDemoStartLocal.Value;
+                var demoBase = demo == "Almuerzo"
+                    ? new DateTime(local.Year, local.Month, local.Day, 11, 55, 0, local.Kind)
+                    : new DateTime(local.Year, local.Month, local.Day, 16, 55, 0, local.Kind);
+                local = demoBase + elapsed;
+
+                // Re-drive analog hand angles so they track demo time.
+                // The outer UpdateClock already set them against real
+                // time on this tick; we overwrite with demo time here.
+                var demoHour   = (local.Hour % 12) + (local.Minute / 60.0) + (local.Second / 3600.0);
+                var demoMinute = local.Minute + (local.Second / 60.0) + (local.Millisecond / 60_000.0);
+                var demoSecond = local.Second + (SmoothSecondHand ? local.Millisecond / 1000.0 : 0);
+                if (_hourRotate   is not null) _hourRotate.Angle   = demoHour   * 30.0;
+                if (_minuteRotate is not null) _minuteRotate.Angle = demoMinute *  6.0;
+                if (_secondRotate is not null) _secondRotate.Angle = demoSecond *  6.0;
+            }
+
+            var horaChapin = CaptJohnHoraChapinEnabled;
+
+            // Flash-window detection — wraparound-safe modulo distance
+            // from noon (720 min from midnight) and 5 PM (1020 min).
+            var minSinceMidnight = local.Hour * 60 + local.Minute;
+            var distNoon = WrappedAbsDiff(minSinceMidnight, 720);
+            var dist5PM  = WrappedAbsDiff(minSinceMidnight, 1020);
+            var inNoonWindow = distNoon <= 5;
+            var in5PMWindow  = dist5PM  <= 5;
+            var inFlash = inNoonWindow || in5PMWindow;
+
+            // 5 s on / 5 s off cadence (10 s period).
+            var flashOn = ((local.Second / 5) % 2) == 0;
+
+            // Jitter walk: advance once per clock-minute change. Sync
+            // to the actual minute on every hour AND half hour (v1.1.5
+            // — was noon-only in v1.1.4, every-top-of-hour in
+            // v1.1.0..1.1.3). The 30-minute cadence keeps the lazy hand
+            // from drifting more than ~ ±15 min from reality between
+            // syncs while still letting it wander noticeably between
+            // them. The walk runs at all times so the displayed minute
+            // stays roughly current — VISIBILITY is gated by state.
+            if (local.Minute != _captJohnJitterLastTickRealMinute)
+            {
+                _captJohnJitterLastTickRealMinute = local.Minute;
+                if (local.Minute == 0 || local.Minute == 30)
+                {
+                    _captJohnJitterMinute = local.Minute;
+                }
+                else
+                {
+                    var delta = _captJohnRng.Next(-3, 4);   // [-3, +3] inclusive
+                    _captJohnJitterMinute = ((_captJohnJitterMinute + delta) % 60 + 60) % 60;
+                }
+            }
+            if (_captJohnJitterRotate is not null)
+                _captJohnJitterRotate.Angle = _captJohnJitterMinute * 6.0;
+
+            // Visibility: only state B shows the jitter hand.
+            var showJitter = horaChapin && !inFlash;
+            if (_captJohnJitterHand is not null)
+                _captJohnJitterHand.Opacity = showJitter ? 1.0 : 0;
+
+            // Decide opacity for the four flash-driven elements:
+            // hour hand, minute hand, second hand, and the two numerals.
+            double handOpacity, num12Opacity, num5Opacity;
+
+            if (inFlash)
+            {
+                // State A. Hour + minute + second + the relevant numeral
+                // all flash on/off together.
+                //   · Noon window  → only "12" flashes (the "5" stays hidden).
+                //   · 5 PM window  → only "5"  flashes (the "12" stays hidden).
+                var v = flashOn ? 1.0 : 0.0;
+                handOpacity  = v;
+                num12Opacity = inNoonWindow ? v : 0;
+                num5Opacity  = in5PMWindow  ? v : 0;
+            }
+            else if (horaChapin)
+            {
+                // State B. Lazy bar-clock mode. Real hands at 10%
+                // opacity (= 90% transparent — Dan's "bring up the
+                // transparency" v1.1.2/1.1.3 directive). Faint enough
+                // that the jitter hand dominates as the visual minute
+                // indicator, opaque enough to confirm where the real
+                // time is if you squint. Earlier passes tried 7.5%
+                // (too faint to read at all) and 90% opaque (too
+                // prominent — drowned out the jitter hand).
+                handOpacity  = 0.1;
+                num12Opacity = 0;
+                num5Opacity  = 0;
+            }
+            else
+            {
+                // State C. Regular clock face.
+                handOpacity  = 1.0;
+                num12Opacity = 0;
+                num5Opacity  = 0;
+            }
+
+            if (_captJohnHourHand   is not null) _captJohnHourHand.Opacity   = handOpacity;
+            if (_captJohnMinuteHand is not null) _captJohnMinuteHand.Opacity = handOpacity;
+            if (_captJohn12Numeral  is not null) _captJohn12Numeral.Opacity  = num12Opacity;
+            if (_captJohn5Numeral   is not null) _captJohn5Numeral.Opacity   = num5Opacity;
+
+            // Second hand:
+            //   · State A (flash) → flashes with the rest.
+            //   · State B (Hora Chapín ON, normal) → hidden.
+            //   · State C (regular face) → 100% always.
+            if (_captJohnSecondHand is not null)
+            {
+                _captJohnSecondHand.Opacity =
+                    inFlash ? handOpacity
+                    : horaChapin ? 0
+                    : 1.0;
+            }
+        };
+
+        static int WrappedAbsDiff(int a, int target)
+        {
+            var d = Math.Abs(a - target);
+            return Math.Min(d, 1440 - d);
+        }
     }
 
     // ===============================================================

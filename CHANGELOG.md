@@ -4,6 +4,284 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.6] - 2026-05-03 — Installer: wipe persisted settings on install (factory-reset every Setup.exe)
+
+Per Dan: *"the defaults for the clock should reset on each install."* Two issues sat behind this:
+
+1. **CaptJohn was opening with Hora Chapín ON** even though the code default is `false` (regular time). Cause: a prior test install had toggled it on, the toggle persisted to `%APPDATA%\ComTekAtomicClock\settings.json`, and every subsequent Setup.exe read that persisted `true` back. The bug was in the persistence flow, not the default.
+2. **No standing way to "start clean"** between test installs. Forcing testers (Dan) to manually delete the JSON files between runs was friction.
+
+### Change
+
+`windows/tools/installer.iss` gains an `[InstallDelete]` section that runs at install time (before the new build's files are copied) and removes:
+
+- `%APPDATA%\ComTekAtomicClock\settings.json` — the per-user UI state (tabs, themes, time format, second-hand override, CaptJohn Hora Chapín toggle, …).
+- `%ProgramData%\ComTekAtomicClock\service.json` — the per-machine service config (time-source pool, sync interval, large-offset confirmation).
+
+Both files are recreated at first launch with the current code's baked-in defaults — `Theme.AtomicLab`, `TimeSource.Boulder`, `CaptJohnHoraChapin = false`, etc. The CaptJohn theme therefore opens with `Hora Chapín OFF` (regular time) on every fresh install.
+
+Note: the installed tree under `%ProgramFiles%\ComTekAtomicClock\…` is **not** touched by this — `InstallDelete` runs before the `Files` section copies the new build, and the wipe only targets user-data files outside the install tree.
+
+### Tradeoff
+
+End users lose any per-tab customization (their list of tabs, theme picks, time-zone tabs) on every Setup.exe upgrade. For an alpha / beta in active iteration this is the right call — testers always see what new defaults look like. Worth revisiting before a public-distribution v1.x release; at that point we'd narrow the scope to migration-incompatible schema changes only, or add a "keep my settings" checkbox on the install wizard.
+
+### Files touched
+
+- `windows/tools/installer.iss` — new `[InstallDelete]` section; `MyAppVersion` 1.1.5 → 1.1.6.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.5 → 1.1.6.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.6 → v2.7: front-matter changelog row + a new bullet under §20 install flow noting the wipe-on-install behavior.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.6-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
+## [1.1.5] - 2026-05-03 — CaptJohn: Hora Chapín jitter syncs to real time on the hour AND half hour
+
+Per Dan: *"in 'hora Chapin' mode, the minut hand should sync to the current time on the hour and half hour."*
+
+The v1.1.4 sync rule was "only at noon" (`local.Hour == 12 && local.Minute == 0`) — between syncs the lazy hand could drift very far from reality. v1.1.5 narrows the gap by syncing twice per hour: at `:00` and at `:30`. On those minute ticks the jitter snaps to the actual minute (0 or 30); on every other minute tick the walk takes a normal ±3 random step.
+
+Net effect: the lazy bar-clock hand wanders noticeably between syncs but never drifts more than ~ ±15 minutes from real time before it's pulled back. Reads as "approximately the right time, with character" rather than "totally unmoored."
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — `_digitalUpdater` jitter sync condition: `local.Hour == 12 && local.Minute == 0` → `local.Minute == 0 || local.Minute == 30`. Snap value: was hard-coded `0`, now `local.Minute` (which is 0 or 30 by definition of the branch).
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.4 → 1.1.5.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.4 → 1.1.5.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.5 → v2.6: §10 Theme #7 "Lazy" jitter minute hand row sync rule updated.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.5-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
+## [1.1.4] - 2026-05-03 — CaptJohn: jitter starts at current minute, syncs only at noon; demos play out 11:55 → 12:05 at real speed
+
+Two related fixes after Dan's v1.1.3 testing.
+
+### 1. Jitter starts at the current minute and syncs only at noon
+
+Per Dan: *"the captjohn hour capin min hand jitter should start out at the current time when started and sync up with real time at noon."*
+
+- On `BuildCaptJohn`, the random-walk seed is now the current local minute instead of 0. The jitter hand's initial visible position matches the real time the moment the theme renders, so the user doesn't see the lazy hand snap from "12" to its walk position on the first minute tick.
+- The walk's "even things up" sync condition was `local.Minute == 0` (every top-of-hour). Now it's `local.Hour == 12 && local.Minute == 0` — only the noon transition resets the displayed minute to 0. Every other hour boundary just gets a normal ±3 random walk step.
+- Walk also now runs unconditionally (was previously gated by `showJitter`). Visibility is still gated by state — the walk advances even while the hand is hidden so the displayed minute stays roughly current if the user later toggles Hora Chapín ON.
+
+### 2. Almuerzo / Fini demos play out at real speed from 11:55 → 12:05 (or 16:55 → 17:05)
+
+Per Dan: *"If the almurtzo or fini demo buttons are clicked they should set the hour and min hands at 5 min to either 12 or 5 PM (the time the normal flash activity would take place) and proceed as they normally would if not checked. That is, stop flashing at 5 min after the hour."*
+
+- Earlier passes pinned `local` to a constant (12:00:00 / 17:00:00). The flash continued indefinitely until the user clicked the radio off — that wasn't a faithful demo of the noon / 5 PM event, just a frozen single moment.
+- v1.1.4 instead establishes a demo-start checkpoint on activation (`_captJohnDemoStartLocal`) and remaps `local` as `demoBase + (real - checkpoint)`, where `demoBase` is today at 11:55:00 (Almuerzo) or 16:55:00 (Fini). Real elapsed time advances demo time at the same rate.
+- Result: clicking Almuerzo at any moment makes the clock instantly read 11:55:00, the "12" appears, all three flash on/off; one real minute later the clock reads 11:56:00; … five real minutes later it reads 12:00:00 (the apex of the event); ten real minutes later it reads 12:05:00 and the flash window closes naturally. The demo radio stays checked but no flashing happens — exactly what the clock would do on its own at noon if no demo were active.
+- Click the radio off then on to restart the play-out at 11:55:00. Switching between Almuerzo and Fini also resets the checkpoint via the `OnCaptJohnDemoModeChanged` DP callback.
+- Demo time also drives the analog hand rotations (`_hourRotate.Angle` / `_minuteRotate.Angle` / `_secondRotate.Angle`) — the outer `UpdateClock` already set them against real time on the same dispatcher tick; `_digitalUpdater` now overwrites them with demo-time values when a demo is active.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — new `_captJohnDemoStartLocal` field; `OnCaptJohnDemoModeChanged` DP callback wired into `CaptJohnDemoModeProperty`; `BuildCaptJohn` initializes the jitter at `nowLocal.Minute` and sets the rotate transform's initial angle accordingly; `_digitalUpdater` rewritten with the demo-time mapping + noon-only sync.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.3 → 1.1.4.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.3 → 1.1.4.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.4 → v2.5: §10 Theme #7 — Per-tick state, Demo time-pinning, and Demo persistence rows rewritten to reflect the v1.1.4 model.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.4-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
+## [1.1.3] - 2026-05-03 — CaptJohn: flash-window state machine corrected + demos persist + Hora Chapín hands at 10%
+
+Three coordinated fixes after Dan smoke-tested v1.1.2:
+
+1. **Almuerzo / Fini demos didn't behave correctly.** Per Dan's spec: "At 5 minutes to 12:00 PM the 12 becomes visible and for the next 10 minutes the clock is accurate, shows both hour and minute hands and all three flash on and off every 10 seconds. … The demo buttons set the clock to 12 and 5 respectively and demonstrate the visual effects until the demo button is clicked off." The v1.1.2 state machine was muddled — numerals only fired under Hora Chapín, real hands kept their lazy-mode opacity even during the flash window, and demos cleared when the menu closed. Rewrote the state machine to make the three states clearly distinct.
+2. **"Bring up the transparency to 90%" meant 90% transparent (= 10% opaque).** I'd misread it in v1.1.2 as 90% opacity (`0.9`), so the real hands were effectively at full strength behind the jitter hand — defeating the lazy bar-clock concept. Corrected to `0.1`.
+3. **Demos persist until clicked off**, per the explicit spec. Earlier versions cleared on `ContextMenu.Closed`.
+
+### New CaptJohn `_digitalUpdater` state machine
+
+Three high-level states, each visually distinct:
+
+- **State A — Flash window** (real-time 11:55–12:05 OR 16:55–17:05, OR any time a demo is pinned). Hour, minute, and second hands plus the relevant numeral flash on/off together at 5 s on / 5 s off. Off-frames hide all four. Only the noon-side numeral ("12") flashes during the noon window; only the 5-side numeral ("5") flashes during the 5 PM window — the v1.1.2 code had "12" appearing during the 5 PM window too. Jitter hand suppressed entirely during the flash so the real time isn't obscured.
+- **State B — Hora Chapín ON, outside flash window.** Lazy bar-clock mode: jitter hand at 100% on top, real hour + minute at **10% opacity** (was 90% in v1.1.2 — wrong direction), second hand hidden, numerals hidden.
+- **State C — Hora Chapín OFF, outside flash window.** Regular numberless clock face: hour, minute, second hands at 100%, no jitter, no numerals.
+
+Demo-mode pinning forces the state machine into A unconditionally by overriding `local` to today at 12:00:00 (Almuerzo) or 17:00:00 (Fini); the wrap-safe distance-to-target arithmetic then resolves to 0 and the flash window matches every tick.
+
+### Demo persistence
+
+- Both Almuerzo and Fini menu items now have `StaysOpenOnClick="True"`. Clicking them toggles the radio without dismissing the popup.
+- The `ContextMenu.Closed` handler that cleared `CaptJohnDemoMode` was removed from both `MainWindow.xaml.cs` and `FloatingClockWindow.xaml.cs`. The XAML markup `Closed="JollyRogerMenu_Closed"` was removed from both windows.
+- Mutex between the two demos is still automatic — `IsAlmuerzoActive` / `IsFiniActive` setters on `TabViewModel` route through the single `CaptJohnDemoMode` string, so picking Fini while Almuerzo is checked auto-unchecks Almuerzo.
+- Switching off CaptJohn (selecting any other theme) still clears any active demo (defensive — the Jolly Roger button is hidden on other themes, so there's no UI to clear it through).
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — `_digitalUpdater` rewritten around the three explicit states; jitter walk only advances when state B is active.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` — Almuerzo / Fini items get `StaysOpenOnClick`; Closed handler removed; explanatory comment added.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml.cs` — `JollyRogerMenu_Closed` body deleted (replaced with a comment pointing at the spec change).
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` — same XAML changes mirrored.
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` — same handler removal.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.2 → 1.1.3.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.2 → 1.1.3.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.3 → v2.4: §10 Theme #7 — Default Hora Chapín state, Real hour / minute hand opacity, "12" / "5" numeral visibility rules, and the demo-persistence rule all rewritten to match the v1.1.3 state machine.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.3-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped per Dan's running directive.
+
+## [1.1.2] - 2026-05-03 — CaptJohn: real hand opacity 7.5% → 90% in Hora Chapín ON
+
+Per Dan after smoke-testing v1.1.1: with Hora Chapín ON the real hour/minute hands at 7.5% were too faint to read. Bumped the baseline to 90%, keeping the 100% bump during the noon / 5 PM flash windows. The lazy/jittered novelty still reads — the jitter hand is full-black ink at 100% on top of the parchment — but the real time is now legible behind it.
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — `BuildCaptJohn` `_digitalUpdater`: `realOpacity` baseline `0.075` → `0.9` (Hora Chapín ON branch). Flash-window peak still 1.0; second-hand visibility unchanged. Hora Chapín OFF branch unaffected (100% always).
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.1 → 1.1.2.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.1 → 1.1.2.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.2 → v2.3: §10 Theme #7 — Default Hora Chapín state row updated; "real hands at 7.5% baseline" → "90% baseline" everywhere it appeared.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.2-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
+## [1.1.1] - 2026-05-03 — CaptJohn: Jolly Roger overlay + Hora Chapín default OFF
+
+Patch on top of v1.1.0. Two issues Dan flagged after smoke-testing the v1.1.0 build:
+
+1. **Jolly Roger overflow menu was missing from the Captain John's face.** The v1.1.0 commit had wired the theme renderer (BuildCaptJohn, jitter random walk, flash windows) but not the user-facing Jolly Roger button that lets you toggle Hora Chapín on/off and trigger the Almuerzo / Fini demos. v1.1.1 adds it.
+2. **Default render should be Hora Chapín OFF**, not ON. The novelty mode is opt-in.
+
+### What v1.1.1 changes
+
+- New ☠ Jolly Roger overlay button in the lower-left of the clock face area, visible **only on the CaptJohn theme** (Visibility bound to `TabViewModel.IsCaptJohnTheme` via `BooleanToVisibilityConverter`). 44×44 with a 36 px glyph; foreground inherits `OverlayGlyphBrush` so it's near-black on the parchment backdrop.
+- Click opens a `ContextMenu` with three items:
+  - **Hora Chapín** (checkable, persistent, two-way bound to `CaptJohnHoraChapin`) — `StaysOpenOnClick` so the user can flip it without dismissing the menu.
+  - **Almuerzo (12:00 demo)** (checkable, momentary, two-way to `IsAlmuerzoActive`) — pins the rendered time to today at 12:00:00 so the noon flash window fires continuously.
+  - **Fini (5:00 PM demo)** (checkable, momentary, two-way to `IsFiniActive`) — pins to 17:00:00 so the 5 PM window fires continuously.
+- `ContextMenu.Closed` clears the demo state so demos never outlive the user's open popup. Hora Chapín is unaffected by close (persistent toggle).
+- `CaptJohnHoraChapinEnabled` DependencyProperty default flipped from `true` to **`false`** (regular numberless face is the default; jitter is opt-in).
+- `TabSettings.CaptJohnHoraChapin` (bool, default false) added to `settings.json` schema so the toggle persists per-tab across restarts.
+- `TabViewModel` exposes `IsCaptJohnTheme`, `CaptJohnHoraChapin`, `CaptJohnDemoMode`, `IsAlmuerzoActive`, `IsFiniActive` for the binding stack.
+- Switching a tab off CaptJohn auto-clears any active demo (defensive — there's no Jolly Roger panel on the new theme to clear it through).
+- Same overlay added to `FloatingClockWindow` so floating CaptJohn clocks get the same controls.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — two new DPs (`CaptJohnHoraChapinEnabled`, `CaptJohnDemoMode`); `_digitalUpdater` rewritten to honor them (demo time-pin, Hora-Chapín-off branch sets jitter hand opacity 0 and real-hand opacity 1.0).
+- `windows/src/ComTekAtomicClock.Shared/Settings/SettingsModel.cs` — `TabSettings.CaptJohnHoraChapin` field.
+- `windows/src/ComTekAtomicClock.UI/ViewModels/TabViewModel.cs` — new properties + auto-clear-demo on theme switch.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` — Jolly Roger overlay button + ContextMenu in the tab-content `DataTemplate`; CaptJohn DPs added to the `ClockFaceControl` element.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml.cs` — `JollyRogerButton_Click`, `JollyRogerMenu_Closed` handlers.
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` — `BoolToVis` resource; CaptJohn DPs on `ClockFaceControl`; Jolly Roger button.
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` — same handlers.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.0 → 1.1.1.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.0 → 1.1.1.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.1-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped per Dan's directive (he's testing the installer, not the standalone deploy).
+
+## [1.1.0] - 2026-05-03 — Hand-length feature pass + Captain John's Marina theme (CaptJohn)
+
+Feature release. Combines the hand-length tuning across every analog face with the new **Captain John's Marina** (CaptJohn) theme — the 13th theme overall and the 7th in the analog cluster. The theme ships fully wired runtime in this release: `Theme.CaptJohn` enum value, `BuildCaptJohn` renderer in `ClockFaceControl`, gallery entry, per-tab persistence, jitter-and-flash demo state in the per-tick callback. Earlier CaptJohn drafts targeted "design pre-stage now, runtime in v1.1.x"; the runtime work was folded into v1.1.0 instead so 1.1.0 is the cohesive feature release.
+
+### Hand-length pass (visible runtime change)
+
+Dan, while iterating the design of the new `CaptJohn` (Captain John's Marina) theme, asked for a clearer length distinction between the hour and minute hands — minute hand longer, hour hand shorter, by about a half-inch difference. Then asked for the same change applied to "all faces, if they aren't already different lengths." All 6 of v1.0.0's analog faces had different hour/minute lengths but the differences were modest (36–38 px ≈ 3/8 inch).
+
+Across **every analog face** (Atomic Lab, Boulder Slate, Aero Glass, Cathode, Concourse, Daylight), shortened the hour hand by 24 px (1/4″ at 96 DPI) and lengthened the minute hand by 24 px (1/4″). Net effect: minute hand is now 84–86 px longer than the hour hand on every analog theme — a clearly visible difference in line with traditional clock proportions where the minute hand reaches near the dial edge while the hour hand stops well short.
+
+| Theme | Hour: was → now | Minute: was → now | Second (unchanged) |
+|---|---|---|---|
+| Atomic Lab | 90 → **66** | 128 → **152** | 142 |
+| Boulder Slate (Mondaine batons) | 100 → **76** | 138 → **162** | (special lollipop, unchanged) |
+| Aero Glass | 92 → **68** | 128 → **152** | 140 |
+| Cathode | 90 → **66** | 128 → **152** | 142 |
+| Concourse | 86 → **62** | 122 → **146** | 138 |
+| Daylight | 90 → **66** | 128 → **152** | 140 |
+
+Hand thicknesses, colors, and second-hand lengths are unchanged — only hour and minute lengths move. Digital-only and encoder themes (Flip Clock / Marquee / Slab / Binary / Hex / Binary Digital) have no analog hands and are unaffected.
+
+### CaptJohn theme — runtime ships in this release
+
+The CaptJohn theme uses the same minute-longer-than-hour proportions as the rest of the analog cluster (66 / 152) and adds a new `bordeauxMid` minute-hand color (`#641414`) sitting between its dark hour bordeaux (`#4A0F0F`) and the bright numeral red (`#7B1616`) — three distinguishable shades.
+
+Runtime additions:
+
+- `Theme.CaptJohn` enum value (between `Daylight` and `FlipClock`) in `Shared/Settings/SettingsModel.cs`.
+- `BuildCaptJohn()` (~250 LOC) in `Controls/ClockFaceControl.xaml.cs` — parchment radial backdrop, brass ring, cream face, Captain John's logo painted into an ellipse-clipped layer at 40% opacity, "The Busted Flush" caption (Monotype Corsiva 13 px italic at 40% sepia), Hora Chapín jitter hand at 152 px ink black, hidden Cinzel "12" / "5" numerals at radius 130, real hour / minute / second hands at 66 / 152 / 138 px, center pin.
+- Per-tick `_digitalUpdater` callback drives the jitter random walk (±3 minute step per real-minute click, sync only at top of hour) and the 5 s on / 5 s off flash window for the noon and 5 PM demo modes.
+- `ThemeCatalog` entry "Captain John's" between Daylight and Flip Clock, gallery preview pulls `Assets/themes/captjohn-mockup.png`.
+- `TabViewModel.IsDarkTheme` returns `false` for CaptJohn (parchment = light backdrop → near-black overlay glyphs).
+
+Asset additions (also serve as the single source of truth for the design):
+
+- `windows/design/themes/captjohn-mockup-hora.png` — Hora Chapín ON (default, lazy mode with jitter)
+- `windows/design/themes/captjohn-mockup-hora-off.png` — Hora Chapín OFF (regular numberless clock)
+- `windows/design/themes/captjohn-mockup-almuerze.png` — Almuerzo demo (12:00 noon flash)
+- `windows/design/themes/captjohn-mockup-fini.png` — Fini demo (5:00 PM flash)
+- `windows/design/themes/captjohn-mockup-menu-open.png` — Jolly Roger overflow menu open (Hora Chapín checkbox + Almuerzo / Fini radios)
+- `windows/design/themes/captjohn-mockup.png` — alias for the default Hora Chapín state
+- `windows/design/fonts/Cinzel-Variable.ttf` — OFL-licensed Cinzel variable font (125 KB) used for Cinzel Bold numerals on the CaptJohn face when 12 / 5 flash during demo windows
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo.jpg` — Captain John's Marina source logo (168 × 197) used as the dial backdrop at 40% opacity
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo-circle.jpg` — pre-padded 270 × 270 white-cornered version (so the original image's diagonal fits inside the inscribed circle of the 320 face)
+
+The CaptJohn theme delivers: parchment-and-brass palette, lazy "Hora Chapín" minute hand with random ±3 minute jitter (sync only at top of hour), real-time hour and minute hands at 7.5% opacity in the default Hora Chapín mode, "Almuerzo" demo pinning to 12:00 noon with all hands + numerals flashing at 5 s cadence, "Fini" demo pinning to 5:00 PM with 12 + 5 numerals flashing, "The Busted Flush" caption in Monotype Corsiva 13 px italic at 40% sepia (matching logo opacity), and the Jolly Roger ☠ overflow button (60 px) in the lower-left whose popout panel hosts the Hora Chapín checkbox + Almuerzo / Fini demo radios. The popout-panel UI scaffolding lands here as runtime hooks; the full Jolly-Roger overflow visual + click handler ships in a v1.1.x follow-up — for v1.1.0, the theme is selectable from the gallery and renders correctly in its default Hora Chapín ON state.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.Shared/Settings/SettingsModel.cs` — `Theme.CaptJohn` enum value added
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — six analog `Build*` methods updated for the hand-length pass; new `BuildCaptJohn()` renderer (~250 LOC); per-tick jitter + flash logic in the digital-updater callback
+- `windows/src/ComTekAtomicClock.UI/ViewModels/ThemeCatalog.cs` — new "Captain John's" gallery entry between Daylight and Flip Clock
+- `windows/src/ComTekAtomicClock.UI/ViewModels/TabViewModel.cs` — `IsDarkTheme` returns `false` for CaptJohn (parchment is light → near-black overlay glyphs)
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.0.0 → 1.1.0; `Resource` entries for `JohnsMarina-logo.jpg`, `Cinzel-Variable.ttf`, `captjohn-mockup.png`
+- `windows/tools/installer.iss` — `MyAppVersion` 1.0.0 → 1.1.0
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo.jpg` (new)
+- `windows/src/ComTekAtomicClock.UI/Assets/JohnsMarina-logo-circle.jpg` (new)
+- `windows/design/fonts/Cinzel-Variable.ttf` (new — OFL Cinzel variable font)
+- `windows/design/themes/captjohn-mockup-*.png` (new — 6 mockup states)
+- `windows/SPEC.md` v2.0 → v2.1 (front matter; CaptJohn full per-element spec inserted as Theme #7 in §10; #8–13 renumbered; per-theme hand rows; end-of-doc baseline)
+- `windows/CONTEXT.md` (current version line + session log entry + repo state)
+- `windows/TODO.md` (CaptJohn entry with full design lock-in detail; new "Custom" theme entry — user-uploaded background image)
+- `windows/CHANGELOG.md` (this entry)
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
 ## [1.0.0] - 2026-05-03 — First stable release
 
 Symbolic milestone. Code jumps 0.0.39 → 1.0.0. Functionally, this is v0.0.39 with a version stamp and a consolidated backlog doc — no runtime change, but the version leap declares the **core feature set is stable enough for end-user distribution**.

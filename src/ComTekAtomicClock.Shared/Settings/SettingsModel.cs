@@ -33,6 +33,15 @@ public enum Theme
     Cathode,
     Concourse,
     Daylight,
+    /// <summary>
+    /// v1.1.0+ — Captain John's Marina (Pirate Bar, Rio Dulce, Guatemala).
+    /// Parchment-and-brass face with the marina's logo at 40% opacity as
+    /// the dial backdrop. Lazy "Hora Chapín" jitter minute hand (random
+    /// ±3 min per tick, syncs at top of hour). Cinzel-Bold "12" and "5"
+    /// numerals flash in bordeaux during a 10-minute window centered on
+    /// noon and 5 PM. Grouped with the analog cluster in §10.
+    /// </summary>
+    CaptJohn,
     FlipClock,
     Marquee,
     Slab,
@@ -159,6 +168,17 @@ public class TabSettings
 
     /// <summary>Per-tab color overrides; null entries fall back to theme defaults.</summary>
     public ColorOverrides Colors { get; set; } = new();
+
+    /// <summary>
+    /// v1.1.1+ — Persistent toggle for the CaptJohn theme's "Hora Chapín"
+    /// novelty mode (jittered minute hand, 7.5% real hands, ±5 min flash
+    /// windows around noon and 5 PM). Default false per Dan's directive
+    /// — Hora Chapín is opt-in, not the default presentation. Read by
+    /// MainWindowViewModel/TabViewModel and propagated into the
+    /// ClockFaceControl.CaptJohnHoraChapinEnabled DP. Ignored on every
+    /// theme other than CaptJohn.
+    /// </summary>
+    public bool CaptJohnHoraChapin { get; set; } = false;
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? UnknownFields { get; set; }
