@@ -4,6 +4,31 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.5] - 2026-05-03 — CaptJohn: Hora Chapín jitter syncs to real time on the hour AND half hour
+
+Per Dan: *"in 'hora Chapin' mode, the minut hand should sync to the current time on the hour and half hour."*
+
+The v1.1.4 sync rule was "only at noon" (`local.Hour == 12 && local.Minute == 0`) — between syncs the lazy hand could drift very far from reality. v1.1.5 narrows the gap by syncing twice per hour: at `:00` and at `:30`. On those minute ticks the jitter snaps to the actual minute (0 or 30); on every other minute tick the walk takes a normal ±3 random step.
+
+Net effect: the lazy bar-clock hand wanders noticeably between syncs but never drifts more than ~ ±15 minutes from real time before it's pulled back. Reads as "approximately the right time, with character" rather than "totally unmoored."
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — `_digitalUpdater` jitter sync condition: `local.Hour == 12 && local.Minute == 0` → `local.Minute == 0 || local.Minute == 30`. Snap value: was hard-coded `0`, now `local.Minute` (which is 0 or 30 by definition of the branch).
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.4 → 1.1.5.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.4 → 1.1.5.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.5 → v2.6: §10 Theme #7 "Lazy" jitter minute hand row sync rule updated.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.5-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
 ## [1.1.4] - 2026-05-03 — CaptJohn: jitter starts at current minute, syncs only at noon; demos play out 11:55 → 12:05 at real speed
 
 Two related fixes after Dan's v1.1.3 testing.

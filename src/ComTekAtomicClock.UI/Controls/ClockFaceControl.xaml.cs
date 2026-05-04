@@ -1648,16 +1648,19 @@ public partial class ClockFaceControl : UserControl
             var flashOn = ((local.Second / 5) % 2) == 0;
 
             // Jitter walk: advance once per clock-minute change. Sync
-            // to 0 only at noon (hour==12 AND minute==0); other top-of-
-            // hour ticks do a normal random walk. The walk runs at all
-            // times so the displayed minute stays roughly current — we
-            // gate VISIBILITY by state, not the walk itself.
+            // to the actual minute on every hour AND half hour (v1.1.5
+            // — was noon-only in v1.1.4, every-top-of-hour in
+            // v1.1.0..1.1.3). The 30-minute cadence keeps the lazy hand
+            // from drifting more than ~ ±15 min from reality between
+            // syncs while still letting it wander noticeably between
+            // them. The walk runs at all times so the displayed minute
+            // stays roughly current — VISIBILITY is gated by state.
             if (local.Minute != _captJohnJitterLastTickRealMinute)
             {
                 _captJohnJitterLastTickRealMinute = local.Minute;
-                if (local.Hour == 12 && local.Minute == 0)
+                if (local.Minute == 0 || local.Minute == 30)
                 {
-                    _captJohnJitterMinute = 0;
+                    _captJohnJitterMinute = local.Minute;
                 }
                 else
                 {
