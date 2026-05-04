@@ -1,24 +1,26 @@
 # ComTek Atomic Clock — Windows
 
 > [!IMPORTANT]
-> **v1.0.0 — BETA · First public release (2026-05-03).** Code on `master` has progressed to **v1.1.6** with the new **Captain John's Marina (CaptJohn)** theme; that build is not yet published as a GitHub Release, so the v1.0.0 assets below remain the latest downloadable installer.
->
-> The core feature set is stable enough for real-world use, but broad-deployment testing is just starting. Please file bugs at <https://github.com/doxender/WindowsComTekAtomicClock/issues>. The bundled Windows Service adjusts your system clock against NIST or NTP.br stratum-1 servers, so don't rely on this for timekeeping that matters in a regulated context until the patch cycle settles. ~38 known limitations are tracked in [TODO.md](TODO.md). Code-signing is on the post-1.0 list — Windows SmartScreen will warn on first launch.
+> **v1.1.6 — BETA · Second public release (2026-05-03).** Adds the **Captain John's Marina (CaptJohn)** theme (7th analog face) plus a hand-length pass that improves readability on every other analog face. Also: each Setup.exe wipes persisted settings at install (testing-clarity tradeoff during iteration; will be narrowed before the next public-distribution release). Bug reports: <https://github.com/doxender/WindowsComTekAtomicClock/issues>. The bundled Windows Service adjusts your system clock against NIST or NTP.br stratum-1 servers, so don't rely on this for timekeeping that matters in a regulated context until the patch cycle settles. Code-signing is still on the post-1.0 list — Windows SmartScreen will warn on first launch.
 
 A Windows desktop atomic clock that synchronizes the system clock to NIST (Boulder, CO) or NTP.br (São Paulo, BR) stratum-1 servers, with 13 themable clock faces and a Chrome-style tabbed time-zone view.
 
-## Download v1.0.0
+## Download v1.1.6
 
 | Asset | Size | Use |
 |---|---|---|
-| [`ComTekAtomicClock-v1.0.0-Setup.exe`](https://github.com/doxender/WindowsComTekAtomicClock/releases/download/v1.0.0/ComTekAtomicClock-v1.0.0-Setup.exe) | 97 MB | Recommended. Inno Setup installer — license screen, install-dir picker, Start Menu shortcut, Add/Remove Programs entry. |
-| [`ComTekAtomicClock-v1.0.0-win-x64-self-contained.zip`](https://github.com/doxender/WindowsComTekAtomicClock/releases/download/v1.0.0/ComTekAtomicClock-v1.0.0-win-x64-self-contained.zip) | 134 MB | Portable — same payload, unzipped. For installs outside Program Files. |
+| [`ComTekAtomicClock-v1.1.6-Setup.exe`](https://github.com/doxender/WindowsComTekAtomicClock/releases/download/v1.1.6/ComTekAtomicClock-v1.1.6-Setup.exe) | 97 MB | Recommended. Inno Setup installer — license screen, install-dir picker, Start Menu shortcut, Add/Remove Programs entry. |
+| [`ComTekAtomicClock-v1.1.6-win-x64-self-contained.zip`](https://github.com/doxender/WindowsComTekAtomicClock/releases/download/v1.1.6/ComTekAtomicClock-v1.1.6-win-x64-self-contained.zip) | 135 MB | Portable — same payload, unzipped. For installs outside Program Files. |
 
 Both are **self-contained** (the .NET 8 runtime is bundled — no separate runtime install). All releases: <https://github.com/doxender/WindowsComTekAtomicClock/releases>.
 
+### Upgrading from v1.0.0
+
+The installer auto-uninstalls a prior v1.0.0 install (matching `AppId`) and resets persisted settings to defaults. Your tabs and theme picks will reset; system-clock sync state lives in the Windows Service and isn't touched.
+
 ### SmartScreen warning
 
-The exes are not Authenticode-signed in 1.0. Windows SmartScreen will warn ("Windows protected your PC" / "unknown publisher") on first launch. Click **More info** → **Run anyway**. Code-signing is the highest-priority post-1.0 item.
+The exes are not Authenticode-signed yet. Windows SmartScreen will warn ("Windows protected your PC" / "unknown publisher") on first launch. Click **More info** → **Run anyway**. Code-signing is the highest-priority post-1.0 item.
 
 ## Features
 
