@@ -2,13 +2,14 @@
 
 | | |
 |---|---|
-| **Document version** | 2.6 |
+| **Document version** | 2.7 |
 | **Date** | 2026-05-03 |
-| **Code baseline** | v1.1.5 |
+| **Code baseline** | v1.1.6 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
 | **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
+| **v2.6 → v2.7 changes** | Installer (`tools/installer.iss`) gains a new `[InstallDelete]` section that wipes `%APPDATA%\ComTekAtomicClock\settings.json` and `%ProgramData%\ComTekAtomicClock\service.json` at the start of every install. Each Setup.exe therefore starts from the code's baked-in defaults (CaptJohn opens with Hora Chapín OFF, theme = AtomicLab, time-source = Boulder, etc.). Testing-clarity directive — to be revisited before public-distribution release. See CHANGELOG.md `[1.1.6]`. |
 | **v2.5 → v2.6 changes** | CaptJohn — Hora Chapín jitter sync rule narrowed: was "noon only" in v1.1.4, now "every `:00` and every `:30`". The lazy hand now resyncs to real time twice per hour, capping drift between syncs at ~ ±15 min. See §10 Theme #7; CHANGELOG.md `[1.1.5]`. |
 | **v2.4 → v2.5 changes** | CaptJohn — (1) jitter random-walk seed is now the current local minute (was 0); (2) walk syncs to 0 only at noon (was every top-of-hour); (3) Almuerzo / Fini demos no longer pin clock time to a single instant — they instead set the demo-start checkpoint, map clock time to `11:55:00 + (real - checkpoint)` (or `16:55:00 + …` for Fini), and let real elapsed time advance demo time at normal speed. The 10-minute flash window plays out for a real 10 minutes and stops naturally at 12:05 / 17:05. Demo radio stays checked through the play-out and afterwards. See §10 Theme #7; CHANGELOG.md `[1.1.4]`. |
 | **v2.3 → v2.4 changes** | CaptJohn — `_digitalUpdater` rewritten around three explicit states (A: flash window, B: Hora Chapín ON normal, C: regular face). Flash window now hides the jitter hand and flashes hour + minute + second + relevant numeral on/off together at 5 s / 5 s; only "12" flashes during the noon window, only "5" during the 5 PM window. Demos persist until the user toggles them off (no longer cleared on `ContextMenu.Closed`). Hora Chapín ON real-hand opacity 0.9 → **0.1** (90% transparent — matches Dan's intent; v1.1.2 had inverted the spec). See §10 Theme #7; CHANGELOG.md `[1.1.3]`. |

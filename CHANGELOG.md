@@ -4,6 +4,44 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.6] - 2026-05-03 — Installer: wipe persisted settings on install (factory-reset every Setup.exe)
+
+Per Dan: *"the defaults for the clock should reset on each install."* Two issues sat behind this:
+
+1. **CaptJohn was opening with Hora Chapín ON** even though the code default is `false` (regular time). Cause: a prior test install had toggled it on, the toggle persisted to `%APPDATA%\ComTekAtomicClock\settings.json`, and every subsequent Setup.exe read that persisted `true` back. The bug was in the persistence flow, not the default.
+2. **No standing way to "start clean"** between test installs. Forcing testers (Dan) to manually delete the JSON files between runs was friction.
+
+### Change
+
+`windows/tools/installer.iss` gains an `[InstallDelete]` section that runs at install time (before the new build's files are copied) and removes:
+
+- `%APPDATA%\ComTekAtomicClock\settings.json` — the per-user UI state (tabs, themes, time format, second-hand override, CaptJohn Hora Chapín toggle, …).
+- `%ProgramData%\ComTekAtomicClock\service.json` — the per-machine service config (time-source pool, sync interval, large-offset confirmation).
+
+Both files are recreated at first launch with the current code's baked-in defaults — `Theme.AtomicLab`, `TimeSource.Boulder`, `CaptJohnHoraChapin = false`, etc. The CaptJohn theme therefore opens with `Hora Chapín OFF` (regular time) on every fresh install.
+
+Note: the installed tree under `%ProgramFiles%\ComTekAtomicClock\…` is **not** touched by this — `InstallDelete` runs before the `Files` section copies the new build, and the wipe only targets user-data files outside the install tree.
+
+### Tradeoff
+
+End users lose any per-tab customization (their list of tabs, theme picks, time-zone tabs) on every Setup.exe upgrade. For an alpha / beta in active iteration this is the right call — testers always see what new defaults look like. Worth revisiting before a public-distribution v1.x release; at that point we'd narrow the scope to migration-incompatible schema changes only, or add a "keep my settings" checkbox on the install wizard.
+
+### Files touched
+
+- `windows/tools/installer.iss` — new `[InstallDelete]` section; `MyAppVersion` 1.1.5 → 1.1.6.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.5 → 1.1.6.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.6 → v2.7: front-matter changelog row + a new bullet under §20 install flow noting the wipe-on-install behavior.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.6-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped.
+
 ## [1.1.5] - 2026-05-03 — CaptJohn: Hora Chapín jitter syncs to real time on the hour AND half hour
 
 Per Dan: *"in 'hora Chapin' mode, the minut hand should sync to the current time on the hour and half hour."*
