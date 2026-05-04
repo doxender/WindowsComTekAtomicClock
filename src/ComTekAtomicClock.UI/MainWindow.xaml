@@ -257,6 +257,8 @@
                                 TimeZone="{Binding TimeZone}"
                                 Theme="{Binding Theme}"
                                 SmoothSecondHand="{Binding SmoothSecondHand}"
+                                CaptJohnHoraChapinEnabled="{Binding CaptJohnHoraChapin}"
+                                CaptJohnDemoMode="{Binding CaptJohnDemoMode}"
                                 TimeSourceLabel="{Binding DataContext.TimeSourceLabel,
                                                   RelativeSource={RelativeSource AncestorType=Window}}"
                                 TimeSourceBadge="{Binding DataContext.TimeSourceBadge,
@@ -327,6 +329,53 @@
                                                   Click="HelpMenuItem_Click"/>
                                         <MenuItem Header="About…"
                                                   Click="AboutMenuItem_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+
+                            <!--
+                              v1.1.1 — Jolly Roger ☠ overlay button. Only
+                              renders when the active theme is CaptJohn
+                              (Visibility bound to IsCaptJohnTheme via
+                              BoolToVis). Lower-left of the 400×400
+                              logical canvas. Click opens a context-menu
+                              popup with three items:
+                                · Hora Chapín (checkable, persistent)
+                                · Almuerzo (momentary, pin to noon)
+                                · Fini (momentary, pin to 5 PM)
+                              The Closed handler clears any active demo
+                              mode so demo presentations never outlive
+                              the user's open popup.
+                            -->
+                            <Button HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    Margin="14,0,0,14"
+                                    Width="44" Height="44"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    ToolTip="Captain John's options"
+                                    Visibility="{Binding IsCaptJohnTheme, Converter={StaticResource BoolToVis}}"
+                                    Click="JollyRogerButton_Click">
+                                <TextBlock Text="&#x2620;"
+                                           FontSize="36"
+                                           Foreground="{Binding OverlayGlyphBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                                <Button.ContextMenu>
+                                    <ContextMenu Closed="JollyRogerMenu_Closed">
+                                        <MenuItem Header="Hora Chapín"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding CaptJohnHoraChapin, Mode=TwoWay}"
+                                                  StaysOpenOnClick="True"/>
+                                        <Separator/>
+                                        <MenuItem Header="Almuerzo (12:00 demo)"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsAlmuerzoActive, Mode=TwoWay}"/>
+                                        <MenuItem Header="Fini (5:00 PM demo)"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsFiniActive, Mode=TwoWay}"/>
                                     </ContextMenu>
                                 </Button.ContextMenu>
                             </Button>

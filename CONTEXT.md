@@ -8,11 +8,11 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | **v1.1.0** — hand-length proportions tuned across all analog faces + new `Theme.CaptJohn` (Captain John's Marina) — 13 themes total (7 analog / 4 digital-only / 2 encoders). |
+| **Current version** | **v1.1.1** — CaptJohn Jolly Roger overlay popup wired + Hora Chapín default flipped to OFF (opt-in novelty). |
 | **Code-as-ground-truth baseline** | `SPEC.md` v2.1 (2026-05-03) |
-| **Next minor target** | **v1.1.x** — Jolly Roger overflow popout for CaptJohn (Hora Chapín checkbox + Almuerzo / Fini demo radios), top-right ⋯ overlay menu refinements. |
+| **Next minor target** | **v1.1.x** — top-right ⋯ overlay menu refinements on CaptJohn (currently the standard `?` menu); revisit if Dan finds more polish opportunities. |
 | **Open backlog** | `windows/TODO.md` (single source of truth for all open work) |
-| **Repo state** | `captain-john` branch carrying v1.1.0 (single squashed commit) — local only, awaiting Dan's test-then-push. `master` clean at v1.0.0 / origin parity. |
+| **Repo state** | `captain-john` branch at v1.1.1 (two commits: v1.1.0 amend + v1.1.1 Jolly Roger patch) — local only, awaiting Dan's test-then-push. `master` clean at v1.0.0 / origin parity. |
 
 ## Quick navigation
 

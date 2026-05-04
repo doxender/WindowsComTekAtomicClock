@@ -168,6 +168,35 @@ public partial class MainWindow : FluentWindow
         btn.ContextMenu.IsOpen          = true;
     }
 
+    /// <summary>
+    /// v1.1.1 — Jolly Roger overlay button click handler. Mirrors the
+    /// HelpButton pattern: opens the attached ContextMenu (Hora Chapín
+    /// checkable + Almuerzo / Fini momentary demos). Visible only on
+    /// CaptJohn (button Visibility is bound via BoolToVis on
+    /// TabViewModel.IsCaptJohnTheme).
+    /// </summary>
+    private void JollyRogerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button btn) return;
+        if (btn.ContextMenu is null) return;
+        btn.ContextMenu.PlacementTarget = btn;
+        btn.ContextMenu.Placement       = System.Windows.Controls.Primitives.PlacementMode.Top;
+        btn.ContextMenu.IsOpen          = true;
+    }
+
+    /// <summary>
+    /// v1.1.1 — Jolly Roger ContextMenu Closed handler. Clears any
+    /// active CaptJohn demo mode so the noon / 5 PM pin only persists
+    /// while the user has the popup open. Hora Chapín stays where the
+    /// user set it (persistent toggle, not demo).
+    /// </summary>
+    private void JollyRogerMenu_Closed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ContextMenu menu) return;
+        if (menu.DataContext is ViewModels.TabViewModel tabVm)
+            tabVm.CaptJohnDemoMode = string.Empty;
+    }
+
     private void HelpMenuItem_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new HelpDialog { Owner = this };

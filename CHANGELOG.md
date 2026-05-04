@@ -4,6 +4,49 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.1] - 2026-05-03 — CaptJohn: Jolly Roger overlay + Hora Chapín default OFF
+
+Patch on top of v1.1.0. Two issues Dan flagged after smoke-testing the v1.1.0 build:
+
+1. **Jolly Roger overflow menu was missing from the Captain John's face.** The v1.1.0 commit had wired the theme renderer (BuildCaptJohn, jitter random walk, flash windows) but not the user-facing Jolly Roger button that lets you toggle Hora Chapín on/off and trigger the Almuerzo / Fini demos. v1.1.1 adds it.
+2. **Default render should be Hora Chapín OFF**, not ON. The novelty mode is opt-in.
+
+### What v1.1.1 changes
+
+- New ☠ Jolly Roger overlay button in the lower-left of the clock face area, visible **only on the CaptJohn theme** (Visibility bound to `TabViewModel.IsCaptJohnTheme` via `BooleanToVisibilityConverter`). 44×44 with a 36 px glyph; foreground inherits `OverlayGlyphBrush` so it's near-black on the parchment backdrop.
+- Click opens a `ContextMenu` with three items:
+  - **Hora Chapín** (checkable, persistent, two-way bound to `CaptJohnHoraChapin`) — `StaysOpenOnClick` so the user can flip it without dismissing the menu.
+  - **Almuerzo (12:00 demo)** (checkable, momentary, two-way to `IsAlmuerzoActive`) — pins the rendered time to today at 12:00:00 so the noon flash window fires continuously.
+  - **Fini (5:00 PM demo)** (checkable, momentary, two-way to `IsFiniActive`) — pins to 17:00:00 so the 5 PM window fires continuously.
+- `ContextMenu.Closed` clears the demo state so demos never outlive the user's open popup. Hora Chapín is unaffected by close (persistent toggle).
+- `CaptJohnHoraChapinEnabled` DependencyProperty default flipped from `true` to **`false`** (regular numberless face is the default; jitter is opt-in).
+- `TabSettings.CaptJohnHoraChapin` (bool, default false) added to `settings.json` schema so the toggle persists per-tab across restarts.
+- `TabViewModel` exposes `IsCaptJohnTheme`, `CaptJohnHoraChapin`, `CaptJohnDemoMode`, `IsAlmuerzoActive`, `IsFiniActive` for the binding stack.
+- Switching a tab off CaptJohn auto-clears any active demo (defensive — there's no Jolly Roger panel on the new theme to clear it through).
+- Same overlay added to `FloatingClockWindow` so floating CaptJohn clocks get the same controls.
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — two new DPs (`CaptJohnHoraChapinEnabled`, `CaptJohnDemoMode`); `_digitalUpdater` rewritten to honor them (demo time-pin, Hora-Chapín-off branch sets jitter hand opacity 0 and real-hand opacity 1.0).
+- `windows/src/ComTekAtomicClock.Shared/Settings/SettingsModel.cs` — `TabSettings.CaptJohnHoraChapin` field.
+- `windows/src/ComTekAtomicClock.UI/ViewModels/TabViewModel.cs` — new properties + auto-clear-demo on theme switch.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` — Jolly Roger overlay button + ContextMenu in the tab-content `DataTemplate`; CaptJohn DPs added to the `ClockFaceControl` element.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml.cs` — `JollyRogerButton_Click`, `JollyRogerMenu_Closed` handlers.
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` — `BoolToVis` resource; CaptJohn DPs on `ClockFaceControl`; Jolly Roger button.
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` — same handlers.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.0 → 1.1.1.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.0 → 1.1.1.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.1-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped per Dan's directive (he's testing the installer, not the standalone deploy).
+
 ## [1.1.0] - 2026-05-03 — Hand-length feature pass + Captain John's Marina theme (CaptJohn)
 
 Feature release. Combines the hand-length tuning across every analog face with the new **Captain John's Marina** (CaptJohn) theme — the 13th theme overall and the 7th in the analog cluster. The theme ships fully wired runtime in this release: `Theme.CaptJohn` enum value, `BuildCaptJohn` renderer in `ClockFaceControl`, gallery entry, per-tab persistence, jitter-and-flash demo state in the per-tick callback. Earlier CaptJohn drafts targeted "design pre-stage now, runtime in v1.1.x"; the runtime work was folded into v1.1.0 instead so 1.1.0 is the cohesive feature release.

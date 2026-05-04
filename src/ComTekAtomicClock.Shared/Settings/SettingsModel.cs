@@ -169,6 +169,17 @@ public class TabSettings
     /// <summary>Per-tab color overrides; null entries fall back to theme defaults.</summary>
     public ColorOverrides Colors { get; set; } = new();
 
+    /// <summary>
+    /// v1.1.1+ — Persistent toggle for the CaptJohn theme's "Hora Chapín"
+    /// novelty mode (jittered minute hand, 7.5% real hands, ±5 min flash
+    /// windows around noon and 5 PM). Default false per Dan's directive
+    /// — Hora Chapín is opt-in, not the default presentation. Read by
+    /// MainWindowViewModel/TabViewModel and propagated into the
+    /// ClockFaceControl.CaptJohnHoraChapinEnabled DP. Ignored on every
+    /// theme other than CaptJohn.
+    /// </summary>
+    public bool CaptJohnHoraChapin { get; set; } = false;
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? UnknownFields { get; set; }
 }

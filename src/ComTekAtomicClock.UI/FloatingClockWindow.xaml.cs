@@ -164,4 +164,34 @@ public partial class FloatingClockWindow : FluentWindow
         var dlg = new AboutDialog { Owner = this };
         dlg.ShowDialog();
     }
+
+    // ----------------------------------------------------------------
+    // v1.1.1 — Jolly Roger overlay (CaptJohn theme only)
+    // ----------------------------------------------------------------
+
+    /// <summary>
+    /// Jolly Roger overlay button click handler. Opens the attached
+    /// ContextMenu (Hora Chapín checkable + Almuerzo / Fini momentary
+    /// demos). Visible only on CaptJohn (the button's Visibility is
+    /// bound via BoolToVis on TabViewModel.IsCaptJohnTheme).
+    /// </summary>
+    private void JollyRogerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button btn) return;
+        if (btn.ContextMenu is null) return;
+        btn.ContextMenu.PlacementTarget = btn;
+        btn.ContextMenu.Placement       = PlacementMode.Top;
+        btn.ContextMenu.IsOpen          = true;
+    }
+
+    /// <summary>
+    /// Jolly Roger ContextMenu Closed handler. Clears any active
+    /// CaptJohn demo so the noon / 5 PM pin only persists while the
+    /// user has the popup open. Hora Chapín stays where the user set
+    /// it (persistent toggle, not demo).
+    /// </summary>
+    private void JollyRogerMenu_Closed(object sender, RoutedEventArgs e)
+    {
+        _tab.CaptJohnDemoMode = string.Empty;
+    }
 }

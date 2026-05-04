@@ -110,6 +110,60 @@ public partial class ClockFaceControl : UserControl
     }
 
     // ---------------------------------------------------------------
+    // v1.1.1: CaptJohn theme runtime mode flags (Hora Chapín + Demo)
+    //
+    // Both DPs are no-ops on every theme except CaptJohn. The CaptJohn
+    // _digitalUpdater closure reads them every tick to decide:
+    //
+    //   · CaptJohnHoraChapinEnabled (bool, default FALSE — v1.1.1)
+    //       true  → Hora Chapín ON: jitter hand visible, real hands at
+    //               7.5% baseline, flash logic active around noon / 5 PM.
+    //       false → Hora Chapín OFF: jitter hand hidden, real hands at
+    //               full opacity, flash logic suppressed. The "regular
+    //               numberless clock face" state per the design spec.
+    //               Default per Dan's v1.1.1 directive — Hora Chapín is
+    //               an opt-in novelty mode, not the default presentation.
+    //
+    //   · CaptJohnDemoMode (string: "" / "Almuerzo" / "Fini", default "")
+    //       Momentary demo override that pins time to today at 12:00:00
+    //       (Almuerzo) or 17:00:00 (Fini). Forces the noon-window or
+    //       5 PM window flash logic continuously. Cleared the moment the
+    //       Jolly Roger overflow popup closes so demo state can never
+    //       outlive the user's interaction. String chosen over enum to
+    //       avoid pulling a new public type into the control's surface.
+    //
+    // Both default to "default state" so non-CaptJohn themes are
+    // unaffected. The MainWindow / FloatingClockWindow Jolly Roger
+    // overlay button is the only thing that flips them.
+    // ---------------------------------------------------------------
+
+    public static readonly DependencyProperty CaptJohnHoraChapinEnabledProperty =
+        DependencyProperty.Register(
+            nameof(CaptJohnHoraChapinEnabled),
+            typeof(bool),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(false));
+
+    public bool CaptJohnHoraChapinEnabled
+    {
+        get => (bool)GetValue(CaptJohnHoraChapinEnabledProperty);
+        set => SetValue(CaptJohnHoraChapinEnabledProperty, value);
+    }
+
+    public static readonly DependencyProperty CaptJohnDemoModeProperty =
+        DependencyProperty.Register(
+            nameof(CaptJohnDemoMode),
+            typeof(string),
+            typeof(ClockFaceControl),
+            new PropertyMetadata(string.Empty));
+
+    public string CaptJohnDemoMode
+    {
+        get => (string)GetValue(CaptJohnDemoModeProperty);
+        set => SetValue(CaptJohnDemoModeProperty, value);
+    }
+
+    // ---------------------------------------------------------------
     // v0.0.36: Time-source badge / source-label (Boulder vs Brazil)
     //
     // TimeSourceLabel — single word ("BOULDER" or "BRASIL") rendered
@@ -1473,34 +1527,61 @@ public partial class ClockFaceControl : UserControl
 
         // ---- 13. Per-tick state machine ------------------------------
         // Drives:
-        //   · Jitter advance / hour-mark sync of the lazy minute hand.
+        //   · Jitter advance / hour-mark sync of the lazy minute hand
+        //     (Hora Chapín mode only).
         //   · Flash-window detection (±5 min of noon and 5 PM).
         //   · 5 s on / 5 s off cadence within the window.
         //   · Visibility toggling of real hands at 7.5% / 100% and the
         //     numerals at 0 / 100%.
+        //   · Mode overrides driven by the Jolly Roger overflow panel
+        //     (CaptJohnHoraChapinEnabled toggle + CaptJohnDemoMode
+        //     momentary "Almuerzo" / "Fini" pins).
         _digitalUpdater = local =>
         {
+            // Demo modes pin the effective time to today at 12:00 noon
+            // ("Almuerzo") or 17:00 / 5 PM ("Fini") so the flash-window
+            // logic below fires unconditionally. Pin only the time of
+            // day; keep the year/month/day so anything date-dependent
+            // (e.g. future date readouts) still reads sensibly.
+            var demo = CaptJohnDemoMode;
+            if (demo == "Almuerzo")
+                local = new DateTime(local.Year, local.Month, local.Day, 12,  0, local.Second, local.Kind);
+            else if (demo == "Fini")
+                local = new DateTime(local.Year, local.Month, local.Day, 17,  0, local.Second, local.Kind);
+
+            var horaChapin = CaptJohnHoraChapinEnabled;
+
             // Jitter random walk: advance once per minute. At top of
             // hour (minute == 0), reset to 0 (sync to 12 — Dan's
-            // "even things up" rule).
-            if (local.Minute != _captJohnJitterLastTickRealMinute)
+            // "even things up" rule). Only update the angle when Hora
+            // Chapín is on; otherwise the jitter hand is hidden anyway.
+            if (horaChapin)
             {
-                _captJohnJitterLastTickRealMinute = local.Minute;
-                if (local.Minute == 0)
+                if (local.Minute != _captJohnJitterLastTickRealMinute)
                 {
-                    _captJohnJitterMinute = 0;
+                    _captJohnJitterLastTickRealMinute = local.Minute;
+                    if (local.Minute == 0)
+                    {
+                        _captJohnJitterMinute = 0;
+                    }
+                    else
+                    {
+                        var delta = _captJohnRng.Next(-3, 4);   // [-3, +3] inclusive
+                        _captJohnJitterMinute = ((_captJohnJitterMinute + delta) % 60 + 60) % 60;
+                    }
                 }
-                else
-                {
-                    var delta = _captJohnRng.Next(-3, 4);   // [-3, +3] inclusive
-                    _captJohnJitterMinute = ((_captJohnJitterMinute + delta) % 60 + 60) % 60;
-                }
+                if (_captJohnJitterRotate is not null)
+                    _captJohnJitterRotate.Angle = _captJohnJitterMinute * 6.0;
             }
-            if (_captJohnJitterRotate is not null)
-                _captJohnJitterRotate.Angle = _captJohnJitterMinute * 6.0;
+
+            // Jitter hand visibility = Hora Chapín ON.
+            if (_captJohnJitterHand is not null)
+                _captJohnJitterHand.Opacity = horaChapin ? 1.0 : 0;
 
             // Flash-window detection — wraparound-safe modulo distance
             // from noon (720 min from midnight) and 5 PM (1020 min).
+            // Demo modes already pinned local; their dist will be 0,
+            // so the window matches every tick.
             var minSinceMidnight = local.Hour * 60 + local.Minute;
             var distNoon = WrappedAbsDiff(minSinceMidnight, 720);
             var dist5PM  = WrappedAbsDiff(minSinceMidnight, 1020);
@@ -1510,21 +1591,35 @@ public partial class ClockFaceControl : UserControl
             // 5 s on / 5 s off cadence
             var flashOn = ((local.Second / 5) % 2) == 0;
 
-            // Real hands: 7.5% baseline; jump to 100% during the
-            // "on" frame of a flash window.
-            var realOpacity = (inFlash && flashOn) ? 1.0 : 0.075;
+            // Real hands:
+            //   · Hora Chapín ON  → 7.5% baseline; jump to 100% during
+            //     the "on" frame of a flash window (or any frame in a
+            //     demo).
+            //   · Hora Chapín OFF → 100% always (regular clock face).
+            double realOpacity;
+            if (!horaChapin)
+                realOpacity = 1.0;
+            else
+                realOpacity = (inFlash && flashOn) ? 1.0 : 0.075;
             if (_captJohnHourHand   is not null) _captJohnHourHand.Opacity   = realOpacity;
             if (_captJohnMinuteHand is not null) _captJohnMinuteHand.Opacity = realOpacity;
 
-            // Second hand: only visible during flash on-frames.
+            // Second hand:
+            //   · Hora Chapín ON  → visible only during flash on-frames.
+            //   · Hora Chapín OFF → visible always.
             if (_captJohnSecondHand is not null)
-                _captJohnSecondHand.Opacity = (inFlash && flashOn) ? 1.0 : 0;
+                _captJohnSecondHand.Opacity =
+                    !horaChapin ? 1.0
+                    : (inFlash && flashOn) ? 1.0
+                    : 0;
 
-            // Numerals: each visible only in its own window's on-frames.
+            // Numerals: only fire under Hora Chapín. In the regular
+            // clock face mode the dial is numberless (per design).
+            var numeralsOn = horaChapin && flashOn;
             if (_captJohn12Numeral is not null)
-                _captJohn12Numeral.Opacity = ((inNoonWindow || in5PMWindow) && flashOn) ? 1.0 : 0;
+                _captJohn12Numeral.Opacity = ((inNoonWindow || in5PMWindow) && numeralsOn) ? 1.0 : 0;
             if (_captJohn5Numeral is not null)
-                _captJohn5Numeral.Opacity  = (in5PMWindow && flashOn) ? 1.0 : 0;
+                _captJohn5Numeral.Opacity  = (in5PMWindow && numeralsOn) ? 1.0 : 0;
         };
 
         static int WrappedAbsDiff(int a, int target)
