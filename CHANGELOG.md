@@ -4,6 +4,52 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.3] - 2026-05-03 — CaptJohn: flash-window state machine corrected + demos persist + Hora Chapín hands at 10%
+
+Three coordinated fixes after Dan smoke-tested v1.1.2:
+
+1. **Almuerzo / Fini demos didn't behave correctly.** Per Dan's spec: "At 5 minutes to 12:00 PM the 12 becomes visible and for the next 10 minutes the clock is accurate, shows both hour and minute hands and all three flash on and off every 10 seconds. … The demo buttons set the clock to 12 and 5 respectively and demonstrate the visual effects until the demo button is clicked off." The v1.1.2 state machine was muddled — numerals only fired under Hora Chapín, real hands kept their lazy-mode opacity even during the flash window, and demos cleared when the menu closed. Rewrote the state machine to make the three states clearly distinct.
+2. **"Bring up the transparency to 90%" meant 90% transparent (= 10% opaque).** I'd misread it in v1.1.2 as 90% opacity (`0.9`), so the real hands were effectively at full strength behind the jitter hand — defeating the lazy bar-clock concept. Corrected to `0.1`.
+3. **Demos persist until clicked off**, per the explicit spec. Earlier versions cleared on `ContextMenu.Closed`.
+
+### New CaptJohn `_digitalUpdater` state machine
+
+Three high-level states, each visually distinct:
+
+- **State A — Flash window** (real-time 11:55–12:05 OR 16:55–17:05, OR any time a demo is pinned). Hour, minute, and second hands plus the relevant numeral flash on/off together at 5 s on / 5 s off. Off-frames hide all four. Only the noon-side numeral ("12") flashes during the noon window; only the 5-side numeral ("5") flashes during the 5 PM window — the v1.1.2 code had "12" appearing during the 5 PM window too. Jitter hand suppressed entirely during the flash so the real time isn't obscured.
+- **State B — Hora Chapín ON, outside flash window.** Lazy bar-clock mode: jitter hand at 100% on top, real hour + minute at **10% opacity** (was 90% in v1.1.2 — wrong direction), second hand hidden, numerals hidden.
+- **State C — Hora Chapín OFF, outside flash window.** Regular numberless clock face: hour, minute, second hands at 100%, no jitter, no numerals.
+
+Demo-mode pinning forces the state machine into A unconditionally by overriding `local` to today at 12:00:00 (Almuerzo) or 17:00:00 (Fini); the wrap-safe distance-to-target arithmetic then resolves to 0 and the flash window matches every tick.
+
+### Demo persistence
+
+- Both Almuerzo and Fini menu items now have `StaysOpenOnClick="True"`. Clicking them toggles the radio without dismissing the popup.
+- The `ContextMenu.Closed` handler that cleared `CaptJohnDemoMode` was removed from both `MainWindow.xaml.cs` and `FloatingClockWindow.xaml.cs`. The XAML markup `Closed="JollyRogerMenu_Closed"` was removed from both windows.
+- Mutex between the two demos is still automatic — `IsAlmuerzoActive` / `IsFiniActive` setters on `TabViewModel` route through the single `CaptJohnDemoMode` string, so picking Fini while Almuerzo is checked auto-unchecks Almuerzo.
+- Switching off CaptJohn (selecting any other theme) still clears any active demo (defensive — the Jolly Roger button is hidden on other themes, so there's no UI to clear it through).
+
+### Files touched
+
+- `windows/src/ComTekAtomicClock.UI/Controls/ClockFaceControl.xaml.cs` — `_digitalUpdater` rewritten around the three explicit states; jitter walk only advances when state B is active.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml` — Almuerzo / Fini items get `StaysOpenOnClick`; Closed handler removed; explanatory comment added.
+- `windows/src/ComTekAtomicClock.UI/MainWindow.xaml.cs` — `JollyRogerMenu_Closed` body deleted (replaced with a comment pointing at the spec change).
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml` — same XAML changes mirrored.
+- `windows/src/ComTekAtomicClock.UI/FloatingClockWindow.xaml.cs` — same handler removal.
+- `windows/src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.2 → 1.1.3.
+- `windows/tools/installer.iss` — `MyAppVersion` 1.1.2 → 1.1.3.
+- `windows/CHANGELOG.md` (this entry).
+- `windows/CONTEXT.md` — current-version line bumped.
+- `windows/SPEC.md` v2.3 → v2.4: §10 Theme #7 — Default Hora Chapín state, Real hour / minute hand opacity, "12" / "5" numeral visibility rules, and the demo-persistence rule all rewritten to match the v1.1.3 state machine.
+
+### Build verification
+
+`dotnet build src/ComTekAtomicClock.UI -c Release` → 0 errors, 0 warnings.
+
+### Distribution
+
+`release/ComTekAtomicClock-v1.1.3-Setup.exe` rebuilt via Inno Setup. Self-contained zip skipped per Dan's running directive.
+
 ## [1.1.2] - 2026-05-03 — CaptJohn: real hand opacity 7.5% → 90% in Hora Chapín ON
 
 Per Dan after smoke-testing v1.1.1: with Hora Chapín ON the real hour/minute hands at 7.5% were too faint to read. Bumped the baseline to 90%, keeping the 100% bump during the noon / 5 PM flash windows. The lazy/jittered novelty still reads — the jitter hand is full-black ink at 100% on top of the parchment — but the real time is now legible behind it.

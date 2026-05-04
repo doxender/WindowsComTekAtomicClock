@@ -1526,23 +1526,35 @@ public partial class ClockFaceControl : UserControl
             pos5y - _captJohn5Numeral.DesiredSize.Height / 2));
 
         // ---- 13. Per-tick state machine ------------------------------
-        // Drives:
-        //   · Jitter advance / hour-mark sync of the lazy minute hand
-        //     (Hora Chapín mode only).
-        //   · Flash-window detection (±5 min of noon and 5 PM).
-        //   · 5 s on / 5 s off cadence within the window.
-        //   · Visibility toggling of real hands at 7.5% / 100% and the
-        //     numerals at 0 / 100%.
-        //   · Mode overrides driven by the Jolly Roger overflow panel
-        //     (CaptJohnHoraChapinEnabled toggle + CaptJohnDemoMode
-        //     momentary "Almuerzo" / "Fini" pins).
+        // Three high-level states, each clearly distinct on screen:
+        //
+        //   A. Flash window (11:55–12:05 OR 16:55–17:05 in real time, OR
+        //      any time a demo is pinned). The "wake up, the real time
+        //      matters now" state. Hour hand, minute hand, second hand,
+        //      and the relevant numeral (only "12" at noon; only "5" at
+        //      5 PM) all flash on/off together at a 5 s / 5 s cadence.
+        //      During off-frames everything is hidden. Jitter hand is
+        //      suppressed (lazy mode steps aside for the special event).
+        //
+        //   B. Hora Chapín ON, outside flash window. Lazy bar-clock
+        //      mode: jitter hand at 100% on top, real hour + minute at
+        //      90% behind it (v1.1.2 — readable but secondary), second
+        //      hand hidden, numerals hidden.
+        //
+        //   C. Hora Chapín OFF, outside flash window. Regular numberless
+        //      clock face: real hour, minute, second hands at 100%, no
+        //      jitter, no numerals.
+        //
+        // Demo-mode pinning is just a way to force the state machine
+        // into A unconditionally — it overrides `local` to today at
+        // 12:00:00 ("Almuerzo") or 17:00:00 ("Fini") so the flash-window
+        // distance is 0. Demo persists until the user toggles the radio
+        // off; the Jolly Roger menu closing does NOT clear the demo
+        // (v1.1.3 — was clearing in v1.1.1/1.1.2).
         _digitalUpdater = local =>
         {
-            // Demo modes pin the effective time to today at 12:00 noon
-            // ("Almuerzo") or 17:00 / 5 PM ("Fini") so the flash-window
-            // logic below fires unconditionally. Pin only the time of
-            // day; keep the year/month/day so anything date-dependent
-            // (e.g. future date readouts) still reads sensibly.
+            // Demo modes pin the effective time. Keep year/month/day so
+            // any date-dependent readout still reads sensibly.
             var demo = CaptJohnDemoMode;
             if (demo == "Almuerzo")
                 local = new DateTime(local.Year, local.Month, local.Day, 12,  0, local.Second, local.Kind);
@@ -1551,11 +1563,26 @@ public partial class ClockFaceControl : UserControl
 
             var horaChapin = CaptJohnHoraChapinEnabled;
 
-            // Jitter random walk: advance once per minute. At top of
-            // hour (minute == 0), reset to 0 (sync to 12 — Dan's
-            // "even things up" rule). Only update the angle when Hora
-            // Chapín is on; otherwise the jitter hand is hidden anyway.
-            if (horaChapin)
+            // Flash-window detection — wraparound-safe modulo distance
+            // from noon (720 min from midnight) and 5 PM (1020 min).
+            // Demo modes already pinned local; their distance will be 0
+            // so the window matches every tick.
+            var minSinceMidnight = local.Hour * 60 + local.Minute;
+            var distNoon = WrappedAbsDiff(minSinceMidnight, 720);
+            var dist5PM  = WrappedAbsDiff(minSinceMidnight, 1020);
+            var inNoonWindow = distNoon <= 5;
+            var in5PMWindow  = dist5PM  <= 5;
+            var inFlash = inNoonWindow || in5PMWindow;
+
+            // 5 s on / 5 s off cadence (10 s period).
+            var flashOn = ((local.Second / 5) % 2) == 0;
+
+            // Jitter hand: only visible in state B (Hora Chapín ON,
+            // outside flash window). Suppressed during the flash so the
+            // real time takes the spotlight unobscured. Random walk
+            // advances exactly once per real-minute change.
+            var showJitter = horaChapin && !inFlash;
+            if (showJitter)
             {
                 if (local.Minute != _captJohnJitterLastTickRealMinute)
                 {
@@ -1573,55 +1600,62 @@ public partial class ClockFaceControl : UserControl
                 if (_captJohnJitterRotate is not null)
                     _captJohnJitterRotate.Angle = _captJohnJitterMinute * 6.0;
             }
-
-            // Jitter hand visibility = Hora Chapín ON.
             if (_captJohnJitterHand is not null)
-                _captJohnJitterHand.Opacity = horaChapin ? 1.0 : 0;
+                _captJohnJitterHand.Opacity = showJitter ? 1.0 : 0;
 
-            // Flash-window detection — wraparound-safe modulo distance
-            // from noon (720 min from midnight) and 5 PM (1020 min).
-            // Demo modes already pinned local; their dist will be 0,
-            // so the window matches every tick.
-            var minSinceMidnight = local.Hour * 60 + local.Minute;
-            var distNoon = WrappedAbsDiff(minSinceMidnight, 720);
-            var dist5PM  = WrappedAbsDiff(minSinceMidnight, 1020);
-            var inNoonWindow = distNoon <= 5;
-            var in5PMWindow  = dist5PM  <= 5;
-            var inFlash = inNoonWindow || in5PMWindow;
-            // 5 s on / 5 s off cadence
-            var flashOn = ((local.Second / 5) % 2) == 0;
+            // Decide opacity for the four flash-driven elements:
+            // hour hand, minute hand, second hand, and the two numerals.
+            double handOpacity, num12Opacity, num5Opacity;
 
-            // Real hour + minute hands:
-            //   · Hora Chapín ON  → 90% baseline (v1.1.2 — was 7.5% in
-            //     v1.1.0/1.1.1). Jumps to 100% during the "on" frame of
-            //     a flash window or whenever a demo is pinned. Per Dan:
-            //     the lazy/jittered novelty mode still needs the real
-            //     hands to be readable, not ghost-faint.
-            //   · Hora Chapín OFF → 100% always (regular clock face).
-            double realOpacity;
-            if (!horaChapin)
-                realOpacity = 1.0;
+            if (inFlash)
+            {
+                // State A. Hour + minute + second + the relevant numeral
+                // all flash on/off together.
+                //   · Noon window  → only "12" flashes (the "5" stays hidden).
+                //   · 5 PM window  → only "5"  flashes (the "12" stays hidden).
+                var v = flashOn ? 1.0 : 0.0;
+                handOpacity  = v;
+                num12Opacity = inNoonWindow ? v : 0;
+                num5Opacity  = in5PMWindow  ? v : 0;
+            }
+            else if (horaChapin)
+            {
+                // State B. Lazy bar-clock mode. Real hands at 10%
+                // opacity (= 90% transparent — Dan's "bring up the
+                // transparency" v1.1.2/1.1.3 directive). Faint enough
+                // that the jitter hand dominates as the visual minute
+                // indicator, opaque enough to confirm where the real
+                // time is if you squint. Earlier passes tried 7.5%
+                // (too faint to read at all) and 90% opaque (too
+                // prominent — drowned out the jitter hand).
+                handOpacity  = 0.1;
+                num12Opacity = 0;
+                num5Opacity  = 0;
+            }
             else
-                realOpacity = (inFlash && flashOn) ? 1.0 : 0.9;
-            if (_captJohnHourHand   is not null) _captJohnHourHand.Opacity   = realOpacity;
-            if (_captJohnMinuteHand is not null) _captJohnMinuteHand.Opacity = realOpacity;
+            {
+                // State C. Regular clock face.
+                handOpacity  = 1.0;
+                num12Opacity = 0;
+                num5Opacity  = 0;
+            }
+
+            if (_captJohnHourHand   is not null) _captJohnHourHand.Opacity   = handOpacity;
+            if (_captJohnMinuteHand is not null) _captJohnMinuteHand.Opacity = handOpacity;
+            if (_captJohn12Numeral  is not null) _captJohn12Numeral.Opacity  = num12Opacity;
+            if (_captJohn5Numeral   is not null) _captJohn5Numeral.Opacity   = num5Opacity;
 
             // Second hand:
-            //   · Hora Chapín ON  → visible only during flash on-frames.
-            //   · Hora Chapín OFF → visible always.
+            //   · State A (flash) → flashes with the rest.
+            //   · State B (Hora Chapín ON, normal) → hidden.
+            //   · State C (regular face) → 100% always.
             if (_captJohnSecondHand is not null)
+            {
                 _captJohnSecondHand.Opacity =
-                    !horaChapin ? 1.0
-                    : (inFlash && flashOn) ? 1.0
-                    : 0;
-
-            // Numerals: only fire under Hora Chapín. In the regular
-            // clock face mode the dial is numberless (per design).
-            var numeralsOn = horaChapin && flashOn;
-            if (_captJohn12Numeral is not null)
-                _captJohn12Numeral.Opacity = ((inNoonWindow || in5PMWindow) && numeralsOn) ? 1.0 : 0;
-            if (_captJohn5Numeral is not null)
-                _captJohn5Numeral.Opacity  = (in5PMWindow && numeralsOn) ? 1.0 : 0;
+                    inFlash ? handOpacity
+                    : horaChapin ? 0
+                    : 1.0;
+            }
         };
 
         static int WrappedAbsDiff(int a, int target)

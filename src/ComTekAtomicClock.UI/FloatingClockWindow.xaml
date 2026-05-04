@@ -132,7 +132,14 @@
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
                     <Button.ContextMenu>
-                        <ContextMenu Closed="JollyRogerMenu_Closed">
+                        <!--
+                          v1.1.3: no Closed handler — demos persist
+                          across menu close until the user explicitly
+                          toggles the radio off (or picks the other
+                          demo, which auto-clears via the radio-style
+                          IsAlmuerzoActive / IsFiniActive setters).
+                        -->
+                        <ContextMenu>
                             <MenuItem Header="Hora Chapín"
                                       IsCheckable="True"
                                       IsChecked="{Binding CaptJohnHoraChapin, Mode=TwoWay}"
@@ -140,10 +147,12 @@
                             <Separator/>
                             <MenuItem Header="Almuerzo (12:00 demo)"
                                       IsCheckable="True"
-                                      IsChecked="{Binding IsAlmuerzoActive, Mode=TwoWay}"/>
+                                      IsChecked="{Binding IsAlmuerzoActive, Mode=TwoWay}"
+                                      StaysOpenOnClick="True"/>
                             <MenuItem Header="Fini (5:00 PM demo)"
                                       IsCheckable="True"
-                                      IsChecked="{Binding IsFiniActive, Mode=TwoWay}"/>
+                                      IsChecked="{Binding IsFiniActive, Mode=TwoWay}"
+                                      StaysOpenOnClick="True"/>
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>

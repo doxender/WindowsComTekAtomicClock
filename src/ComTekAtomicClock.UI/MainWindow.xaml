@@ -364,7 +364,24 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                                 <Button.ContextMenu>
-                                    <ContextMenu Closed="JollyRogerMenu_Closed">
+                                    <!--
+                                      v1.1.3: no Closed handler — the
+                                      Almuerzo / Fini demos persist
+                                      across menu close (and across app
+                                      restart in-session) until the
+                                      user explicitly toggles the radio
+                                      off, or selects the other demo
+                                      (which auto-clears the previous
+                                      via the IsAlmuerzoActive /
+                                      IsFiniActive radio-style setters
+                                      on TabViewModel). Earlier versions
+                                      cleared on Closed, but Dan's spec
+                                      is "demonstrate the visual effects
+                                      until the demo button is clicked
+                                      off" — so the menu close shouldn't
+                                      end the demo.
+                                    -->
+                                    <ContextMenu>
                                         <MenuItem Header="Hora Chapín"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding CaptJohnHoraChapin, Mode=TwoWay}"
@@ -372,10 +389,12 @@
                                         <Separator/>
                                         <MenuItem Header="Almuerzo (12:00 demo)"
                                                   IsCheckable="True"
-                                                  IsChecked="{Binding IsAlmuerzoActive, Mode=TwoWay}"/>
+                                                  IsChecked="{Binding IsAlmuerzoActive, Mode=TwoWay}"
+                                                  StaysOpenOnClick="True"/>
                                         <MenuItem Header="Fini (5:00 PM demo)"
                                                   IsCheckable="True"
-                                                  IsChecked="{Binding IsFiniActive, Mode=TwoWay}"/>
+                                                  IsChecked="{Binding IsFiniActive, Mode=TwoWay}"
+                                                  StaysOpenOnClick="True"/>
                                     </ContextMenu>
                                 </Button.ContextMenu>
                             </Button>

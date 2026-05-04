@@ -184,14 +184,8 @@ public partial class FloatingClockWindow : FluentWindow
         btn.ContextMenu.IsOpen          = true;
     }
 
-    /// <summary>
-    /// Jolly Roger ContextMenu Closed handler. Clears any active
-    /// CaptJohn demo so the noon / 5 PM pin only persists while the
-    /// user has the popup open. Hora Chapín stays where the user set
-    /// it (persistent toggle, not demo).
-    /// </summary>
-    private void JollyRogerMenu_Closed(object sender, RoutedEventArgs e)
-    {
-        _tab.CaptJohnDemoMode = string.Empty;
-    }
+    // v1.1.3: JollyRogerMenu_Closed removed. Demos persist across menu
+    // close until the user explicitly clicks the radio off, picks the
+    // other demo, or switches off CaptJohn theme (handled in
+    // TabViewModel.Theme setter).
 }

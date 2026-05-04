@@ -184,18 +184,11 @@ public partial class MainWindow : FluentWindow
         btn.ContextMenu.IsOpen          = true;
     }
 
-    /// <summary>
-    /// v1.1.1 — Jolly Roger ContextMenu Closed handler. Clears any
-    /// active CaptJohn demo mode so the noon / 5 PM pin only persists
-    /// while the user has the popup open. Hora Chapín stays where the
-    /// user set it (persistent toggle, not demo).
-    /// </summary>
-    private void JollyRogerMenu_Closed(object sender, RoutedEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.ContextMenu menu) return;
-        if (menu.DataContext is ViewModels.TabViewModel tabVm)
-            tabVm.CaptJohnDemoMode = string.Empty;
-    }
+    // v1.1.3: JollyRogerMenu_Closed handler removed. Demos now persist
+    // across menu close per Dan's spec ("demonstrate the visual effects
+    // until the demo button is clicked off"). The radio-style setters
+    // on IsAlmuerzoActive / IsFiniActive handle mutex between the two
+    // demos; explicit click-off (or theme switch off CaptJohn) clears.
 
     private void HelpMenuItem_Click(object sender, RoutedEventArgs e)
     {
