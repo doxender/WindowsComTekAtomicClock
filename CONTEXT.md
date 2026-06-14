@@ -8,11 +8,11 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | **v1.1.6** — Installer wipes `%APPDATA%\…\settings.json` and `%ProgramData%\…\service.json` on install so every Setup.exe starts from factory defaults (testing-clarity directive). |
+| **Current version** | **v1.1.7** — Benign DWM "composition disabled" (`0x80263001`) race (RDP / remote / monitor-off) no longer pops a modal error box; `App.OnDispatcherUnhandledException` now recovers it silently. (Prior: v1.1.6 installer factory-reset.) |
 | **Code-as-ground-truth baseline** | `SPEC.md` v2.1 (2026-05-03) |
 | **Next minor target** | **v1.1.x** — top-right ⋯ overlay menu refinements on CaptJohn (currently the standard `?` menu); revisit if Dan finds more polish opportunities. |
 | **Open backlog** | `windows/TODO.md` (single source of truth for all open work) |
-| **Repo state** | `captain-john` branch at v1.1.6 (seven commits: v1.1.0 amend + v1.1.1 Jolly Roger + v1.1.2 hand-opacity + v1.1.3 flash state machine + v1.1.4 jitter init / demo timeline + v1.1.5 hour+half-hour sync + v1.1.6 wipe-on-install) — local only, awaiting Dan's test-then-push. `master` clean at v1.0.0 / origin parity. |
+| **Repo state** | `captain-john` branch committed at v1.1.6 (seven commits: v1.1.0 amend + v1.1.1 Jolly Roger + v1.1.2 hand-opacity + v1.1.3 flash state machine + v1.1.4 jitter init / demo timeline + v1.1.5 hour+half-hour sync + v1.1.6 wipe-on-install). **v1.1.7 (DWM-composition handler hardening) staged in the working tree, NOT yet committed** — awaiting Dan's test-then-commit. `master` clean at v1.0.0 / origin parity. |
 
 ## Quick navigation
 

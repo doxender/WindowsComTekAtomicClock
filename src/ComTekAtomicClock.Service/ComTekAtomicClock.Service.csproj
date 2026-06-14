@@ -16,4 +16,9 @@
   <ItemGroup>
     <ProjectReference Include="..\ComTekAtomicClock.Shared\ComTekAtomicClock.Shared.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Expose internal Sync types (NtpPacket, TimeSourcePool, SntpResult) to the test project. -->
+    <InternalsVisibleTo Include="ComTekAtomicClock.Tests" />
+  </ItemGroup>
 </Project>

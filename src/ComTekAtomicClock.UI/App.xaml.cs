@@ -12,6 +12,7 @@
 // (older install) the calls quietly fail and the §1.9 banner surfaces
 // the right next-step.
 
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using System.Windows;
@@ -69,12 +70,42 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// DWM_E_COMPOSITIONDISABLED — desktop composition is OFF (Remote Desktop,
+    /// a session connect/disconnect, monitor power-off, or a legacy
+    /// "disable desktop composition" compat flag). Every window here is a
+    /// WPF-UI <c>FluentWindow</c> with a Mica backdrop; WPF-UI's chrome answers
+    /// the WM_DWMCOMPOSITIONCHANGED message by calling
+    /// <c>DwmExtendFrameIntoClientArea</c> to re-extend the glass frame, and
+    /// when composition is disabled that native call returns this HRESULT —
+    /// which WPF surfaces as an unhandled COMException on the dispatcher.
+    /// It is benign and purely cosmetic (the frame just can't be glass-extended
+    /// in a no-composition session), so we recover silently rather than alarm
+    /// the user with a modal "unhandled exception" box — which would also storm
+    /// if composition toggled repeatedly.
+    /// </summary>
+    private const int DwmCompositionDisabled = unchecked((int)0x80263001);
+
+    internal static bool IsBenignCompositionGlitch(Exception ex) =>
+        ex is COMException { HResult: DwmCompositionDisabled };
+
+    /// <summary>
     /// Dispatcher (UI-thread) handler. Marks Handled=true so a single
-    /// recoverable mishap doesn't tear the app down.
+    /// recoverable mishap doesn't tear the app down. Known-benign framework
+    /// races (see <see cref="IsBenignCompositionGlitch"/>) recover silently;
+    /// everything else still surfaces the diagnostic dialog.
     /// </summary>
     private static void OnDispatcherUnhandledException(
         object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        if (IsBenignCompositionGlitch(e.Exception))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "[UnhandledException:Dispatcher] benign DWM composition glitch "
+                + $"(0x{DwmCompositionDisabled:X8}) recovered silently: {e.Exception.Message}");
+            e.Handled = true;
+            return;
+        }
+
         ShowExceptionDialog(e.Exception, "Dispatcher");
         e.Handled = true;
     }

@@ -2,11 +2,12 @@
 
 | | |
 |---|---|
-| **Document version** | 2.7 |
-| **Date** | 2026-05-03 |
-| **Code baseline** | v1.1.6 |
+| **Document version** | 2.8 |
+| **Date** | 2026-06-14 |
+| **Code baseline** | v1.1.7 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
+| **v2.7 → v2.8 changes** | Error-surfacing behavior refined: `App.OnDispatcherUnhandledException` now recognizes the benign DWM `DWM_E_COMPOSITIONDISABLED` (`0x80263001`) race — raised by WPF-UI's Mica `FluentWindow` chrome when desktop composition is disabled (RDP / remote / monitor-off) — and recovers it silently instead of popping the diagnostic modal. All other unhandled exceptions still surface the dialog. See CHANGELOG.md `[1.1.7]`; CONTEXT.md error-handling note. |
 | **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
 | **v2.6 → v2.7 changes** | Installer (`tools/installer.iss`) gains a new `[InstallDelete]` section that wipes `%APPDATA%\ComTekAtomicClock\settings.json` and `%ProgramData%\ComTekAtomicClock\service.json` at the start of every install. Each Setup.exe therefore starts from the code's baked-in defaults (CaptJohn opens with Hora Chapín OFF, theme = AtomicLab, time-source = Boulder, etc.). Testing-clarity directive — to be revisited before public-distribution release. See CHANGELOG.md `[1.1.6]`. |

@@ -4,6 +4,53 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.7] - 2026-06-14 — Hardening: the benign DWM "composition disabled" race no longer pops a modal error box
+
+Reported by Dan after an overnight session change — a modal **"ComTek Atomic Clock — unhandled exception"** box appeared:
+
+> `System.Runtime.InteropServices.COMException [Dispatcher]` — *"(Desktop composition is disabled) The operation could not be completed because desktop composition is disabled. (0x80263001)"*
+
+with the stack running `WindowChromeWorker._HandleDwmCompositionChanged → _ExtendGlassFrame → DwmExtendFrameIntoClientArea`.
+
+### Root cause
+
+Every window in the app is a WPF-UI `FluentWindow` with `WindowBackdropType="Mica"` + `ExtendsContentIntoTitleBar="True"`. WPF-UI's chrome answers the `WM_DWMCOMPOSITIONCHANGED` message by calling `DwmExtendFrameIntoClientArea` to re-extend the glass frame. When desktop composition is **disabled** — Remote Desktop, an RDP connect/disconnect, monitor power-off, or a legacy "disable desktop composition" compat flag — that native call returns `DWM_E_COMPOSITIONDISABLED` (HRESULT `0x80263001`), which WPF throws as an unhandled `COMException` on the dispatcher. The throw is inside framework code (PresentationFramework + WPF-UI); the app cannot prevent it.
+
+The app *did* already recover — `App.OnDispatcherUnhandledException` sets `e.Handled = true`, so the process never actually died — but the v0.0.16 catch-all handler treated this benign, cosmetic, expected condition exactly like a real fault and popped the alarming modal. Worse, if composition toggled repeatedly the dialog could storm.
+
+### Change
+
+`App.OnDispatcherUnhandledException` now classifies the benign DWM-composition race (a `COMException` whose `HResult == 0x80263001`) via a new `IsBenignCompositionGlitch` helper and **recovers it silently** — a `Debug.WriteLine` breadcrumb plus `e.Handled = true`, no dialog. The glass frame simply isn't re-extended in a no-composition session (cosmetic only). Every *other* exception still surfaces the diagnostic dialog, unchanged. This covers `MainWindow` and every dialog window (`AboutDialog`, `HelpDialog`, `ThemesDialog`, `TabSettingsDialog`, `FloatingClockWindow`) — all are Mica `FluentWindow`s sharing the one global handler.
+
+### Files touched
+
+- `src/ComTekAtomicClock.UI/App.xaml.cs` — `using System.Runtime.InteropServices;`; new `DwmCompositionDisabled` const + `internal IsBenignCompositionGlitch` helper (internal so the test project can call it); silent-recovery branch in `OnDispatcherUnhandledException`.
+- `src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj` — version 1.1.6 → 1.1.7; `InternalsVisibleTo` the test project.
+- `src/ComTekAtomicClock.Service/ComTekAtomicClock.Service.csproj` — `InternalsVisibleTo` the test project (exposes `NtpPacket`, `TimeSourcePool`, `SntpResult`).
+- `tools/installer.iss` — `MyAppVersion` 1.1.6 → 1.1.7.
+- `CONTEXT.md` — current-version line bumped.
+- `SPEC.md` v2.7 → v2.8: code baseline + front-matter changes row (error-surfacing behavior).
+
+### Tests (new — this is the project's first test project)
+
+Added `src/ComTekAtomicClock.Tests` (xUnit, net8.0-windows; added to `ComTekAtomicClock.slnx`). The project previously shipped with **zero** automated tests — verification was careful code review + manual runs, recorded in this changelog. This is the first unit-test project, focused on the highest-stakes pure logic plus a regression for the v1.1.7 fix. **35 tests, all green.**
+
+- `NtpPacketTests` — SNTP offset/delay math against a synthesized response, plus every RFC 4330 §5 validation gate (short/null buffer, wrong mode, bad version, leap-indicator alarm, out-of-range stratum) and the client-request shape. (Highest-stakes: this parser's output sets the system clock.)
+- `TimeSourcePoolTests` — walk order (anycast-first, whole-pool, no dupes; pool-member primary listed once), and the `IsKnownHost` validator (anycast / pool member / case-insensitive / off-pool rejected / blank), the control that scopes a hand-edited `SyncServer` to the published pool.
+- `IpcWireFormatTests` — length-prefixed JSON round-trip, the 1 MiB cap (read + write), negative-length rejection, truncated-frame and clean-disconnect handling.
+- `AppExceptionHandlingTests` — **regression for this fix**: `IsBenignCompositionGlitch` is true only for a `COMException` with HRESULT `0x80263001`, false for other COM errors, non-COM exceptions, and a plain exception that merely carries the same HRESULT.
+- `FormatLastSyncTests` — the status-bar formatter across not-running / pending / success / failure states.
+
+Follow-up coverage worth adding later: `SettingsStore` round-trip + corrupt-file quarantine, and the `SyncWorker` interval clamp.
+
+### Build verification
+
+`dotnet test src/ComTekAtomicClock.Tests` → build 0 errors / 0 warnings; **Passed: 35, Failed: 0, Skipped: 0.**
+
+### Verification note
+
+Build- and logic-verified. The runtime trigger (composition disabled) can't be reproduced on a normal Win11 desktop session — DWM composition is mandatory there — so repro requires an actual RDP/remote session. Manual repro: run the clock, then connect/disconnect via Remote Desktop. Before this fix a modal appeared; after, the event is silent (visible only as a `Debug` breadcrumb in the attached debugger's Output window).
+
 ## [1.1.6] - 2026-05-03 — Installer: wipe persisted settings on install (factory-reset every Setup.exe)
 
 Per Dan: *"the defaults for the clock should reset on each install."* Two issues sat behind this:
