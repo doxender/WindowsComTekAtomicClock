@@ -2,7 +2,8 @@
 //
 // Application lifecycle: when the UI launches, start the
 // ComTekAtomicClockSvc Windows Service if it's installed but stopped.
-// When the UI exits (last window closed), stop the service. The
+// When the UI exits (last window closed), stop the service, but only
+// if no other copy of the UI is still running (v1.1.8). The
 // service's start mode is "demand" (set by ServiceInstaller.exe), so
 // it does not auto-start at boot — the clock app owns its lifetime.
 //
@@ -12,6 +13,7 @@
 // (older install) the calls quietly fail and the §1.9 banner surfaces
 // the right next-step.
 
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
@@ -65,8 +67,42 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        TryStopService();
+        // v1.1.8: only the last running copy of the UI stops the service.
+        // Before, ANY copy's exit stopped it, so closing one of two copies
+        // (a double-clicked shortcut, another user's session) left the
+        // other clock showing "installed but not running", unsynced.
+        if (ShouldStopServiceOnExit(Environment.ProcessId, UiProcessIds()))
+            TryStopService();
         base.OnExit(e);
+    }
+
+    /// <summary>
+    /// Pure decision for <see cref="OnExit"/>: stop the service only if no
+    /// UI process other than <paramref name="currentPid"/> is running.
+    /// <paramref name="uiPids"/> is null when the process list couldn't be
+    /// read; then keep the service running (a sync nobody is watching is
+    /// harmless; a stopped sync under a live clock is the bug).
+    /// </summary>
+    internal static bool ShouldStopServiceOnExit(int currentPid, IReadOnlyCollection<int>? uiPids)
+        => uiPids is not null && uiPids.All(pid => pid == currentPid);
+
+    /// <summary>
+    /// Process IDs of every running copy of this UI exe, in any session,
+    /// including this one; null if the process list can't be read.
+    /// </summary>
+    private static IReadOnlyCollection<int>? UiProcessIds()
+    {
+        try
+        {
+            using var self = Process.GetCurrentProcess();
+            var procs = Process.GetProcessesByName(self.ProcessName);
+            try { return procs.Select(p => p.Id).ToList(); }
+            finally { foreach (var p in procs) p.Dispose(); }
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>

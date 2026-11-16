@@ -13,7 +13,7 @@
 //                                         broad ACLs, then sc.exe
 //                                         create + start
 //
-//   Uninstall (`--uninstall`):
+//   Uninstall (`uninstall` or `--uninstall`; v1.1.8 accepts both):
 //     - Stops the service if running.
 //     - sc.exe delete to remove the SCM registration.
 //     - Removes %ProgramData%\ComTekAtomicClock\ (per-machine config).
@@ -34,6 +34,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.ServiceProcess;
+using ComTekAtomicClock.Shared.Installer;
 
 [assembly: SupportedOSPlatform("windows")]
 
@@ -41,8 +42,13 @@ const string ServiceName       = "ComTekAtomicClockSvc";
 const string DisplayName       = "ComTek Atomic Clock — time sync";
 const string ProgramDataFolder = "ComTekAtomicClock";
 
-var uninstall      = args.Any(a => a == "--uninstall");
-var purgeUserData  = args.Any(a => a == "--purge-user-data");
+// v1.1.8: the mode verb counts bare or dashed. The Inno uninstaller
+// ([UninstallRun] in tools/installer.iss) and SPEC §20 pass `uninstall`;
+// the UI passes `--uninstall`. Before, only the dashed form counted, so
+// an Add/Remove Programs uninstall ran INSTALL mode here, starting the
+// service it meant to remove. See ServiceInstallerArgs.
+var uninstall      = ServiceInstallerArgs.IsUninstall(args);
+var purgeUserData  = ServiceInstallerArgs.IsPurgeUserData(args);
 
 try
 {

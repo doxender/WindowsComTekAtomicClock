@@ -8,11 +8,11 @@ For the formal point-in-time spec see `SPEC.md`. For the per-version changelog s
 |---|---|
 | **Project root** | `C:\ComputerSource\ComTekAtomicClock\windows\` |
 | **Solution** | `ComTekAtomicClock.slnx` |
-| **Current version** | **v1.1.7** — Benign DWM "composition disabled" (`0x80263001`) race (RDP / remote / monitor-off) no longer pops a modal error box; `App.OnDispatcherUnhandledException` now recovers it silently. (Prior: v1.1.6 installer factory-reset.) |
+| **Current version** | **v1.1.8** — Service lifecycle fixes: the banner's Start button starts an installed service directly (no UAC prompt) and finds the helper in the Inno install layout; `App.OnExit` stops the service only as the last running UI copy; the helper accepts `uninstall` as well as `--uninstall`. (Prior: v1.1.7 benign-DWM-race handling; v1.1.6 installer factory-reset.) |
 | **Code-as-ground-truth baseline** | `SPEC.md` v2.1 (2026-05-03) |
 | **Next minor target** | **v1.1.x** — top-right ⋯ overlay menu refinements on CaptJohn (currently the standard `?` menu); revisit if Dan finds more polish opportunities. |
 | **Open backlog** | `windows/TODO.md` (single source of truth for all open work) |
-| **Repo state** | `captain-john` branch committed at v1.1.6 (seven commits: v1.1.0 amend + v1.1.1 Jolly Roger + v1.1.2 hand-opacity + v1.1.3 flash state machine + v1.1.4 jitter init / demo timeline + v1.1.5 hour+half-hour sync + v1.1.6 wipe-on-install). **v1.1.7 (DWM-composition handler hardening) staged in the working tree, NOT yet committed** — awaiting Dan's test-then-commit. `master` clean at v1.0.0 / origin parity. |
+| **Repo state** | `master` at v1.1.8: merge of `fix/service-start-v1.1.8` (2026-11-16, Dan: "merge and push as needed"). `release\ComTekAtomicClock-v1.1.8-Setup.exe` built locally; **not** published as a GitHub Release (the README's headline download is still v1.1.6). Was: this row said v1.1.7 was uncommitted; it was committed 2026-06-14 as `3062808`. |
 
 ## Quick navigation
 
@@ -68,7 +68,7 @@ If a future session sees an open issue about tab UX and is tempted to add Dragab
 ### Service runs only while UI is open (alpha simplification)
 
 - `sc.exe create … start= demand` — NOT `auto`.
-- `App.xaml.cs:62 TryStartService()` on `OnStartup`; `:67 TryStopService()` on `OnExit`.
+- `App.TryStartService()` on `OnStartup`; `App.TryStopService()` on `OnExit`, but only when `App.ShouldStopServiceOnExit` finds no other running UI copy (v1.1.8; before, any copy's exit stopped the service under the others).
 - **Why:** avoids the "uninstalled-but-still-running service" failure mode in alpha. Migrating to `auto` for v1.0 is Planned (SPEC.md §22 / D-1).
 
 ### Tab-name refresh is bound, not imperative (per v0.0.33 — supersedes v0.0.32 rule)
@@ -186,6 +186,17 @@ Any code change must update every project doc that describes the area touched: `
 ---
 
 ## Session log (newest first)
+
+### 2026-11-16 — v1.1.8: service start/stop fixes (Sam, at Dan's request)
+
+- **Report:** Dan's screenshot: banner "The time-sync service is installed but not running"; the Start button failed with "Could not locate ComTekAtomicClock.ServiceInstaller.exe. Build all four projects first." Installed build: v1.1.6 (2026-05-03) under `C:\Program Files\ComTekAtomicClock\`.
+- **Evidence:** Application log: service started 2026-11-15 21:41:06 by a UI launched at 21:41:05, stopped at 21:41:13, and that UI stayed up until morning. A non-elevated `sc.exe start` started it on 2026-11-16 at 10:19, confirming the Authenticated Users start right.
+- **Fixes** (CHANGELOG 1.1.8): Inno-layout probe in `ExePaths`; the banner starts an installed service directly, as SPEC § Banner always said; `OnExit` stops the service only as the last UI copy; the helper accepts bare `uninstall` (the Inno uninstaller had been running install mode since v0.0.36).
+- **Tests:** 35 → 52, all passing; each new regression test fails with its bug re-introduced.
+- **Consent:** Dan, 2026-11-16 10:35: "let's fix things up and let me know if I need to re-install. You can merge and push as needed."
+- **Release:** `release\ComTekAtomicClock-v1.1.8-Setup.exe`, built locally; publish file counts match v1.1.6 (UI 269, Service 222, Installer 192). Not uploaded as a GitHub Release.
+- **Open for Dan:** TODO #34 (`auto` start). Clay measured on 2026-11-08 that Windows Time is stopped on this box, so whenever the clock app is closed, nothing syncs the system clock.
+- **Stale elsewhere in this file, left as is:** "Awaiting Dan's go-ahead" still lists `tab-header-refresh-reliability` as local-only; on origin that branch now holds a single 2026-07 backup commit of `docs/code-vs-spec-audit.md`.
 
 ### 2026-05-03 — v1.0.1: Hand-length pass on all 6 analog faces
 
