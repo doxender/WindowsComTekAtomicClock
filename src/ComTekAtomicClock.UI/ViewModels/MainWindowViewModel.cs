@@ -681,12 +681,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void LaunchInstallerAndPoll(object? _ = null)
     {
+        // v1.1.8 (SPEC § Banner): an installed-but-stopped service is
+        // started directly: no UAC prompt, and no need to find the helper
+        // exe. The elevated helper stays the fallback for a refused start
+        // (an older install without the start right) and the only path
+        // when the service isn't installed at all.
+        string? directStartError = null;
+        if (ServiceState == ServiceLifecycleState.InstalledNotRunning)
+        {
+            var direct = ServiceLauncher.TryStartInstalledService();
+            if (direct.Started)
+            {
+                QuickPollServiceState();
+                return;
+            }
+            directStartError = direct.ErrorMessage;
+        }
+
         var result = ServiceLauncher.LaunchServiceInstaller();
         if (!result.Started)
         {
+            var message = result.ErrorMessage ?? "Unknown error.";
+            if (directStartError is not null)
+                message = $"Starting the service directly failed: {directStartError}\n\n{message}";
             MessageBox.Show(
                 Application.Current?.MainWindow!,
-                result.ErrorMessage ?? "Unknown error.",
+                message,
                 "Could not start the time-sync service",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);

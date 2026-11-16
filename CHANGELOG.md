@@ -4,6 +4,48 @@ All notable changes to ComTek Atomic Clock (Windows) are tracked here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The patch number is bumped on every shipped change per the project's standing version-bump rule, with the problem and solution noted under the matching version header below.
 
+## [1.1.8] - 2026-11-16 — The time-sync service no longer stays stopped under a running clock; the banner's Start button works on installed copies
+
+Reported by Dan (screenshot, 2026-11-16): the main window showed **"The time-sync service is installed but not running"**, and pressing **Start the time-sync service** popped **"Could not locate ComTekAtomicClock.ServiceInstaller.exe. Build all four projects first."** The clock kept running, but nothing was syncing it.
+
+### Root causes (three, plus one found on the way)
+
+1. **The banner button could not find the helper on an installed copy.** `ExePaths` probed only the UI's own folder (the MSIX layout of § 2.7) and the dev `bin\` folders. The Inno Setup installer (`tools/installer.iss`) puts each exe in its own subfolder (`{app}\UI\`, `{app}\Service\`, `{app}\Installer\`), so neither probe matched.
+2. **The button didn't need the helper in the first place.** SPEC § Banner says `InstalledNotRunning` starts the service directly; the code sent both banner states through the elevated helper. The installer grants Authenticated Users `SERVICE_START` (§ 4), so a standard user can start it: `App.TryStartService` already does at launch, and a non-elevated `sc.exe start ComTekAtomicClockSvc` started it on Dan's box at 10:19.
+3. **Any copy of the UI stopped the service when it exited.** `App.OnExit` always called `TryStopService()`. The Application log on Dan's box: a fresh UI (process start 2026-11-15 21:41:05) started the service at 21:41:06; the service was stopped at 21:41:13; that UI kept running until morning under the banner. Only `OnExit` sends a stop and the app has no single-instance guard, so the likely sequence is a second copy opening and closing. That is inferred from the log; nothing recorded which process sent the stop.
+4. **(Found on the way) The Inno uninstaller ran the helper in install mode.** `[UninstallRun]` passes `uninstall`; the helper honored only `--uninstall`, so an Add/Remove Programs uninstall *started* a stopped service instead of removing it: the "uninstalled-but-still-running service" failure the `demand` start mode was chosen to avoid. Present since the Inno script was added (v0.0.36, `1ea3ddc`); upgrades never hit it because they don't run the uninstaller.
+
+### Change
+
+- `ExePaths` probes, in order: sibling (MSIX), **the Inno layout (`..\Installer\`, `..\Service\`)**, dev Debug, dev Release. The probe is now a pure `Resolve(uiDir, …, exists)`, so it is unit-tested.
+- On `InstalledNotRunning` the banner button calls the new `ServiceLauncher.TryStartInstalledService()` (non-elevated `ServiceController.Start`, no UAC prompt). Only a refused start falls back to the elevated helper, and the error then reports both failures. The "could not locate" messages now say where they looked and suggest a reinstall, instead of only "build all four projects".
+- `App.OnExit` stops the service only when `ShouldStopServiceOnExit` finds no other `ComTekAtomicClock.UI` process (any session). If the process list can't be read, it leaves the service running.
+- The helper accepts `uninstall` and `--uninstall` (any case) through the new `ComTekAtomicClock.Shared.Installer.ServiceInstallerArgs`.
+
+Unchanged: the `demand` start mode (TODO #34 / D-1 still plans `auto`) and the v1.1.6 install-time settings wipe.
+
+### Files touched
+
+- `src/ComTekAtomicClock.UI/Services/ExePaths.cs`: Inno-layout probe; testable `Resolve` / `Candidates`.
+- `src/ComTekAtomicClock.UI/Services/ServiceLauncher.cs`: `TryStartInstalledService()`; clearer not-found messages.
+- `src/ComTekAtomicClock.UI/ViewModels/MainWindowViewModel.cs`: banner button tries the direct start first, helper as fallback.
+- `src/ComTekAtomicClock.UI/App.xaml.cs`: `OnExit` last-copy check (`ShouldStopServiceOnExit`, `UiProcessIds`).
+- `src/ComTekAtomicClock.Shared/Installer/ServiceInstallerArgs.cs`: new; helper mode parsing.
+- `src/ComTekAtomicClock.ServiceInstaller/Program.cs`: uses `ServiceInstallerArgs`; header comment.
+- `src/ComTekAtomicClock.UI/ComTekAtomicClock.UI.csproj`: version 1.1.7 → 1.1.8.
+- `tools/installer.iss`: `MyAppVersion` 1.1.7 → 1.1.8.
+- `CONTEXT.md`; `SPEC.md` v2.8 → v2.9.
+
+### Tests
+
+17 new, 52 in total, all passing (build: 0 warnings, 0 errors):
+
+- `ExePathsTests`: installed layout for the helper and the service, sibling-wins order, dev Debug and Release, not found, and a real temporary install tree through `File.Exists`.
+- `AppServiceLifecycleTests`: the last copy stops the service; another copy keeps it; an unreadable process list keeps it; an empty list stops it.
+- `ServiceInstallerArgsTests`: `uninstall`, `--uninstall` and `UNINSTALL`; the Inno install command line is install mode; no arguments; the purge flag.
+
+Each regression test was checked against its bug: with the fix reverted one at a time (installed-layout probe removed, bare `uninstall` not counted, `OnExit` always stopping), the matching tests fail (3, 2 and 2 failures) and pass again with the fix restored.
+
 ## [1.1.7] - 2026-06-14 — Hardening: the benign DWM "composition disabled" race no longer pops a modal error box
 
 Reported by Dan after an overnight session change — a modal **"ComTek Atomic Clock — unhandled exception"** box appeared:

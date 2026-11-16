@@ -9,6 +9,7 @@
 
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using System.ServiceProcess;
 
 namespace ComTekAtomicClock.UI.Services;
 
@@ -33,19 +34,55 @@ public static class ServiceLauncher
         if (installerPath is null)
         {
             return new LaunchResult(false,
-                "Could not locate ComTekAtomicClock.ServiceInstaller.exe. " +
-                "Build all four projects first.");
+                "Could not locate ComTekAtomicClock.ServiceInstaller.exe " +
+                "(looked beside the app, in ..\\Installer, and in the dev build folders). " +
+                "Reinstall ComTek Atomic Clock, or in a dev checkout build all four projects first.");
         }
 
         var serviceExe = ExePaths.FindService();
         if (serviceExe is null)
         {
             return new LaunchResult(false,
-                "Could not locate ComTekAtomicClock.Service.exe. " +
-                "Build all four projects first.");
+                "Could not locate ComTekAtomicClock.Service.exe " +
+                "(looked beside the app, in ..\\Service, and in the dev build folders). " +
+                "Reinstall ComTek Atomic Clock, or in a dev checkout build all four projects first.");
         }
 
         return LaunchHelper(installerPath, $"--service-exe \"{serviceExe}\"");
+    }
+
+    /// <summary>
+    /// v1.1.8: start the already-installed service WITHOUT elevation, as
+    /// SPEC § Banner specifies for InstalledNotRunning. The installer
+    /// helper grants Authenticated Users SERVICE_START on the service
+    /// object (§ 4); App.TryStartService relies on the same right at
+    /// launch. Doesn't wait for Running; the caller re-polls. Returns
+    /// Started=false with the reason when the start is refused (e.g. an
+    /// older install without that right), so the caller can fall back to
+    /// the elevated helper.
+    /// </summary>
+    public static LaunchResult TryStartInstalledService()
+    {
+        try
+        {
+            using var sc = new ServiceController(ServiceStateChecker.ServiceName);
+            switch (sc.Status)
+            {
+                case ServiceControllerStatus.Running:
+                case ServiceControllerStatus.StartPending:
+                    return new LaunchResult(true, null);
+                case ServiceControllerStatus.StopPending:
+                    // Let a stop in progress finish before starting again.
+                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(5));
+                    break;
+            }
+            sc.Start();
+            return new LaunchResult(true, null);
+        }
+        catch (Exception ex)
+        {
+            return new LaunchResult(false, ex.InnerException?.Message ?? ex.Message);
+        }
     }
 
     /// <summary>

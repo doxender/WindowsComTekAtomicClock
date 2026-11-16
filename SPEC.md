@@ -2,11 +2,12 @@
 
 | | |
 |---|---|
-| **Document version** | 2.8 |
-| **Date** | 2026-06-14 |
-| **Code baseline** | v1.1.7 |
+| **Document version** | 2.9 |
+| **Date** | 2026-11-16 |
+| **Code baseline** | v1.1.8 |
 | **Status** | Authoritative — supersedes `requirements.txt` (591 lines, dated 2026-04-25) |
 | **Author** | Daniel V. Oxender |
+| **v2.8 → v2.9 changes** | Service lifecycle fixes (v1.1.8): the § Banner button now starts an installed-but-stopped service directly, as that section always specified, falling back to the elevated helper only when refused; `ExePaths` also probes the Inno install layout (`{app}\UI`, `{app}\Service`, `{app}\Installer`); `App.OnExit` stops the service only when no other UI copy is running; the installer helper accepts `uninstall` as well as `--uninstall` (§ 20). Code baseline 1.1.7 → 1.1.8. |
 | **v2.7 → v2.8 changes** | Error-surfacing behavior refined: `App.OnDispatcherUnhandledException` now recognizes the benign DWM `DWM_E_COMPOSITIONDISABLED` (`0x80263001`) race — raised by WPF-UI's Mica `FluentWindow` chrome when desktop composition is disabled (RDP / remote / monitor-off) — and recovers it silently instead of popping the diagnostic modal. All other unhandled exceptions still surface the dialog. See CHANGELOG.md `[1.1.7]`; CONTEXT.md error-handling note. |
 | **v1.3 → v1.4 changes** | Time-source picker added: machine-wide `TimeSource` enum (Boulder / Brazil) selectable from the Settings dialog. Boulder = NIST stratum-1 pool (default, unchanged). Brazil = NTP.br stratum-1 pool (NIC.br / São Paulo). Atomic Lab face's NIST-panel subtitle now dynamic (`"NIST · BOULDER · CO"` ↔ `"NTP.BR · SÃO PAULO · BR"`). Every face shows a single-word `BOULDER` or `BRASIL` header label (warm-amber Cascadia Code 11pt, top-center) via a uniform `AddSourceLabel` helper. See §4, §5, §10, §13, §21; CHANGELOG.md `[0.0.36]`. |
 | **v1.2 → v1.3 changes** | `FloatingClockWindow` overlay buttons consolidated: `✕` (redundant with OS title-bar X) + `?` removed; replaced with a single `⋯` (Fluent `SymbolRegular.MoreHorizontal20`) "more options" button hosting all menu items (Settings… / Themes… / Bring back into tabs / Help… / About…). "Tab settings…" renamed to "Settings…" on the floating-window menu. See §6, CHANGELOG.md `[0.0.35]`. |
@@ -99,7 +100,7 @@ The two halves communicate via a single named pipe (length-prefixed JSON envelop
 
 ### Key architectural decisions
 
-- **Service runs only while UI is open.** UI launches the service on `App.OnStartup` and stops it on `App.OnExit`. This is a deliberate departure from the legacy spec's "Automatic" start mode (see §21 — Resolved Contradictions). Service start mode is set to `demand` by `sc.exe create … start= demand`.
+- **Service runs only while UI is open.** UI launches the service on `App.OnStartup` and stops it on `App.OnExit`, but only when no other copy of the UI is still running (v1.1.8, `App.ShouldStopServiceOnExit`). This is a deliberate departure from the legacy spec's "Automatic" start mode (see §21 — Resolved Contradictions). Service start mode is set to `demand` by `sc.exe create … start= demand`.
 - **All privilege escalation is concentrated in `ServiceInstaller.exe`.** It is the only process with `requireAdministrator` in its manifest. The UI runs as a standard user (`asInvoker`) and never elevates itself; instead it shells the installer with `Verb = "runas"` to trigger a UAC prompt.
 - **Settings split.** Per-user UI state (tabs, themes, window positions) lives in `%APPDATA%`; per-machine sync config (sync interval, sync server) lives in `%ProgramData%`. The Service reads `service.json` only; the UI reads/writes both.
 - **Forward-compat via `[JsonExtensionData]`.** Every settings record carries a `Dictionary<string, JsonElement>? UnknownFields` so a settings file written by a newer app version is round-tripped without data loss when read by an older version.
@@ -469,9 +470,9 @@ Shown when `ServiceState ∈ { NotInstalled, InstalledNotRunning }`; hidden when
 | `InstalledNotRunning` | `"Start the time-sync service"` |
 | `Running` | (banner hidden) |
 
-Click handler:
-- `NotInstalled` → shells `ComTekAtomicClock.ServiceInstaller.exe install` with `Verb="runas"` (UAC).
-- `InstalledNotRunning` → calls `sc.exe start ComTekAtomicClockSvc`.
+Click handler (`MainWindowViewModel.LaunchInstallerAndPoll`):
+- `NotInstalled` → shells `ComTekAtomicClock.ServiceInstaller.exe install` with `Verb="runas"` (UAC). `ExePaths` finds the helper beside the UI (MSIX), in the Inno layout's `..\Installer\`, or in the dev `bin\` folders.
+- `InstalledNotRunning` → starts the service directly with `ServiceController.Start` (`ServiceLauncher.TryStartInstalledService`; no elevation, since Authenticated Users hold `SERVICE_START`, § 4). Only if that start is refused does it fall back to the elevated helper. (v1.1.8; before, both states went through the helper, which on an Inno install could not be found.)
 
 ### Status bar
 
@@ -1474,6 +1475,7 @@ ComTekAtomicClock.ServiceInstaller.exe uninstall [--purge-user-data]
 - `sc.exe delete ComTekAtomicClockSvc`.
 - Removes `%ProgramData%\ComTekAtomicClock\`.
 - Optionally removes `%APPDATA%\ComTekAtomicClock\` with `--purge-user-data`.
+- The verb is accepted bare (`uninstall`, as above and in `tools/installer.iss` `[UninstallRun]`) or dashed (`--uninstall`, as the UI passes it). Before v1.1.8 only the dashed form was honored, so the Inno uninstaller ran install mode.
 
 ### Running locally without installing the service
 
